@@ -81,6 +81,7 @@
 <a href="game.html" style="color:#e8ecf6;text-decoration:none;">Explore</a>
 <a href="rankings.html" style="color:#9aa6bf;text-decoration:none;">Rankings</a>
 <a href="vet.html" style="color:#9aa6bf;text-decoration:none;">Data Lab</a>
+<a href="scoreboard.html" style="color:#9aa6bf;text-decoration:none;">Scoreboard</a>
 </nav>
 <header class="hero">
   <div class="wm"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 100" width="560" height="100">
@@ -164,6 +165,17 @@ const BADGES = [
 ];
 function chartedCount(s){ return Object.keys(s.charted).length; }
 
+var BLOCKED=["fuck","shit","bitch","cunt","nigger","nigga","faggot","retard","rape","nazi","kike","spic","chink","whore","slut","pussy","asshole","bastard","porn","penis","vagina","hitler"];
+function normalizeName(s){ return (s||"").toLowerCase().replace(/[^a-z0-9]/g,""); }
+function cleanName(s){
+  var t=(s||"").trim();
+  if(t.length<2) return {ok:false, reason:"Please enter a name with at least 2 characters."};
+  if(t.length>40) return {ok:false, reason:"Please keep the name under 40 characters."};
+  var n=normalizeName(t);
+  for(var i=0;i<BLOCKED.length;i++){ if(n.indexOf(BLOCKED[i])>=0) return {ok:false, reason:"That name contains language we can't allow — please pick something family-friendly."}; }
+  return {ok:true};
+}
+
 function hostOf(name){ const t=name.trim().split(/\s+/); if(t.length>1 && /^[a-z]$/.test(t[t.length-1])) t.pop(); return t.join(" "); }
 const SYS = {};
 PLANETS.forEach(p=>{ const h=hostOf(p.planet); (SYS[h]=SYS[h]||{host:h,planets:[],dist:p.distance_ly}).planets.push(p); if(p.distance_ly!=null) SYS[h].dist=p.distance_ly; });
@@ -245,7 +257,7 @@ function showSystem(s){
   $("detail").innerHTML=h;
   const ex=$("explore"); if(ex) ex.onclick=()=>warpThen(()=>{ state.charted[s.host]=true; save(); showSystem(s); refresh(); });
   const cl=$("claim"); if(cl) cl.onclick=()=>{ const who=(state.explorer||"").trim(); if(!who){ alert("Enter your explorer name up top first."); return; } state.claims[s.host]=who; state.claimAvatars=state.claimAvatars||{}; state.claimAvatars[s.host]=state.avatar; save(); if(window.LOPSync){ const col=AVCOLOR[state.avatar]||"#7fb2ff"; LOPSync.ensureExplorer(who,state.avatar,col).then(function(){ LOPSync.logClaim(s.host,col); }); } showSystem(s); refresh(); };
-  const nm=$("name"); if(nm) nm.onclick=()=>{ const who=(state.explorer||"").trim(); if(!who){ alert("Enter your explorer name up top first."); return; } const opts=s.planets.map(p=>p.planet); const which=opts.length===1?opts[0]:prompt("Which planet?\n"+opts.join("\n"),opts[0]); if(!which||!opts.includes(which)) return; const nn=prompt(`Name your discovery (${which}):`,state.names[which]||""); if(nn){ state.names[which]=nn.trim(); save(); if(window.LOPSync){ LOPSync.ensureExplorer(who,state.avatar,AVCOLOR[state.avatar]).then(function(){ LOPSync.logDiscovery(nn.trim(), which); }); } showSystem(s); refresh(); } };
+  const nm=$("name"); if(nm) nm.onclick=()=>{ const who=(state.explorer||"").trim(); if(!who){ alert("Enter your explorer name up top first."); return; } const opts=s.planets.map(p=>p.planet); const which=opts.length===1?opts[0]:prompt("Which planet?\n"+opts.join("\n"),opts[0]); if(!which||!opts.includes(which)) return; const nn=prompt(`Name your discovery (${which}):`,state.names[which]||""); if(nn){ var nm2=nn.trim(); var chk=cleanName(nm2); if(!chk.ok){ alert(chk.reason); return; } state.names[which]=nm2; save(); if(window.LOPSync){ LOPSync.ensureExplorer(who,state.avatar,AVCOLOR[state.avatar]).then(function(){ LOPSync.logDiscovery(nm2, which); }); } showSystem(s); refresh(); } };
   renderLB();
 }
 function renderLB(){ const t={}; Object.values(state.claims).forEach(w=>t[w]=(t[w]||0)+1); const r=Object.entries(t).sort((a,b)=>b[1]-a[1]).slice(0,6); const el=$("lb"); if(!el) return; el.innerHTML=r.length?r.map(([w,n])=>`<div><span>${w}</span><span class="muted">${n} system${n>1?"s":""}</span></div>`).join(""):`<div class="muted" style="border:none;">No claims yet — be the first.</div>`; }

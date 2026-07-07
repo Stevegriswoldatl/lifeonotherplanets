@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project Scoreboard — Life On Other Planets?</title>
+<meta name="description" content="Live numbers from the search: contributions, explorers, crowd accuracy, and how many hidden test planets the crowd is catching.">
+<link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+<meta property="og:title" content="Project Scoreboard — Life On Other Planets?">
+<meta property="og:description" content="See the search working in real numbers — contributions, accuracy, and candidates advanced.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://lifeonotherplanets.space/scoreboard.html">
+<meta property="og:image" content="https://lifeonotherplanets.space/assets/app-icon.svg">
+<meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Space+Grotesk:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; background:#05070f; color:#e8ecf6; font-family:"Hanken Grotesk",-apple-system,sans-serif; line-height:1.6; }
+  nav { display:flex; gap:16px; align-items:center; max-width:960px; margin:0 auto; padding:12px 20px; font-family:"Space Grotesk",sans-serif; font-size:14px; }
+  nav a { text-decoration:none; color:#9aa6bf; }
+  nav a.brand { color:#e8ecf6; font-weight:600; margin-right:auto; }
+  nav a.here { color:#e8ecf6; }
+  .wrap { max-width:960px; margin:0 auto; padding:8px 20px 70px; }
+  h1 { font-family:"Fredoka",sans-serif; font-weight:600; font-size:26px; margin:18px 0 2px; }
+  .sub { color:#9aa6bf; font-size:15px; margin:0 0 22px; max-width:640px; }
+  .banner { background:#171008; border:1px solid #3a2a1a; border-radius:14px; padding:14px 18px; margin-bottom:22px; color:#f3c98a; font-size:14px; display:none; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; }
+  .card { background:#0b1120; border:1px solid #1a2338; border-radius:16px; padding:16px 18px; }
+  .card .k { font-family:"Space Grotesk",sans-serif; font-size:12px; letter-spacing:1.2px; text-transform:uppercase; color:#9aa6bf; }
+  .card .v { font-size:30px; font-weight:600; font-family:"Space Grotesk",sans-serif; margin-top:4px; }
+  .card .v.green { color:#8fe3c4; }
+  .panel { background:#0b1120; border:1px solid #1a2338; border-radius:16px; padding:18px; margin-top:20px; }
+  h2 { font-family:"Space Grotesk",sans-serif; font-size:17px; font-weight:700; margin:0 0 4px; }
+  .note { color:#8494b5; font-size:13px; }
+  canvas { width:100%; max-height:280px; margin-top:10px; }
+  .foot { color:#5f6e92; font-size:13px; margin-top:34px; border-top:1px solid #131c33; padding-top:16px; }
+  a { color:#7fb2ff; }
+</style>
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">Life On Other Planets?</a>
+  <a href="game.html">Explore</a>
+  <a href="rankings.html">Rankings</a>
+  <a href="vet.html">Data Lab</a>
+  <a class="here" href="scoreboard.html">Scoreboard</a>
+</nav>
+<div class="wrap">
+  <h1>Project Scoreboard</h1>
+  <p class="sub">The search, in real numbers. These update as people explore and vet real telescope data — including how many hidden test planets the crowd is catching, which is how we prove it's working.</p>
+
+  <div class="banner" id="banner">Cloud sync isn't switched on yet, so these numbers are placeholders. They'll go live the moment the site's Supabase key is added.</div>
+
+  <div class="grid">
+    <div class="card"><div class="k">Contributions</div><div class="v green" id="m_class">—</div></div>
+    <div class="card"><div class="k">Explorers</div><div class="v" id="m_expl">—</div></div>
+    <div class="card"><div class="k">Crowd accuracy</div><div class="v" id="m_acc">—</div></div>
+    <div class="card"><div class="k">Hidden planets caught</div><div class="v green" id="m_inj">—</div></div>
+    <div class="card"><div class="k">Candidates advanced</div><div class="v" id="m_cand">—</div></div>
+    <div class="card"><div class="k">Named discoveries</div><div class="v" id="m_disc">—</div></div>
+  </div>
+
+  <div class="panel">
+    <h2>Contributions over time</h2>
+    <div class="note">Daily vetting activity across all explorers.</div>
+    <canvas id="chart"></canvas>
+  </div>
+
+  <p class="foot">Numbers come straight from the project database, including hidden known-answer and injected-planet checks — the honest measure of whether the crowd is finding real signals. <a href="index.html">About the project</a> · <a href="privacy.html">Privacy</a></p>
+</div>
+
+<script>
+(function(){
+  const cfg = window.LOP_SUPABASE || {};
+  const set = (id,v)=>{ document.getElementById(id).textContent = v; };
+  const enabled = cfg.url && cfg.anonKey && window.supabase;
+  if(!enabled){ document.getElementById("banner").style.display="block"; return; }
+  const client = window.supabase.createClient(cfg.url, cfg.anonKey);
+
+  (async ()=>{
+    try {
+      const h = await client.from("project_health").select("*").limit(1);
+      const d = (h.data && h.data[0]) || {};
+      set("m_class", (d.total_classifications ?? 0).toLocaleString());
+      set("m_expl", (d.total_explorers ?? 0).toLocaleString());
+      set("m_acc", d.crowd_accuracy_pct!=null ? d.crowd_accuracy_pct + "%" : "—");
+      set("m_inj", d.injection_recovery_pct!=null ? d.injection_recovery_pct + "%" : "—");
+      set("m_cand", (d.candidates_advanced ?? 0).toLocaleString());
+      set("m_disc", (d.named_discoveries ?? 0).toLocaleString());
+    } catch(e){ console.warn(e); document.getElementById("banner").style.display="block"; document.getElementById("banner").textContent="Couldn't load live numbers right now."; }
+
+    try {
+      const s = await client.from("daily_stats").select("*");
+      const rows = (s.data||[]).sort((a,b)=> (a.day<b.day?-1:1));
+      const labels = rows.map(r=>r.day);
+      const vals = rows.map(r=>r.classifications);
+      if(window.Chart && labels.length){
+        new Chart(document.getElementById("chart"), {
+          type:"line",
+          data:{ labels, datasets:[{ data:vals, borderColor:"#5DCAA5", backgroundColor:"rgba(93,202,165,0.12)", fill:true, tension:0.3, pointRadius:2 }] },
+          options:{ plugins:{legend:{display:false}}, scales:{ x:{ ticks:{color:"#7d8cae"}, grid:{color:"#182138"} }, y:{ ticks:{color:"#7d8cae"}, grid:{color:"#182138"}, beginAtZero:true } } }
+        });
+      }
+    } catch(e){ console.warn(e); }
+  })();
+})();
+</script>
+</body>
+</html>

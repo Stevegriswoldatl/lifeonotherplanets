@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Lab (beta) — Life On Other Planets?</title>
+<meta name="description" content="Donate your own AI: run a ready-made research prompt in your ChatGPT, Claude, or Gemini and help build cited dossiers on the most promising planets.">
+<link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Space+Grotesk:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; background:#05070f; color:#e8ecf6; font-family:"Hanken Grotesk",-apple-system,sans-serif; line-height:1.6; }
+  nav { display:flex; gap:16px; align-items:center; max-width:900px; margin:0 auto; padding:12px 20px; font-family:"Space Grotesk",sans-serif; font-size:14px; }
+  nav a { text-decoration:none; color:#9aa6bf; } nav a.brand { color:#e8ecf6; font-weight:600; margin-right:auto; } nav a.here { color:#e8ecf6; }
+  .wrap { max-width:900px; margin:0 auto; padding:8px 20px 70px; }
+  h1 { font-family:"Fredoka",sans-serif; font-weight:600; font-size:25px; margin:16px 0 2px; }
+  .beta { font-size:12px; background:#2a220f; color:#f3c98a; border:1px solid #6b511f; border-radius:999px; padding:2px 10px; font-family:"Space Grotesk",sans-serif; vertical-align:middle; margin-left:8px; }
+  .sub { color:#9aa6bf; font-size:15px; margin:6px 0 20px; max-width:680px; }
+  .step { font-family:"Space Grotesk",sans-serif; font-size:12px; letter-spacing:1.4px; text-transform:uppercase; color:#7d8cae; margin:22px 0 8px; }
+  .panel { background:#0b1120; border:1px solid #1a2338; border-radius:16px; padding:16px 18px; }
+  select, textarea, button { font-family:"Space Grotesk",sans-serif; }
+  select { background:#0a0f1c; color:#e8ecf6; border:1px solid #26314f; border-radius:10px; padding:9px 12px; font-size:14px; }
+  .prompt { background:#0a0f1c; border:1px solid #1a2338; border-radius:12px; padding:14px; font-family:"Space Grotesk",monospace; font-size:13px; color:#c9d3ea; white-space:pre-wrap; max-height:230px; overflow:auto; }
+  button { border-radius:10px; padding:9px 14px; font-size:13px; font-weight:600; cursor:pointer; border:1px solid #29365a; background:#16203a; color:#dbe4fb; }
+  button:hover { background:#1d2a4a; }
+  button.primary { background:#5DCAA5; color:#05231b; border-color:#5DCAA5; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+  textarea { width:100%; min-height:150px; background:#0a0f1c; color:#e8ecf6; border:1px solid #26314f; border-radius:12px; padding:12px; font-size:13px; }
+  .dossier { margin-top:8px; }
+  .field { padding:8px 0; border-bottom:1px solid #172038; font-size:14px; }
+  .field .k { color:#9aa6bf; font-family:"Space Grotesk",sans-serif; font-size:12px; letter-spacing:.6px; text-transform:uppercase; }
+  .pill { display:inline-block; font-size:12px; padding:2px 9px; border-radius:999px; border:1px solid #2b3a63; color:#9db4e6; }
+  .ok { color:#8fe3c4; } .warn { color:#f3c98a; }
+  .note { color:#8494b5; font-size:13px; margin-top:14px; line-height:1.6; }
+  a { color:#7fb2ff; }
+</style>
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">Life On Other Planets?</a>
+  <a href="game.html">Explore</a>
+  <a href="rankings.html">Rankings</a>
+  <a href="vet.html">Data Lab</a>
+  <a href="scoreboard.html">Scoreboard</a>
+  <a class="here" href="relay.html">AI Lab</a>
+</nav>
+<div class="wrap">
+  <h1>AI Lab <span class="beta">beta</span></h1>
+  <p class="sub">Donate your <i>own</i> AI. Pick a promising planet, copy the ready-made research prompt, run it in your own ChatGPT, Claude, or Gemini, and paste the answer back. You're helping build cited, structured "dossiers" on the best candidate worlds — work that scales far past what humans can read alone. We never use your account or your tokens.</p>
+
+  <div class="step">Step 1 — Pick a target</div>
+  <div class="panel">
+    <select id="planet"></select>
+    <div class="note" id="pmeta"></div>
+  </div>
+
+  <div class="step">Step 2 — Copy this prompt into your AI</div>
+  <div class="panel">
+    <div class="prompt" id="prompt"></div>
+    <div class="row">
+      <button class="primary" id="copy">Copy prompt</button>
+      <span id="copied" class="ok" style="font-size:13px;"></span>
+    </div>
+  </div>
+
+  <div class="step">Step 3 — Paste your AI's answer back</div>
+  <div class="panel">
+    <textarea id="answer" placeholder="Paste the JSON your AI returned here…"></textarea>
+    <div class="row"><button class="primary" id="submit">Submit dossier</button><span id="err" class="warn" style="font-size:13px;"></span></div>
+    <div class="dossier" id="dossier"></div>
+  </div>
+
+  <p class="note"><b>How this stays honest:</b> your dossier is one input, not the final word. In the live version every target is researched by <b>several people using different AIs</b>, and we only trust facts they <b>agree</b> on. We also mix in <b>known-answer targets</b> to score how reliable each contributor's AI pipeline is, and every fact must carry a <b>source</b> we can check. AI <i>proposes</i>; humans and the professional record <i>dispose</i>. <a href="index.html">About the project</a></p>
+</div>
+
+<script>
+const PLANETS = [
+  {n:"TOI-700 d", r:1.07, s:0.85, t:3459, d:101, note:"Earth-sized, temperate, quiet M dwarf — a flagship habitable-zone world."},
+  {n:"K2-18 b", r:2.37, s:1.01, t:3457, d:124, note:"JWST detected carbon-bearing molecules; debated 'Hycean'/atmosphere world."},
+  {n:"TRAPPIST-1 e", r:0.92, s:0.65, t:2566, d:41, note:"Most Earth-like of the TRAPPIST-1 seven; under active JWST study."},
+  {n:"LHS 1140 b", r:1.73, s:0.43, t:3096, d:49, note:"Dense super-Earth; tentative nitrogen-atmosphere hints from JWST."},
+  {n:"Kepler-442 b", r:1.34, s:0.66, t:4402, d:1206, note:"Frequently ranked among the most habitable known planets."},
+  {n:"Proxima Cen b", r:1.07, s:0.65, t:2900, d:4, note:"Closest known potentially habitable planet; RV-detected."},
+  {n:"Teegarden's Star b", r:1.05, s:1.08, t:3034, d:12, note:"Very high Earth-similarity; nearby ultracool dwarf."},
+  {n:"LP 890-9 c", r:1.37, s:0.91, t:2850, d:106, note:"Temperate super-Earth, strong JWST follow-up target."}
+];
+const $ = id => document.getElementById(id);
+const sel = $("planet");
+PLANETS.forEach((p,i)=>{ const o=document.createElement("option"); o.value=i; o.textContent=p.n; sel.appendChild(o); });
+
+function promptFor(p){
+  return `You are assisting a citizen-science project that assesses exoplanets for their promise for life.
+Target planet: ${p.n} (radius ~${p.r} Earth, insolation ~${p.s}x Earth, host star ~${p.t} K, ~${p.d} light-years away).
+
+Using only well-established, publicly documented knowledge, return ONE JSON object and nothing else, with these fields:
+{
+  "planet": "${p.n}",
+  "atmosphere_status": "detected | tentative | none | unknown",
+  "key_facts": ["short factual statements about mass, radius, orbit, habitability"],
+  "follow_up_status": "what observations/validation exist or are planned",
+  "notable_claims": ["any debated or headline claims, clearly flagged as debated"],
+  "confidence": 0.0,
+  "sources": ["Author Year — brief description (do NOT invent sources; use 'unknown' if unsure)"]
+}
+Rules: be accurate, flag anything uncertain, and never fabricate citations. Return valid JSON only.`;
+}
+
+function refresh(){
+  const p = PLANETS[+sel.value];
+  $("pmeta").textContent = p.note + `  ·  ~${p.d} light-years`;
+  $("prompt").textContent = promptFor(p);
+  $("dossier").innerHTML = ""; $("answer").value=""; $("err").textContent=""; $("copied").textContent="";
+}
+sel.addEventListener("change", refresh);
+
+$("copy").addEventListener("click", ()=>{
+  const t = $("prompt").textContent;
+  navigator.clipboard.writeText(t).then(()=>{ $("copied").textContent="Copied — paste it into your AI."; }, ()=>{ $("copied").textContent="Select the text above and copy it."; });
+});
+
+function field(k, v){ return `<div class="field"><div class="k">${k}</div><div>${v}</div></div>`; }
+$("submit").addEventListener("click", ()=>{
+  $("err").textContent=""; $("dossier").innerHTML="";
+  let raw = $("answer").value.trim();
+  const m = raw.match(/\{[\s\S]*\}/);
+  if(!m){ $("err").textContent="Couldn't find JSON. Ask your AI to return valid JSON only, then paste it here."; return; }
+  let d; try { d = JSON.parse(m[0]); } catch(e){ $("err").textContent="That isn't valid JSON yet — check for stray text and try again."; return; }
+  const atmo = (d.atmosphere_status||"unknown");
+  const pillClass = atmo==="detected"?"ok":atmo==="tentative"?"warn":"";
+  let html = `<div style="font-family:'Space Grotesk';font-weight:700;margin:6px 0 4px;">Dossier — ${d.planet||PLANETS[+sel.value].n}</div>`;
+  html += field("Atmosphere", `<span class="pill ${pillClass}">${atmo}</span>`);
+  if(Array.isArray(d.key_facts)) html += field("Key facts", "<ul style='margin:6px 0 0;padding-left:18px;'>"+d.key_facts.map(f=>`<li>${String(f)}</li>`).join("")+"</ul>");
+  if(d.follow_up_status) html += field("Follow-up", String(d.follow_up_status));
+  if(Array.isArray(d.notable_claims) && d.notable_claims.length) html += field("Notable / debated claims", "<ul style='margin:6px 0 0;padding-left:18px;'>"+d.notable_claims.map(f=>`<li>${String(f)}</li>`).join("")+"</ul>");
+  if(d.confidence!=null) html += field("AI confidence", (Math.round(d.confidence*100))+"%");
+  if(Array.isArray(d.sources)) html += field("Sources (to be verified)", "<ul style='margin:6px 0 0;padding-left:18px;'>"+d.sources.map(f=>`<li>${String(f)}</li>`).join("")+"</ul>");
+  html += `<div class="note" style="margin-top:12px;">Thanks — dossier received. In the live project this would be cross-checked against other contributors' AIs, scored against known-answer targets, and its sources verified before anything is trusted.</div>`;
+  $("dossier").innerHTML = html;
+});
+
+refresh();
+</script>
+</body>
+</html>
