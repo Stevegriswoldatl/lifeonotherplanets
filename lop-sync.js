@@ -1,0 +1,75 @@
+// Life On Other Planets? — shared Supabase sync helper
+//
+// Included by game.html and vet.html. Requires (loaded before this file):
+//   1) https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2   (window.supabase)
+//   2) supabase-config.js                                     (window.LOP_SUPABASE)
+//
+// If no anon key is configured, every method is a safe no-op and the pages
+// fall back to local-only storage — nothing breaks.
+
+(function () {
+  const cfg = (window.LOP_SUPABASE || {});
+  let client = null;
+  let explorerId = null;
+  let explorerPromise = null;
+
+  if (cfg.url && cfg.anonKey && window.supabase && window.supabase.createClient) {
+    try { client = window.supabase.createClient(cfg.url, cfg.anonKey); }
+    catch (e) { console.warn("LOP sync: init failed", e); }
+  }
+
+  function deviceKey() {
+    let k = localStorage.getItem("lop_device_key");
+    if (!k) {
+      k = "dev_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem("lop_device_key", k);
+    }
+    return k;
+  }
+
+  async function ensureExplorer(name, avatar, color) {
+    if (!client) return null;
+    if (explorerId) return explorerId;
+    if (explorerPromise) return explorerPromise;
+    explorerPromise = (async () => {
+      const dk = deviceKey();
+      try {
+        const sel = await client.from("explorers").select("id").eq("device_key", dk).limit(1);
+        if (sel.data && sel.data.length) { explorerId = sel.data[0].id; return explorerId; }
+        const ins = await client.from("explorers")
+          .insert({ device_key: dk, display_name: name || "Explorer", avatar: avatar || "astronaut", avatar_color: color || "#7fb2ff" })
+          .select("id").limit(1);
+        if (ins.data && ins.data.length) explorerId = ins.data[0].id;
+      } catch (e) { console.warn("LOP sync: ensureExplorer", e); }
+      return explorerId;
+    })();
+    return explorerPromise;
+  }
+
+  const api = {
+    get enabled() { return !!client; },
+    ensureExplorer,
+    async logClassification(verdict, isCorrect) {
+      if (!client) return;
+      try { await client.from("classifications").insert({ explorer_id: explorerId, verdict: verdict, is_correct: isCorrect }); }
+      catch (e) { console.warn("LOP sync: logClassification", e); }
+    },
+    async logClaim(systemName, color) {
+      if (!client) return;
+      try { await client.from("claims").insert({ explorer_id: explorerId, system_name: systemName, avatar_color: color }); }
+      catch (e) { console.warn("LOP sync: logClaim", e); }
+    },
+    async logDiscovery(nickname, planetName) {
+      if (!client) return;
+      try { await client.from("discoveries").insert({ named_by: explorerId, nickname: nickname, planet_name: planetName, status: "candidate" }); }
+      catch (e) { console.warn("LOP sync: logDiscovery", e); }
+    },
+    async projectHealth() {
+      if (!client) return null;
+      try { const r = await client.from("project_health").select("*").limit(1); return r.data && r.data[0]; }
+      catch (e) { return null; }
+    }
+  };
+
+  window.LOPSync = api;
+})();

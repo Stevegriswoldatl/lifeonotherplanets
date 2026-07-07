@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 100" width="560" height="100">
+<g transform="translate(2 18) scale(0.64)"><defs><clipPath id="pc"><circle cx="50" cy="47" r="27"></circle></clipPath></defs>
+<ellipse cx="50" cy="55" rx="47" ry="15.5" fill="none" stroke="#7fb2ff" stroke-width="2.5" opacity="0.5" transform="rotate(-20 50 55)"></ellipse>
+<g clip-path="url(#pc)">
+  <circle cx="50" cy="47" r="27" fill="#123049"></circle>
+  <path d="M28 42 q9 -7 18 -2 q7 4 2 10 q-9 5 -18 1 q-7 -4 -2 -9Z" fill="#5DCAA5"></path>
+  <path d="M52 54 q11 -3 16 3 q3 6 -5 9 q-10 2 -14 -5 Z" fill="#4bb892"></path>
+  <path d="M36 62 q6 -2 10 2 q2 4 -4 6 q-7 1 -9 -4 Z" fill="#4bb892"></path>
+  <ellipse cx="60" cy="36" rx="9" ry="3.2" fill="#e8ecf6" opacity="0.22"></ellipse>
+  <ellipse cx="42" cy="40" rx="7" ry="2.4" fill="#e8ecf6" opacity="0.16"></ellipse>
+  <circle cx="40" cy="38" r="27" fill="#ffffff" opacity="0.05"></circle>
+  <circle cx="62" cy="58" r="27" fill="#000000" opacity="0.16"></circle>
+</g>
+<circle cx="50" cy="47" r="27" fill="none" stroke="#7fb2ff" stroke-width="1.4" opacity="0.35"></circle>
+<path d="M22 55 A47 15.5 0 0 0 78 55" fill="none" stroke="#7fb2ff" stroke-width="2.5" opacity="0.85" transform="rotate(-20 50 55)"></path>
+<g transform="translate(70 10) scale(0.9167)">
+  <path d="M12 0.5 L14.1 9.9 L23.5 12 L14.1 14.1 L12 23.5 L9.9 14.1 L0.5 12 L9.9 9.9 Z" fill="#f5c977"></path>
+  <path d="M12 5 L13 11 L19 12 L13 13 L12 19 L11 13 L5 12 L11 11 Z" fill="#fff2cf"></path>
+  <circle cx="12" cy="12" r="1.7" fill="#fffaf0"></circle>
+</g></g>
+<text x="80" y="50" font-family="Fredoka, &#39;Segoe UI&#39;, sans-serif" font-weight="600" font-size="36" fill="#e8ecf6">Life On Other Planets<tspan fill="#f5c977">?</tspan></text>
+<text x="82" y="76" font-family="&#39;Space Grotesk&#39;, sans-serif" font-weight="600" font-size="13" letter-spacing="5.2" fill="#5DCAA5">THE SEARCH</text>
+</svg>

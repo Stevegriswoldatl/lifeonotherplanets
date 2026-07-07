@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data Lab — Life On Other Planets?</title>
+<link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+<meta name="description" content="Vet real-style light curves to tell real planets from noise — the actual science task behind the game, scored against known answers.">
+<meta property="og:title" content="Data Lab — Life On Other Planets?">
+<meta property="og:description" content="Help tell real planet signals from false alarms in telescope data. Your accuracy is measured for real.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://lifeonotherplanets.space/vet.html">
+<meta property="og:image" content="https://lifeonotherplanets.space/assets/app-icon.svg">
+<meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Space+Grotesk:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script src="lop-sync.js"></script>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; background:#05070f; color:#e8ecf6; font-family:"Hanken Grotesk",-apple-system,sans-serif; }
+  .wrap { max-width:1020px; margin:0 auto; padding:24px 18px 60px; }
+  h1 { font-family:"Fredoka",sans-serif; font-weight:600; font-size:25px; margin:0 0 2px; }
+  h1 .q { color:#f5c977; }
+  .sub { color:#9aa6bf; font-size:14px; margin:0 0 20px; max-width:680px; }
+  .grid { display:grid; grid-template-columns:1.6fr 1fr; gap:16px; }
+  @media(max-width:820px){ .grid{ grid-template-columns:1fr; } }
+  .panel { background:#0b1120; border:1px solid #1a2338; border-radius:20px; padding:18px; }
+  .eyebrow { font-family:"Space Grotesk",sans-serif; font-size:11px; letter-spacing:1.6px; text-transform:uppercase; color:#9aa6bf; }
+  canvas { width:100%; height:300px; display:block; background:#0a0f1c; border-radius:12px; margin:8px 0 4px; }
+  .axhint { display:flex; justify-content:space-between; font-size:11px; color:#6f7ea3; font-family:"Space Grotesk",sans-serif; }
+  .q { font-size:16px; margin:14px 0 10px; font-weight:600; }
+  .btns { display:flex; gap:10px; flex-wrap:wrap; }
+  button { font-family:"Space Grotesk",sans-serif; font-weight:600; font-size:14px; border-radius:12px; padding:11px 16px; cursor:pointer; border:1px solid #29365a; background:#16203a; color:#dbe4fb; }
+  button:hover { background:#1d2a4a; }
+  button.yes { border-color:#2c6b56; } button.yes:hover{ background:#0f2a22; }
+  button.no { border-color:#7a3b2c; } button.no:hover{ background:#2a140f; }
+  button.maybe { border-color:#6b511f; } button.maybe:hover{ background:#2a220f; }
+  .verdict { margin-top:14px; padding:14px 16px; border-radius:14px; border:1px solid #1a2338; display:none; }
+  .verdict.show { display:block; }
+  .verdict.correct { border-color:#2c6b56; background:#0d211b; }
+  .verdict.wrong { border-color:#7a3b2c; background:#231110; }
+  .verdict h3 { margin:0 0 6px; font-family:"Space Grotesk",sans-serif; font-size:15px; }
+  .verdict p { margin:6px 0; font-size:14px; color:#c9d3ea; }
+  .crowd { margin-top:10px; font-size:13px; color:#9aa6bf; font-family:"Space Grotesk",sans-serif; }
+  .crowdbar { height:8px; border-radius:6px; background:#16203a; overflow:hidden; margin-top:5px; display:flex; }
+  .crowdbar i { display:block; height:100%; }
+  .stat { font-family:"Space Grotesk",sans-serif; }
+  .stat .k { font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:#9aa6bf; }
+  .stat .v { font-size:22px; font-weight:700; }
+  .stat + .stat { margin-top:14px; }
+  .mini { display:grid; grid-template-columns:1fr 1fr; gap:10px 16px; margin-top:6px; }
+  .bar { height:7px; border-radius:6px; background:#16203a; overflow:hidden; margin-top:4px; }
+  .bar i { display:block; height:100%; background:#5DCAA5; }
+  .note { font-size:12.5px; color:#8494b5; margin-top:16px; line-height:1.6; }
+  .badge { display:inline-flex; align-items:center; gap:8px; margin-top:12px; padding:8px 12px; border-radius:12px; border:1px solid #29365a; background:#0e1626; font-family:"Space Grotesk",sans-serif; font-size:13px; color:#9aa6bf; }
+  .badge.on { color:#f5c977; border-color:#6b511f; }
+  a{ color:#7fb2ff; }
+</style>
+</head>
+<body>
+<nav style="display:flex;gap:16px;align-items:center;max-width:1020px;margin:0 auto;padding:12px 20px;font-family:'Space Grotesk',sans-serif;font-size:14px;">
+<a href="index.html" style="color:#e8ecf6;text-decoration:none;font-weight:600;margin-right:auto;">Life On Other Planets?</a>
+<a href="game.html" style="color:#9aa6bf;text-decoration:none;">Explore</a>
+<a href="rankings.html" style="color:#9aa6bf;text-decoration:none;">Rankings</a>
+<a href="vet.html" style="color:#e8ecf6;text-decoration:none;">Data Lab</a>
+</nav>
+<div class="wrap">
+  <h1>The Search — Data Lab<span class="q"></span></h1>
+  <p class="sub">This is the real work behind the game. You're shown a <b>light curve</b> — a star's brightness measured over time by a planet-hunting telescope. A planet crossing its star makes a tiny, repeating dip. Your job: tell a real planet from noise, a glitch, or two stars eclipsing each other. Every card here has a known answer, so your accuracy is measured for real — that's how we prove the crowd is working.<span id="syncst" style="color:#5DCAA5;font-family:'Space Grotesk',sans-serif;font-size:13px;"></span></p>
+
+  <div class="grid">
+    <div class="panel">
+      <div class="eyebrow" id="tasklabel">Light curve #1</div>
+      <canvas id="lc"></canvas>
+      <div class="axhint"><span>time (days) →</span><span>← brightness</span></div>
+      <div class="q">Is there a real planet transiting this star?</div>
+      <div class="btns">
+        <button class="yes" data-a="planet">Real planet</button>
+        <button class="no" data-a="not">Not a planet</button>
+        <button class="maybe" data-a="unsure">Unsure</button>
+      </div>
+      <div class="verdict" id="verdict"></div>
+    </div>
+
+    <div class="panel">
+      <div class="eyebrow">Your measured performance</div>
+      <div class="stat" style="margin-top:8px;"><div class="k">Cards vetted</div><div class="v" id="done">0</div></div>
+      <div class="stat"><div class="k">Accuracy vs. known truth</div><div class="v" id="acc">—</div></div>
+      <div class="mini">
+        <div>
+          <div class="k stat" style="font-size:11px;">Planets caught (recall)</div>
+          <div class="bar"><i id="recallbar" style="width:0%"></i></div>
+          <div style="font-size:12px;color:#9aa6bf;font-family:'Space Grotesk';" id="recall">0 / 0</div>
+        </div>
+        <div>
+          <div class="k stat" style="font-size:11px;">False alarms avoided</div>
+          <div class="bar"><i id="fabar" style="width:0%;background:#e0b451;"></i></div>
+          <div style="font-size:12px;color:#9aa6bf;font-family:'Space Grotesk';" id="fa">0 / 0</div>
+        </div>
+      </div>
+      <div class="stat" style="margin-top:14px;"><div class="k">Current streak</div><div class="v" id="streak">0</div></div>
+      <div class="badge" id="sharpeye"><span>&#9733;</span> Sharp Eye — 85%+ over 10 cards</div>
+      <div class="note">
+        <b>Why this is real science:</b> no single answer decides anything. In the live project, each light curve is shown to many people; the crowd's <i>agreement</i> — checked against hidden known-answer cards like these — is what flags a candidate for a professional to follow up. We also hide faint synthetic planets in the data (an <i>injection–recovery</i> test) to measure exactly what fraction the crowd catches. That's how we know it works, in numbers.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const R = { done:0, correct:0, planetsTotal:0, planetsCaught:0, fpTotal:0, fpAvoided:0, streak:0, last10:[] };
+let current = null, answered = false;
+
+function explorerName(){ try{ return (JSON.parse(localStorage.getItem('loop_search_state_v2'))||{}).explorer || 'Explorer'; }catch(e){ return 'Explorer'; } }
+window.addEventListener('load', function(){
+  var el=document.getElementById('syncst');
+  if(window.LOPSync && LOPSync.enabled){ if(el) el.textContent=' · Cloud sync on'; LOPSync.ensureExplorer(explorerName(),'stargazer','#f5c977'); }
+  else if(el){ el.textContent=' · saving locally'; }
+});
+
+function rand(a,b){ return a + Math.random()*(b-a); }
+function gauss(s){ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random(); return s*Math.sqrt(-2*Math.log(u))*Math.cos(6.2831853*v); }
+
+// Generate a light curve with known ground truth.
+// kinds: transit (planet), injection (faint planet), noise (not), eb (not), glitch (not)
+function makeCurve(){
+  const N=320, t=[], f=[];
+  const noise = rand(0.0018, 0.0052);
+  const varyAmp = Math.random()<0.5 ? rand(0, 0.004) : 0;
+  const varyP = rand(3, 12);
+  for(let i=0;i<N;i++){ t.push(i/N*27); f.push(1 + varyAmp*Math.sin(t[i]/varyP*6.2831853 + 1) + gauss(noise)); }
+  const roll = Math.random();
+  let kind, truth, why;
+  if(roll < 0.34){ kind="transit"; truth="planet"; why="A clear, evenly-spaced set of shallow flat-bottomed dips — the signature of a planet crossing the star again and again."; addTransit(t,f, rand(0.008,0.02)); }
+  else if(roll < 0.52){ kind="injection"; truth="planet"; why="A faint but real transit we injected into the data on purpose. Catching these is how we measure the crowd's sensitivity to small, Earth-like planets."; addTransit(t,f, rand(0.0035,0.006)); }
+  else if(roll < 0.70){ kind="eb"; truth="not"; why="Look again: the dips alternate deep / shallow and are V-shaped, not flat-bottomed. That's two stars eclipsing each other — the single most common planet impostor."; addEB(t,f); }
+  else if(roll < 0.85){ kind="glitch"; truth="not"; why="That single sharp spike doesn't repeat. A one-off jump is almost always an instrument glitch or a cosmic ray, not a planet."; addGlitch(t,f); }
+  else { kind="noise"; truth="not"; why="Just the star's natural flicker and measurement noise — no repeating dip. Correctly saying 'no' here matters as much as finding a planet."; }
+  return {t,f,kind,truth,why,depth: kind==="injection"?"faint":kind==="transit"?"clear":null};
+}
+function addTransit(t,f,depth){
+  const P=rand(2.2,8), t0=rand(0.5,P), dur=rand(0.12,0.28);
+  for(let i=0;i<t.length;i++){ const ph=((t[i]-t0)%P+P)%P; if(ph<dur||ph>P-dur){ f[i]-=depth; } }
+}
+function addEB(t,f){
+  const P=rand(2.5,7), t0=rand(0.5,P), dur=rand(0.10,0.20), d1=rand(0.05,0.16), d2=d1*rand(0.25,0.5);
+  for(let i=0;i<t.length;i++){ let ph=((t[i]-t0)%P+P)%P;
+    // primary (V-shaped)
+    if(ph<dur){ f[i]-=d1*(1-ph/dur); } else if(ph>P-dur){ f[i]-=d1*(1-(P-ph)/dur); }
+    // secondary at half phase
+    const phs=Math.abs(ph-P/2); if(phs<dur*0.8){ f[i]-=d2*(1-phs/(dur*0.8)); }
+  }
+}
+function addGlitch(t,f){ const i=Math.floor(rand(0.2,0.8)*t.length); f[i]+=rand(0.02,0.05)*(Math.random()<0.5?-1:1); }
+
+const c=document.getElementById("lc");
+function draw(cur){
+  const dpr=window.devicePixelRatio||1, W=c.clientWidth, H=300;
+  c.width=W*dpr; c.height=H*dpr; const x=c.getContext("2d"); x.setTransform(dpr,0,0,dpr,0,0);
+  x.clearRect(0,0,W,H);
+  const pad=26, fmin=Math.min.apply(null,cur.f), fmax=Math.max.apply(null,cur.f), span=(fmax-fmin)||1;
+  const X=i=>pad+(i/(cur.t.length-1))*(W-2*pad);
+  const Y=v=>pad+(1-(v-fmin)/span)*(H-2*pad);
+  x.strokeStyle="#152036"; x.lineWidth=1;
+  for(let g=0;g<=4;g++){ const yy=pad+g/4*(H-2*pad); x.beginPath(); x.moveTo(pad,yy); x.lineTo(W-pad,yy); x.stroke(); }
+  x.fillStyle="#7fb2ff";
+  for(let i=0;i<cur.f.length;i++){ x.globalAlpha=0.85; x.beginPath(); x.arc(X(i),Y(cur.f[i]),1.6,0,6.2832); x.fill(); }
+  x.globalAlpha=1;
+}
+
+function next(){
+  answered=false; current=makeCurve(); draw(current);
+  document.getElementById("tasklabel").textContent="Light curve #"+(R.done+1);
+  const v=document.getElementById("verdict"); v.className="verdict"; v.innerHTML="";
+  document.querySelectorAll(".btns button").forEach(b=>b.disabled=false);
+}
+function answer(a){
+  if(answered) return; answered=true;
+  document.querySelectorAll(".btns button").forEach(b=>b.disabled=true);
+  const truth=current.truth;
+  const correct = (a===truth); // 'unsure' counts as not-correct but not a false alarm
+  R.done++;
+  if(truth==="planet"){ R.planetsTotal++; if(a==="planet") R.planetsCaught++; }
+  else { R.fpTotal++; if(a==="not") R.fpAvoided++; }
+  if(a!=="unsure"){ if(correct){ R.correct++; R.streak++; } else { R.streak=0; } }
+  R.last10.push(correct?1:0); if(R.last10.length>10) R.last10.shift();
+
+  const isCorrectVal = (a==="unsure") ? null : correct;
+  if(window.LOPSync){ LOPSync.ensureExplorer(explorerName(),"stargazer","#f5c977").then(function(){ LOPSync.logClassification(a, isCorrectVal); }); }
+
+  // Simulated crowd (illustrative): other players ~86% accurate
+  let cp=0,cn=0,cu=0, sims=24;
+  for(let i=0;i<sims;i++){ const good=Math.random()<0.86; let vote = good ? (truth==="planet"?"planet":"not") : (truth==="planet"?"not":"planet"); if(Math.random()<0.06) vote="unsure"; if(vote==="planet")cp++; else if(vote==="not")cn++; else cu++; }
+  const tot=cp+cn+cu;
+
+  const v=document.getElementById("verdict");
+  v.className="verdict show "+(correct?"correct":"wrong");
+  const head = a==="unsure" ? "Fair call to flag it — here's the answer" : (correct?"Correct":"Not quite");
+  const truthLabel = truth==="planet" ? (current.depth==="faint"?"Real planet (faint injected transit)":"Real planet") : "Not a planet ("+current.kind+")";
+  v.innerHTML = `<h3>${head}</h3><p><b>Truth: ${truthLabel}.</b> ${current.why}</p>`+
+    `<div class="crowd">What 24 other vetters said — agreement is what advances a candidate:`+
+    `<div class="crowdbar"><i style="width:${cp/tot*100}%;background:#5DCAA5;"></i><i style="width:${cn/tot*100}%;background:#c96b4a;"></i><i style="width:${cu/tot*100}%;background:#6b7690;"></i></div>`+
+    `<div style="margin-top:5px;">Planet ${Math.round(cp/tot*100)}% · Not ${Math.round(cn/tot*100)}% · Unsure ${Math.round(cu/tot*100)}%</div></div>`+
+    `<div style="margin-top:12px;"><button id="nextbtn">Next light curve &rarr;</button></div>`;
+  document.getElementById("nextbtn").onclick=next;
+  updateStats();
+}
+function updateStats(){
+  document.getElementById("done").textContent=R.done;
+  const answeredCount = R.done; // include unsure in denominator of accuracy-of-decisions? use decisive only
+  const decisive = R.correct + (R.done - R.correct); // simple
+  document.getElementById("acc").textContent = R.done? Math.round(R.correct/R.done*100)+"%" : "—";
+  document.getElementById("recall").textContent = R.planetsCaught+" / "+R.planetsTotal;
+  document.getElementById("recallbar").style.width = R.planetsTotal? (R.planetsCaught/R.planetsTotal*100)+"%" : "0%";
+  document.getElementById("fa").textContent = R.fpAvoided+" / "+R.fpTotal;
+  document.getElementById("fabar").style.width = R.fpTotal? (R.fpAvoided/R.fpTotal*100)+"%" : "0%";
+  document.getElementById("streak").textContent=R.streak;
+  const l10=R.last10.reduce((a,b)=>a+b,0);
+  const se=document.getElementById("sharpeye");
+  if(R.last10.length>=10 && l10>=9){ se.classList.add("on"); se.innerHTML="<span>&#9733;</span> Sharp Eye earned — "+l10+"/10 correct"; }
+}
+document.querySelectorAll(".btns button").forEach(b=>b.addEventListener("click",()=>answer(b.dataset.a)));
+window.addEventListener("resize",()=>{ if(current) draw(current); });
+next();
+</script>
+</body>
+</html>

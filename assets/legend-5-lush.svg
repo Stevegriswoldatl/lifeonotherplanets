@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="160" height="160">
+<defs><clipPath id="p5"><circle cx="40" cy="40" r="26"></circle></clipPath></defs>
+<circle cx="40" cy="40" r="30" fill="#5DCAA5" opacity="0.16"></circle><circle cx="40" cy="40" r="26" fill="#12586b"></circle>
+<g clip-path="url(#p5)">
+  <path d="M22 36 q12 -8 22 -2 q8 5 0 10 q-12 5 -22 -1 q-6 -4 0 -7Z" fill="#5DCAA5"></path>
+  <path d="M42 52 q11 -3 16 3 q3 6 -6 8 q-11 1 -14 -6Z" fill="#4bb892"></path>
+  <path d="M26 54 q7 -2 11 2 q2 4 -5 6 q-8 1 -9 -4Z" fill="#4bb892"></path>
+  <ellipse cx="54" cy="32" rx="9" ry="3.2" fill="#fff" opacity="0.7"></ellipse><ellipse cx="32" cy="30" rx="6" ry="2.2" fill="#fff" opacity="0.55"></ellipse>
+</g>
+<circle cx="40" cy="40" r="26" fill="none" stroke="#5DCAA5" stroke-width="2"></circle>
+</svg>
