@@ -14,7 +14,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Space+Grotesk:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Space+Grotesk:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
 <script src="lop-sync.js"></script>
@@ -214,6 +214,33 @@
   .gcell.active{ box-shadow:0 0 0 2px rgba(255,255,255,.55) inset; }
   .gcell .gbadge{ font-size:15px; } .gcell .gname{ font-size:10px; font-weight:700; margin-top:2px; line-height:1.05; } .gcell .gpct{ font-size:9.5px; color:#c7d2ea; margin-top:1px; }
   .gallegend{ font-size:12px; color:#9fb0d0; margin-top:16px; line-height:1.5; } .gallegend b{ color:#e8ecf6; }
+  /* NASA Mission Control loading screen */
+  .mc-load{ position:fixed; inset:0; z-index:100; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 50% 42%, #0a1e3a 0%, #050b1a 55%, #02040c 100%); overflow:hidden;
+    transition:opacity .7s ease, visibility .7s; }
+  .mc-load.done{ opacity:0; visibility:hidden; pointer-events:none; }
+  .mc-stars{ position:absolute; inset:0; pointer-events:none; }
+  .mc-stars i{ position:absolute; width:2px; height:2px; border-radius:50%; background:#cfe8ff; opacity:.5; animation:mcTw 3s infinite ease-in-out; }
+  @keyframes mcTw{ 0%,100%{opacity:.15} 50%{opacity:.9} }
+  .mc-orbit{ position:relative; width:176px; height:176px; margin-bottom:30px; }
+  .mc-ring{ position:absolute; inset:0; border-radius:50%; border:1px solid rgba(79,216,255,.28); }
+  .mc-ring.r2{ inset:-28px; border-color:rgba(79,216,255,.13); }
+  .mc-planet{ position:absolute; inset:40px; border-radius:50%; background:radial-gradient(circle at 34% 30%, #ffd9a8, #e08a3c 55%, #6b3510);
+    box-shadow:0 0 44px rgba(240,150,80,.4), inset -14px -10px 30px rgba(0,0,0,.5); animation:mcPulse 3.4s ease-in-out infinite; }
+  @keyframes mcPulse{ 0%,100%{box-shadow:0 0 40px rgba(240,150,80,.35), inset -14px -10px 30px rgba(0,0,0,.5)} 50%{box-shadow:0 0 60px rgba(240,150,80,.55), inset -14px -10px 30px rgba(0,0,0,.5)} }
+  .mc-sat{ position:absolute; top:50%; left:50%; width:0; height:0; animation:mcOrb 6s linear infinite; }
+  .mc-sat b{ position:absolute; width:8px; height:8px; border-radius:50%; background:#9be7ff; box-shadow:0 0 12px #4fd8ff; transform:translate(92px,-4px); }
+  @keyframes mcOrb{ from{transform:rotate(0)} to{transform:rotate(360deg)} }
+  .mc-sweep{ position:absolute; inset:-28px; border-radius:50%; background:conic-gradient(from 0deg, rgba(79,216,255,.22), transparent 28%); animation:mcSweep 3.6s linear infinite; }
+  @keyframes mcSweep{ from{transform:rotate(0)} to{transform:rotate(360deg)} }
+  .mc-title{ font-family:'Orbitron',sans-serif; font-weight:900; font-size:29px; letter-spacing:.16em; color:#eaf6ff; text-shadow:0 0 20px rgba(79,216,255,.6); }
+  .mc-sub{ font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:.24em; color:#6fb7d8; margin-top:10px; text-transform:uppercase; }
+  .mc-bar{ position:relative; width:min(320px,72vw); height:2px; background:rgba(79,216,255,.18); margin:30px 0 12px; border-radius:2px; }
+  .mc-bar .fill{ position:absolute; left:0; top:0; height:100%; width:0; background:linear-gradient(90deg,#1d6ea5,#4fd8ff); box-shadow:0 0 10px #4fd8ff; transition:width .45s ease; }
+  .mc-ship{ position:absolute; top:50%; left:0; transform:translate(-50%,-50%); font-size:15px; transition:left .45s ease; filter:drop-shadow(0 0 6px #4fd8ff); }
+  .mc-status{ font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:.14em; color:#8fd6f0; min-height:16px; text-transform:uppercase; }
+  .mc-skip{ position:absolute; bottom:calc(env(safe-area-inset-bottom) + 22px); font-family:'Orbitron',sans-serif; font-size:10px; letter-spacing:.16em; color:#456c88; }
+  @media (prefers-reduced-motion: reduce){ .mc-planet,.mc-sat,.mc-sweep,.mc-stars i{ animation:none !important; } }
   .cardmodal{ position:absolute; inset:0; z-index:15; display:flex; align-items:center; justify-content:center; flex-direction:column; background:rgba(3,4,12,.9); backdrop-filter:blur(8px); padding:20px; opacity:0; visibility:hidden; pointer-events:none; transition:opacity .28s ease, visibility .28s; }
   .cardmodal.show{ opacity:1; visibility:visible; pointer-events:auto; }
   .cardmodal img{ max-width:min(92vw,400px); max-height:68vh; border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,.6); transition:transform .42s cubic-bezier(.16,1,.3,1), opacity .3s ease; transform:scale(.9); opacity:0; }
@@ -227,6 +254,21 @@
 </style>
 </head>
 <body>
+<div class="mc-load" id="mcLoad">
+  <div class="mc-stars" id="mcStars"></div>
+  <div class="mc-orbit">
+    <div class="mc-sweep"></div>
+    <div class="mc-ring r2"></div>
+    <div class="mc-ring"></div>
+    <div class="mc-planet"></div>
+    <div class="mc-sat"><b></b></div>
+  </div>
+  <div class="mc-title">DISCOVER PLANETS</div>
+  <div class="mc-sub">Connecting to NASA Archives…</div>
+  <div class="mc-bar"><div class="fill"></div><div class="mc-ship">🛰️</div></div>
+  <div class="mc-status" id="mcStatus"></div>
+  <div class="mc-skip">Tap to skip</div>
+</div>
 <div id="app">
   <canvas id="sky"></canvas>
 
@@ -989,7 +1031,21 @@
   // grandfather existing explorers (played before territories existed) straight past training
   if(!state.graduated && (chartedCount()>=1 || (state.bestStreak||0)>=TRAIN_GOAL)){ state.graduated=true; state.playerColor=myColor(); state.homeSector=pickHome(); state.activeSector=state.homeSector; save(); }
   if(!state.graduated){ const h=document.getElementById('hint'); if(h)h.textContent='🎓 Training — tap a glowing star to scan real data'; }
-  updateHUD(); updateRank(); checkBadges(); renderAtlas(); updateSecChip(); loadDeck(); loadFrontier(); frame();
+  // ---- Mission Control loading sequence (fail-safe: always dismisses) ----
+  (function mcLoader(){ const el=document.getElementById('mcLoad'); if(!el)return;
+    const stars=document.getElementById('mcStars'); if(stars&&!stars.childElementCount){ let h=''; for(let k=0;k<48;k++){ h+='<i style="left:'+(Math.random()*100)+'%;top:'+(Math.random()*100)+'%;animation-delay:'+(Math.random()*3).toFixed(2)+'s"></i>'; } stars.innerHTML=h; }
+    const fill=el.querySelector('.fill'), ship=el.querySelector('.mc-ship'), stat=document.getElementById('mcStatus');
+    const steps=['Downloading Kepler Catalog…','Analyzing Light Curves…','Scanning Candidate Systems…','Preparing Mission…'];
+    let i=0; const t0=Date.now(); let booted=false, ended=false;
+    function setP(p){ p=Math.max(0,Math.min(1,p)); if(fill)fill.style.width=(p*100)+'%'; if(ship)ship.style.left=(p*100)+'%'; }
+    function tick(){ if(i<steps.length){ if(stat)stat.textContent=steps[i]; setP((i+1)/steps.length*0.82); try{tone(860+i*70,.1,'sine',.05);}catch(e){} i++; } }
+    tick(); const iv=setInterval(tick,650);
+    function finish(){ if(ended)return; ended=true; clearInterval(iv); setP(1); if(stat)stat.textContent='Mission ready ✦'; setTimeout(function(){ el.classList.add('done'); },450); }
+    window.__mcBoot=function(){ booted=true; };
+    (function wait(){ const e=Date.now()-t0; if(ended)return; if((booted && e>2400) || e>5000) finish(); else setTimeout(wait,200); })();
+    el.addEventListener('click',finish); })();
+  updateHUD(); updateRank(); checkBadges(); renderAtlas(); updateSecChip();
+  loadDeck().then(function(){ if(window.__mcBoot)window.__mcBoot(); }); loadFrontier(); frame();
 })();
 </script>
 </body>
