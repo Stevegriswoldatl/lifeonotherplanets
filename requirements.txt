@@ -1,0 +1,6 @@
+# Deps for the TESS data-refresh GitHub Action (scripts/fetch_frontier.py).
+# Pulls + folds real TESS light curves from NASA/MAST into compact JSON.
+lightkurve>=2.4,<3
+numpy>=1.24
+astropy>=5
+astroquery>=0.4.6

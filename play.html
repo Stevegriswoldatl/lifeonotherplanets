@@ -188,6 +188,7 @@
   /* sector showcase */
   .secchip{ position:absolute; left:50%; transform:translateX(-50%); top:calc(env(safe-area-inset-top) + 60px); z-index:4; padding:7px 13px; border-radius:999px; font-size:12px; font-weight:700; color:#9be7ff; cursor:pointer; border:1px solid rgba(120,190,246,.32) !important; display:none; align-items:center; gap:6px; }
   .secchip.show{ display:inline-flex; } .secchip b{ color:#fff; }
+  .secchip.soon{ color:#f5c977; border-color:rgba(245,201,119,.5) !important; box-shadow:0 0 16px rgba(245,201,119,.22); }
   .sector{ position:absolute; inset:0; z-index:12; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
     background:radial-gradient(circle at 50% 42%, rgba(20,40,70,.55), rgba(3,4,12,.93)); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
     opacity:0; visibility:hidden; pointer-events:none; transition:opacity .4s ease, visibility .4s; padding:26px; }
@@ -483,7 +484,7 @@
   }
 
   // ---------- real systems (curated) ----------
-  const SYSTEMS=[
+  const CURATED=[
     {h:"Proxima Centauri",d:4.2,seed:11,pl:[{n:"Proxima Cen b",p:"rocky",t:"the nearest exoplanet to Earth"},{n:"Proxima Cen d",p:"rocky",t:"a small, hot inner world"}]},
     {h:"Barnard's Star",d:6.0,seed:12,pl:[{n:"Barnard b",p:"rocky",t:"a sub-Earth on a 3-day orbit"}]},
     {h:"Ross 128",d:11.0,seed:13,pl:[{n:"Ross 128 b",p:"rocky",t:"a temperate world at a quiet star"}]},
@@ -500,14 +501,15 @@
     {h:"K2-18",d:124.0,seed:24,pl:[{n:"K2-18 b",p:"ocean",t:"a possible Hycean ocean world"}]},
     {h:"Kepler-442",d:1206.0,seed:25,pl:[{n:"Kepler-442 b",p:"ice",t:"one of the most promising super-Earths"}]}
   ];
+  let SYSTEMS = CURATED.slice();
+  let SYSBYH = {}; SYSTEMS.forEach(s=>SYSBYH[s.h]=s);
   document.getElementById('tot').textContent=SYSTEMS.length;
-  const SYSBYH={}; SYSTEMS.forEach(s=>SYSBYH[s.h]=s);
 
   // ---------- state (compatible with game.html / vet.html) ----------
   const KEY="loop_search_state_v2";
   function load(){ try{ return Object.assign({explorer:"",avatar:"astronaut",charted:{},claims:{},names:{}}, JSON.parse(localStorage.getItem(KEY))||{}); }catch(e){ return {explorer:"",avatar:"astronaut",charted:{},claims:{},names:{}}; } }
   function save(){ localStorage.setItem(KEY,JSON.stringify(state)); }
-  let state=load(); state.charted=state.charted||{}; state.names=state.names||{}; state.xp=state.xp||0; state.badges=state.badges||{}; state.bestStreak=state.bestStreak||0; state.constellations=state.constellations||[];
+  let state=load(); state.charted=state.charted||{}; state.names=state.names||{}; state.xp=state.xp||0; state.badges=state.badges||{}; state.bestStreak=state.bestStreak||0; state.constellations=state.constellations||[]; state.sector=state.sector||0;
   const R={done:0,correct:0}; // session accuracy
   let curStreak=0;
 
@@ -541,10 +543,43 @@
   // ---------- layout systems by distance ----------
   const rndPos=mulberry(4242);
   function layout(){ const cx=W/2, cy=H*0.5, rmin=Math.min(W,H); const lmin=Math.log(4), lmax=Math.log(1250);
-    SYSTEMS.forEach((s,i)=>{ const ang=(i/SYSTEMS.length)*6.283 + (s._a||(s._a=rndPos()*0.9)); const rn=0.12+0.34*((Math.log(s.d)-lmin)/(lmax-lmin));
-      s.x=cx+Math.cos(ang)*rn*rmin*0.92; s.y=cy+Math.sin(ang)*rn*rmin*0.86; });
+    const sec=state.sector||0;
+    if(sec===0){
+      // Section 1: real systems arranged by distance (stable spiral)
+      SYSTEMS.forEach((s,i)=>{ const ang=(i/SYSTEMS.length)*6.283 + (s._a||(s._a=rndPos()*0.9)); const rn=0.12+0.34*((Math.log(s.d)-lmin)/(lmax-lmin));
+        s.x=cx+Math.cos(ang)*rn*rmin*0.92; s.y=cy+Math.sin(ang)*rn*rmin*0.86; });
+    } else {
+      // later sectors: a fresh golden-angle starfield, rotated per sector so every sector looks different
+      SYSTEMS.forEach((s,i)=>{ const ga=i*2.399963+sec*0.9, t=(i+0.6)/SYSTEMS.length, rn=0.15+0.30*Math.sqrt(t);
+        const jr=(mulberry(sec*997+i*37)()-0.5)*0.05, ja=(mulberry(sec*131+i*53)()-0.5)*0.55;
+        s.x=cx+Math.cos(ga+ja)*(rn+jr)*rmin*0.92; s.y=cy+Math.sin(ga+ja)*(rn+jr)*rmin*0.86; });
+    }
     SYSTEMS.forEach((s,i)=>{ if(s._lk)return; s._lk=SYSTEMS.map((o,j)=>({j,dd:(o.x-s.x)**2+(o.y-s.y)**2})).filter(o=>o.j!==i).sort((a,b)=>a.dd-b.dd).slice(0,2).map(o=>o.j); });
   }
+
+  // ---------- generative sectors: after Section 1 (Training), each new sector is a fresh
+  //            starfield of REAL open TESS candidates the player hasn't charted yet ----------
+  const PTYPES=['rocky','ocean','ice','verdant','gas','violet'];
+  function candidateToSystem(c,idx,i){ const nm=c.name||('Candidate '+(idx+1)+'-'+(i+1)); const seed=hashStr(nm)%100000;
+    return { h:nm, d:(c.distance_ly!=null?c.distance_ly:120), seed, pl:[{ n:nm, p:PTYPES[seed%PTYPES.length], t:'an open TESS planet candidate' }], card:c, sector:idx }; }
+  // REAL TESS DATA ONLY: real open candidates the player hasn't reviewed yet. No synthetic fill.
+  function freshCandidates(){ return FRONTIER.filter(c=>c && Array.isArray(c.f) && c.f.length && !state.charted[c.name]); }
+  function buildSector(idx){
+    if(idx<=0){ SYSTEMS = CURATED.slice(); }
+    else {
+      const fresh = freshCandidates();
+      const rr2=mulberry(idx*997+13); for(let k=fresh.length-1;k>0;k--){ const j=Math.floor(rr2()*(k+1)); const tmp=fresh[k]; fresh[k]=fresh[j]; fresh[j]=tmp; }
+      const size=Math.min(6, fresh.length); const arr=[];
+      for(let i=0;i<size;i++){ arr.push(candidateToSystem(fresh[i],idx,i)); }
+      SYSTEMS = arr;
+    }
+    SYSBYH={}; SYSTEMS.forEach(s=>{ SYSBYH[s.h]=s; });
+    const totEl=document.getElementById('tot'); if(totEl) totEl.textContent=SYSTEMS.length;
+  }
+  function nextSector(){ if(!freshCandidates().length) return;   // guarded — prepWin shows the "caught up" state instead
+    state.sector=(state.sector||0)+1; save(); buildSector(state.sector); layout(); updateHUD();
+    const h=document.getElementById('hint'); if(h){ h.style.opacity=1; h.textContent='New sector — tap a candidate star to review it'; setTimeout(()=>{ if(h)h.style.opacity=0; },4200); }
+    celebrate('🛰️ Sector '+(state.sector+1)+' — fresh real candidates await','#5DCAA5'); if(W&&H) burst(W/2,H/2,'#5DCAA5',44,true); }
 
   // ---------- nebula ----------
   let neb=document.createElement('canvas'); const bgStars=[];
@@ -590,7 +625,7 @@
   function showTip(s){ const tip=document.getElementById('seltip'); tip.innerHTML=s.h+' <span class="d">· '+Math.round(s.d)+' ly</span>'; tip.style.left=s.x+'px'; tip.style.top=s.y+'px'; tip.classList.add('show'); setTimeout(()=>tip.classList.remove('show'),1600); }
 
   // ---------- scan / vet flow ----------
-  let DECK=[], usingFallback=false, curSys=null, curCard=null, scanN=0, answered=false;
+  let DECK=[], usingFallback=false, curSys=null, curCard=null, scanN=0, answered=false, candidateMode=false;
   // frontier deck = REAL open TESS candidates (no answer key); reviewing them feeds the community consensus
   let FRONTIER=[], frontierMode=false, fQueue=[], fIdx=0;
   function loadFrontier(){ return fetch('frontier_curves.json',{cache:'no-store'}).then(r=>r.ok?r.json():[]).catch(()=>[])
@@ -632,7 +667,8 @@
   function sectorNow(){ return SEC_BASE + Math.floor((Date.now()-SEC_ANCHOR)/SEC_MS); }
   function sectorOpensInDays(){ const nextAt=SEC_ANCHOR+(sectorNow()-SEC_BASE+1)*SEC_MS; return Math.max(0,Math.ceil((nextAt-Date.now())/86400000)); }
   let secRAF=0;
-  function updateSecChip(){ const el=document.getElementById('secChip'); if(!el||constMode)return; el.classList.add('show'); el.innerHTML='🛰️ <b>TESS Sector '+sectorNow()+'</b> · next data in '+sectorOpensInDays()+'d'; }
+  function updateSecChip(){ const el=document.getElementById('secChip'); if(!el||constMode)return; const d=sectorOpensInDays(); el.classList.add('show'); el.classList.toggle('soon', d<=3);
+    el.innerHTML = d<=0 ? '🛰️ <b>New TESS data just dropped!</b> · fresh stars to explore' : '🛰️ <b>New TESS data in '+d+'d</b> · stars no one has explored'; }
   function openSector(cur){ cur=cur||sectorNow(); state.lastSeenSector=cur; save();
     const n=FRONTIER.length;
     document.getElementById('secBig').textContent='Sector '+cur;
@@ -734,12 +770,46 @@
       .then(d=>{ DECK=Array.isArray(d)&&d.length?d.slice():null; if(!DECK)throw 0; }).catch(()=>{ usingFallback=true; DECK=Array.from({length:12},synthCard); }); }
   function pickCard(){ if(!DECK||!DECK.length){ return usingFallback?synthCard():synthCard(); } return DECK[Math.floor(Math.random()*DECK.length)]; }
 
-  function openScan(sys){ curSys=sys; scanN=0; over=true;
+  function openScan(sys){ if(sys.card) return openCandidateScan(sys);
+    curSys=sys; scanN=0; over=true;
     document.getElementById('scanTitle').firstChild.textContent="Scanning "+sys.h;
     document.getElementById('scanSub').textContent=Math.round(sys.d)+" light-years away · real telescope data";
     const p=(DECK.length?Promise.resolve():loadDeck()); p.then(()=>{ document.getElementById('scan').classList.add('show'); nextCard(); });
   }
-  function closeScan(){ document.getElementById('scan').classList.remove('show'); over=false; curSys=null; frontierMode=false;
+  // real open-candidate star (generative sectors): a single first-look review that charts the star
+  function openCandidateScan(sys){ curSys=sys; candidateMode=true; over=true; answered=false; curCard=sys.card;
+    document.getElementById('scanTitle').firstChild.textContent='Reviewing '+sys.h;
+    document.getElementById('scanSub').textContent='real open TESS candidate · your first look';
+    document.getElementById('scanDots').style.display='none';
+    document.getElementById('scanProg').textContent='Open candidate';
+    const t=document.getElementById('lcTag'); t.className='tag front'; t.innerHTML='● New — open candidate';
+    const qz=document.querySelector('.qz'); if(qz)qz.textContent='Your first look — planet, or a false alarm?';
+    const vf=document.getElementById('vfeed'); vf.className='vfeed'; vf.innerHTML='';
+    document.querySelectorAll('.vbtns button').forEach(b=>b.disabled=false);
+    document.getElementById('scan').classList.add('show'); drawLC(curCard.f);
+  }
+  function answerCandidate(a){ if(answered||!curCard)return; answered=true; audio();
+    document.querySelectorAll('.vbtns button').forEach(b=>b.disabled=true);
+    addXP(12); creditSectorWork(); logImpact(true); tone(560,.18,'sine',.11,840);
+    const c=curCard, vf=document.getElementById('vfeed'); vf.className='vfeed show front';
+    const kv=[ fkv('Candidate',c.name||curSys.h), fkv('Status','Planet candidate (open)') ];
+    if(c.constellation) kv.push(fkv('Constellation',c.constellation));
+    if(c.distance_ly!=null) kv.push(fkv('Distance',c.distance_ly+' ly'));
+    if(c.period_days) kv.push(fkv('Period',c.period_days+' d'));
+    if(c.depth_ppm) kv.push(fkv('Dip depth',Number(c.depth_ppm).toLocaleString()+' ppm'));
+    let checks='';
+    if(Array.isArray(c.checks)&&c.checks.length){ const nf=c.checks.filter(k=>k.flag).length;
+      checks='<div class="fchecks"><div class="fh">🔬 Automated checks — run on the data'+(nf?' · '+nf+' red flag'+(nf>1?'s':''):' · all clear')+'</div>'+
+        c.checks.map(k=>'<div class="fchk'+(k.flag?' flag':'')+'">'+(k.flag?'⚠ ':'✓ ')+'<b>'+esc(k.test)+'</b> — '+esc(k.note)+'</div>').join('')+'</div>'; }
+    vf.innerHTML='<div class="h">🛰️ First look recorded — thank you!</div>'+
+      '<div class="p"><b>A real, still-open TESS candidate.</b> No answer key — your read joins the community’s consensus, and this star is now charted on your map.</div>'+
+      '<div style="margin-top:9px;">'+kv.join('')+'</div>'+checks+
+      '<div class="cons" id="cons"></div>'+
+      '<button class="nextb" id="nb">Chart '+esc(curSys.h)+' →</button>';
+    document.getElementById('nb').onclick=()=>{ const sysDone=curSys; candidateMode=false; closeScan(); chartSystem(sysDone); };
+    if(window.LOPSync && LOPSync.enabled && c.id){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5').then(()=>LOPSync.logVote(c.id,a)).then(()=>LOPSync.getConsensus(c.id)).then(cc=>renderConsensus(cc,a,null)); }
+  }
+  function closeScan(){ document.getElementById('scan').classList.remove('show'); over=false; curSys=null; frontierMode=false; candidateMode=false;
     const qz=document.querySelector('.qz'); if(qz)qz.textContent='Real planet, or a false alarm?';
     const dd=document.getElementById('scanDots'); if(dd)dd.style.display=''; }
   document.getElementById('scanClose').onclick=closeScan;
@@ -802,7 +872,7 @@
     lctx.strokeStyle='rgba(127,178,255,.08)'; lctx.lineWidth=1; for(let g=0;g<=4;g++){ const y=pad+g/4*(Hc-2*pad); lctx.beginPath(); lctx.moveTo(pad,y); lctx.lineTo(Wc-pad,y); lctx.stroke(); }
     lctx.fillStyle='#8fd0ff'; lctx.shadowBlur=6; lctx.shadowColor='#5fd0ff';
     for(let i=0;i<f.length;i++){ const x=pad+i/(f.length-1)*(Wc-2*pad), y=pad+(1-(f[i]-mn)/sp)*(Hc-2*pad); lctx.beginPath(); lctx.arc(x,y,1.5,0,6.28); lctx.fill(); } lctx.shadowBlur=0; }
-  function answer(a){ if(frontierMode)return answerFrontier(a); if(answered||!curCard)return; answered=true; audio(); document.querySelectorAll('.vbtns button').forEach(b=>b.disabled=true);
+  function answer(a){ if(candidateMode)return answerCandidate(a); if(frontierMode)return answerFrontier(a); if(answered||!curCard)return; answered=true; audio(); document.querySelectorAll('.vbtns button').forEach(b=>b.disabled=true);
     const truth=curCard.truth, correct=(a===truth); R.done++; if(a!=='unsure'&&correct)R.correct++;
     addXP(10+(correct?5:0));
     creditSectorWork(); if(!state.graduated) trainCredit(a!=='unsure' && correct);
@@ -855,20 +925,38 @@
   }
   // Section 1 (Training) complete → congratulate → hand off to Section 2 (real data)
   function prepWin(){
-    const lic=!!state.observerLicense, w=document.getElementById('win');
+    const lic=!!state.observerLicense, sec=state.sector||0, w=document.getElementById('win');
     const h1=w.querySelector('h1'), p=w.querySelector('p'), btn=document.getElementById('again');
-    h1.textContent='🎉 Section 1 complete — Training charted!';
-    if(lic){
-      p.innerHTML='You charted every star in the Training neighborhood <b>and</b> earned your observer’s license. Section 2 is <b>real, unverified TESS data</b> — candidates NASA hasn’t classified yet, where your reads are genuine science.';
-      btn.textContent='Begin Section 2 — Real data →';
-      btn.onclick=function(){ w.classList.remove('show'); openFrontier(); };
-    } else {
-      p.innerHTML='You charted every star in the Training neighborhood! One step left before real science: earn your <b>observer’s license</b> by getting 8 of your last 10 right in the Data Lab. Then Section 2 — real unverified TESS data — unlocks.';
+    // gate: real sectors require the observer's license (earned in the Data Lab)
+    if(sec===0 && !lic){
+      h1.textContent='🎉 Section 1 complete — Training charted!';
+      p.innerHTML='You charted every star in the Training neighborhood! One step left before real science: earn your <b>observer’s license</b> by getting 8 of your last 10 right in the Data Lab. Then real sectors unlock.';
       btn.textContent='Earn my license →';
       btn.onclick=function(){ w.classList.remove('show'); location.href='vet.html'; };
+      return;
     }
+    // caught up on REAL data — no fresh open candidates right now (honest, no fake stars)
+    if(!freshCandidates().length){
+      h1.textContent = sec===0 ? '🎉 Training charted — real data pending' : '🎉 Sector '+(sec+1)+' charted!';
+      p.innerHTML='You’ve given a first look to every open TESS candidate we have right now. NASA’s next batch of real data arrives in about <b>'+sectorOpensInDays()+' days</b> — fresh sectors open then. Meanwhile, keep your eye sharp in the Data Lab.';
+      btn.textContent='Open the Data Lab →';
+      btn.onclick=function(){ w.classList.remove('show'); location.href='vet.html'; };
+      return;
+    }
+    if(sec===0){
+      h1.textContent='🎉 Section 1 complete — Training charted!';
+      p.innerHTML='You charted every training star <b>and</b> earned your observer’s license. Section 2 is a fresh sector of <b>real, unverified TESS candidates</b> — a brand-new starfield, where every read is genuine science.';
+      btn.textContent='Explore Section 2 →';
+    } else {
+      h1.textContent='🎉 Section '+(sec+1)+' charted!';
+      p.innerHTML='You gave a first look to every open candidate in this sector — real reads that feed the community’s consensus. A fresh sector of real TESS candidates is ready, laid out in a whole new pattern.';
+      btn.textContent='Explore next sector →';
+    }
+    btn.onclick=function(){ w.classList.remove('show'); nextSector(); };
   }
   function closeReward(){ document.getElementById('sheet').classList.remove('show'); over=false; renderAtlas(); if(chartedCount()>=SYSTEMS.length) setTimeout(()=>{ prepWin(); document.getElementById('win').classList.add('show'); playSfx('win'); },450); }
+  // on load, if the current sector is already fully charted, show its "next section" prompt so there's always a way forward
+  function maybeSectorComplete(){ if(SYSTEMS.length && chartedCount()>=SYSTEMS.length){ prepWin(); document.getElementById('win').classList.add('show'); } }
   document.getElementById('shGo').onclick=closeReward; document.getElementById('sheetClose').onclick=closeReward;
   document.getElementById('shName2').onclick=()=>{ if(!curSys)return; const which=curSys.pl[0].n; const nn=prompt('Give '+which+' an honorary nickname:',state.names[which]||''); if(nn){ const c=cleanName(nn.trim()); if(!c.ok){ alert(c.reason); return; } state.names[which]=nn.trim(); save(); addXP(15); checkBadges(); if(window.LOPSync){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5').then(()=>LOPSync.logDiscovery(nn.trim(),which)); } openReward(curSys,true); } };
   function cleanName(s){ if(!s||s.length<2)return{ok:false,reason:'Name is too short.'}; if(s.length>28)return{ok:false,reason:'Name is too long.'}; if(/(fuck|shit|bitch|cunt|nazi|damn|ass\b|sex)/i.test(s))return{ok:false,reason:'Please choose a friendly name.'}; return{ok:true}; }
@@ -1086,7 +1174,9 @@
     el.addEventListener('click',finish); })();
   updateHUD(); updateRank(); checkBadges(); renderAtlas(); updateSecChip(); updateMuteBtn();
   (function(){ function fg(){ startAmbient(); document.removeEventListener('pointerdown',fg,true); } document.addEventListener('pointerdown',fg,true); })();
-  loadDeck().then(function(){ if(window.__mcBoot)window.__mcBoot(); }); loadFrontier(); frame();
+  loadDeck().then(function(){ if(window.__mcBoot)window.__mcBoot(); });
+  loadFrontier().then(function(){ if((state.sector||0)>0){ buildSector(state.sector); layout(); updateHUD(); } maybeSectorComplete(); });
+  frame();
 })();
 </script>
 </body>

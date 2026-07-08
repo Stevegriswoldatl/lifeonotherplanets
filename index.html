@@ -23,8 +23,8 @@
   nav a.brand { color:#e8ecf6; font-weight:600; margin-right:auto; }
   .wrap { max-width:760px; margin:0 auto; padding:0 20px 80px; }
   .wrap.top { padding-bottom:8px; }
-  header.hero { margin:0; padding:26px 20px 26px; background:#05070f url("assets/background-starfield.svg") center/cover no-repeat; border-bottom:1px solid #131c33; }
-  header.hero img { max-width:460px; width:100%; height:auto; display:block; margin:0 auto; }
+  header.hero { margin:0; padding:22px 20px 22px; background:#000; border-bottom:1px solid #131c33; }
+  header.hero img { max-width:600px; width:100%; height:auto; display:block; margin:0 auto; }
   h2 { font-family:"Space Grotesk",sans-serif; font-weight:700; font-size:20px; margin:34px 0 8px; }
   h3 { font-family:"Space Grotesk",sans-serif; font-weight:600; font-size:16px; margin:22px 0 4px; color:#cfe0ff; }
   p { color:#c9d3ea; }
@@ -34,6 +34,14 @@
   .cta a { font-family:"Space Grotesk",sans-serif; font-weight:600; font-size:15px; text-decoration:none; padding:12px 20px; border-radius:12px; }
   .cta .play { background:#4fd8ff; color:#05231b; }
   .cta .index { background:#16203a; color:#dbe4fb; border:1px solid #29365a; }
+  .tess-countdown { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:20px; padding:13px 18px; border-radius:14px; background:linear-gradient(180deg,rgba(13,26,46,.92),rgba(8,14,26,.92)); border:1px solid rgba(79,216,255,.32); box-shadow:0 0 26px rgba(79,216,255,.12); font-family:"Space Grotesk",sans-serif; }
+  .tess-countdown .tc-dot { width:9px; height:9px; border-radius:50%; background:#4fd8ff; box-shadow:0 0 10px #4fd8ff; animation:tcpulse 1.8s ease-in-out infinite; flex:0 0 auto; }
+  .tess-countdown .tc-lab { font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:#9be7ff; font-weight:600; }
+  .tess-countdown .tc-num { font-size:26px; font-weight:700; color:#fff; font-variant-numeric:tabular-nums; margin-left:2px; }
+  .tess-countdown .tc-unit { font-size:14px; color:#cdd7ee; font-weight:600; margin-right:6px; }
+  .tess-countdown .tc-sub { flex:1 1 240px; font-size:12.5px; color:#8fa0c4; line-height:1.45; }
+  @keyframes tcpulse { 0%,100%{ opacity:1; transform:scale(1);} 50%{ opacity:.4; transform:scale(.72);} }
+  @media (prefers-reduced-motion:reduce){ .tess-countdown .tc-dot{ animation:none; } }
   .foot { color:#5f6e92; font-size:13px; margin-top:40px; border-top:1px solid #131c33; padding-top:16px; }
 
   /* ===== How It Works (design handoff — 4-step flow) ===== */
@@ -72,7 +80,7 @@
   <a href="scoreboard.html">Scoreboard</a>
 </nav>
 <header class="hero">
-  <img src="assets/wordmark-horizontal.svg" alt="Life On Other Planets? — The Search">
+  <img src="assets/logo-lop.png" alt="Life On Other Planets?" width="600" height="337">
 </header>
 <div class="wrap top">
   <p class="lede">A free online project where anyone can explore a map of the real stars near us, study real data from NASA's planet-hunting telescopes, and help decide which distant worlds are the best places to look for life. Built by the Griswold family as a for-fun, for-real science project.</p>
@@ -81,7 +89,7 @@
     <a class="play" href="play.html">Start exploring →</a>
     <a class="index" href="rankings.html">See the habitability rankings</a>
   </div>
-  <div id="tessCountdown" style="margin-top:16px;font-family:'Space Grotesk',sans-serif;font-size:13px;color:#7fb2ff;"></div>
+  <div id="tessCountdown" class="tess-countdown"></div>
 </div>
 
 <!-- ===== How It Works: 4-step visual flow (design handoff) ===== -->
@@ -276,7 +284,10 @@
 <script>
   // Per-step accordion toggle (independent open/close)
   function nextTessDays(){ var anchor=Date.UTC(2026,5,13), period=27.4*86400000, now=Date.now(); var nb=anchor+Math.ceil((now-anchor)/period)*period; return Math.max(1,Math.ceil((nb-now)/86400000)); }
-  (function(){ var el=document.getElementById('tessCountdown'); if(el) el.innerHTML='🛰️ NASA’s next TESS sky window in ~'+nextTessDays()+' days — new data to search arrives about every 27 days.'; })();
+  (function(){ var el=document.getElementById('tessCountdown'); if(!el)return; var d=nextTessDays();
+    el.innerHTML='<span class="tc-dot"></span><span class="tc-lab">Next NASA data drop</span>'+
+      '<b class="tc-num">'+d+'</b><span class="tc-unit">day'+(d===1?'':'s')+'</span>'+
+      '<span class="tc-sub">Brand-new TESS stars <b>no one has ever reviewed</b> — NASA opens a fresh patch of sky about every 27 days, and you can be among the first to check them.</span>'; })();
   function hiwToggle(btn){
     var card = btn.closest('.hiw-card');
     var detail = card.querySelector('.hiw-detail');
@@ -299,5 +310,6 @@
     svg.innerHTML = out;
   })();
 </script>
+<script src="nav-menu.js" defer></script>
 </body>
 </html>
