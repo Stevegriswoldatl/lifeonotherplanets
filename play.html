@@ -184,6 +184,25 @@
   .ctools button:disabled{ opacity:.4; }
   .skybtn{ width:100%; margin-bottom:14px; padding:15px; border:none; border-radius:16px; font:800 15px "Space Grotesk"; color:#1a0f2e; cursor:pointer; background:linear-gradient(180deg,#c7aef8,#9a6ad0); box-shadow:0 8px 24px rgba(150,120,246,.32); }
   .skybtn:active{ transform:scale(.98); }
+  /* sector showcase */
+  .secchip{ position:absolute; left:50%; transform:translateX(-50%); top:calc(env(safe-area-inset-top) + 60px); z-index:4; padding:7px 13px; border-radius:999px; font-size:12px; font-weight:700; color:#9be7ff; cursor:pointer; border:1px solid rgba(120,190,246,.32) !important; display:none; align-items:center; gap:6px; }
+  .secchip.show{ display:inline-flex; } .secchip b{ color:#fff; }
+  .sector{ position:absolute; inset:0; z-index:12; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+    background:radial-gradient(circle at 50% 42%, rgba(20,40,70,.55), rgba(3,4,12,.93)); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    opacity:0; visibility:hidden; pointer-events:none; transition:opacity .4s ease, visibility .4s; padding:26px; }
+  .sector.show{ opacity:1; visibility:visible; pointer-events:auto; }
+  .sector canvas#seccv{ position:absolute; inset:0; width:100%; height:100%; }
+  .sector .secinner{ position:relative; z-index:2; max-width:400px; transform:translateY(16px); opacity:0; transition:transform .5s cubic-bezier(.16,1,.3,1), opacity .4s; }
+  .sector.show .secinner{ transform:none; opacity:1; }
+  .sector .seceb{ font-size:12px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; color:#78beF6; }
+  .sector h1{ font-family:"Fredoka"; font-size:30px; font-weight:600; margin-top:6px; } .sector h1 span{ color:#9be7ff; }
+  .sector .secbig{ font:800 44px "Space Grotesk"; color:#fff; margin:12px 0 2px; }
+  .sector .secp{ color:#c7d2ea; margin-top:10px; line-height:1.55; font-size:15px; }
+  .sector .secrow{ display:flex; gap:10px; margin-top:22px; justify-content:center; flex-wrap:wrap; }
+  .sector .secgo{ padding:15px 24px; border:none; border-radius:16px; font:800 15px "Space Grotesk"; color:#05231b; cursor:pointer; background:linear-gradient(180deg,#7fe6bd,#5DCAA5); box-shadow:0 8px 24px rgba(93,202,165,.4); }
+  .sector .seclater{ padding:15px 22px; border-radius:16px; font:800 15px "Space Grotesk"; color:#fff; cursor:pointer; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); }
+  .sector .secgo:active,.sector .seclater:active{ transform:scale(.97); }
+  @media (prefers-reduced-motion: reduce){ .sector{ transition-duration:.01ms !important; } }
   .cardmodal{ position:absolute; inset:0; z-index:15; display:flex; align-items:center; justify-content:center; flex-direction:column; background:rgba(3,4,12,.9); backdrop-filter:blur(8px); padding:20px; opacity:0; visibility:hidden; pointer-events:none; transition:opacity .28s ease, visibility .28s; }
   .cardmodal.show{ opacity:1; visibility:visible; pointer-events:auto; }
   .cardmodal img{ max-width:min(92vw,400px); max-height:68vh; border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,.6); transition:transform .42s cubic-bezier(.16,1,.3,1), opacity .3s ease; transform:scale(.9); opacity:0; }
@@ -277,6 +296,19 @@
   </div>
 
   <div class="win" id="win"><h1>🌌 The Neighborhood is charted</h1><p>You explored every nearby system and lit up your whole constellation — by doing real science on real NASA data. This is Season 1 complete.</p><button id="winShare" style="margin-top:12px;background:#141c2e;color:#fff;border:1px solid rgba(255,255,255,.16);padding:14px 26px;border-radius:14px;font:800 15px 'Space Grotesk';cursor:pointer;">📤 Share your card</button><button id="again">Keep exploring</button></div>
+
+  <!-- sector showcase -->
+  <div class="glass secchip" id="secChip"></div>
+  <div class="sector" id="sector">
+    <canvas id="seccv"></canvas>
+    <div class="secinner">
+      <div class="seceb">🛰️ Fresh from TESS</div>
+      <h1 id="secTitle">New sector <span>open</span></h1>
+      <div class="secbig" id="secBig">Sector —</div>
+      <div class="secp" id="secP">A new slice of the sky just arrived from NASA’s telescope.</div>
+      <div class="secrow"><button class="secgo" id="secGo">Review new candidates →</button><button class="seclater" id="secLater">Maybe later</button></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -490,7 +522,7 @@
   // frontier deck = REAL open TESS candidates (no answer key); reviewing them feeds the community consensus
   let FRONTIER=[], frontierMode=false, fQueue=[], fIdx=0;
   function loadFrontier(){ return fetch('frontier_curves.json',{cache:'no-store'}).then(r=>r.ok?r.json():[]).catch(()=>[])
-    .then(fd=>{ FRONTIER=Array.isArray(fd)?fd.filter(c=>c&&Array.isArray(c.f)&&c.f.length):[]; updateFrontPill(); }); }
+    .then(fd=>{ FRONTIER=Array.isArray(fd)?fd.filter(c=>c&&Array.isArray(c.f)&&c.f.length):[]; updateFrontPill(); updateSecChip(); maybeSectorShowcase(); }); }
   function updateFrontPill(){ const el=document.getElementById('frontPill'); if(!el)return;
     if(FRONTIER.length){ el.style.display='inline-flex'; el.innerHTML='🔭 <b>Review new candidates</b> · '+FRONTIER.length+' open'; } else el.style.display='none'; }
 
@@ -499,11 +531,11 @@
   function enterConst(){ constMode=true; cDraft=[]; cLastNode=null;
     document.getElementById('cmode').classList.add('show'); document.getElementById('ctools').classList.add('show');
     document.getElementById('hint').style.opacity=0;
-    document.getElementById('todPill').style.display='none'; document.getElementById('frontPill').style.display='none';
+    document.getElementById('todPill').style.display='none'; document.getElementById('frontPill').style.display='none'; document.getElementById('secChip').classList.remove('show');
     updateCTools(); }
   function exitConst(){ constMode=false; cDraft=[]; cLastNode=null;
     document.getElementById('cmode').classList.remove('show'); document.getElementById('ctools').classList.remove('show');
-    updateTod(); updateFrontPill(); }
+    updateTod(); updateFrontPill(); updateSecChip(); }
   function updateCTools(){ const u=document.getElementById('cUndo'),s=document.getElementById('cSave'); if(u)u.disabled=!cDraft.length; if(s)s.disabled=!cDraft.length; }
   function handleConstTap(mx,my){ let best=null,bd=1e9; SYSTEMS.forEach(s=>{ if(!state.charted[s.h])return; const dx=s.x-mx,dy=s.y-my,d=dx*dx+dy*dy; if(d<bd){bd=d;best=s;} });
     if(!best||bd>44*44){ cLastNode=null; return; }              // tapped empty space → deselect
@@ -518,6 +550,38 @@
     state.constellations.push({name:nm.trim(),edges:cDraft.slice()}); save(); addXP(30); checkBadges();
     celebrate('✷ '+nm.trim()+' — added to your sky!','#c7aef8'); burst(W/2,H/2,'#c7aef8',46,true);
     exitConst(); }
+
+  // ---------- sector showcase (NASA TESS data cadence) ----------
+  const SEC_ANCHOR=Date.UTC(2026,5,13), SEC_BASE=105, SEC_DAYS=27.4, SEC_MS=SEC_DAYS*86400000;
+  function sectorNow(){ return SEC_BASE + Math.floor((Date.now()-SEC_ANCHOR)/SEC_MS); }
+  function sectorOpensInDays(){ const nextAt=SEC_ANCHOR+(sectorNow()-SEC_BASE+1)*SEC_MS; return Math.max(0,Math.ceil((nextAt-Date.now())/86400000)); }
+  let secRAF=0;
+  function updateSecChip(){ const el=document.getElementById('secChip'); if(!el||constMode)return; el.classList.add('show'); el.innerHTML='🛰️ <b>TESS Sector '+sectorNow()+'</b> · next data in '+sectorOpensInDays()+'d'; }
+  function openSector(cur){ cur=cur||sectorNow(); state.lastSeenSector=cur; save();
+    const n=FRONTIER.length;
+    document.getElementById('secBig').textContent='Sector '+cur;
+    document.getElementById('secP').innerHTML = n ? ('<b>'+n+' real open candidate'+(n>1?'s':'')+'</b> from NASA’s TESS telescope need a first look — be among the first to vet them.') : 'A fresh slice of the sky just arrived from NASA’s TESS telescope.';
+    document.getElementById('secGo').style.display = n?'':'none';
+    document.getElementById('sector').classList.add('show'); over=true; tone(300,.5,'triangle',.1,600); chord(330);
+    startSecAnim(); }
+  function closeSector(){ document.getElementById('sector').classList.remove('show'); over=false; if(secRAF){ cancelAnimationFrame(secRAF); secRAF=0; } }
+  function startSecAnim(){ const c=document.getElementById('seccv'), x=c.getContext('2d'); const dpr=Math.min(window.devicePixelRatio||1,2);
+    let w=c.clientWidth||W, h=c.clientHeight||H; c.width=w*dpr; c.height=h*dpr; x.setTransform(dpr,0,0,dpr,0,0);
+    const rnd=mulberry(sectorNow()*7+3), N=Math.max(12,Math.min(26,(FRONTIER.length||6)*3));
+    const cxp=w/2, cyp=h*0.42, a0=-Math.PI*0.9, a1=-Math.PI*0.1, rad=Math.min(w,h)*0.5;
+    const dots=[]; for(let i=0;i<N;i++){ const a=a0+(a1-a0)*rnd(), r=Math.min(w,h)*(0.2+rnd()*0.22); dots.push({x:cxp+Math.cos(a)*r,y:cyp+Math.sin(a)*r,delay:rnd()*1.2,tw:rnd()*6.28,s:.5+rnd()}); }
+    let t0=null;
+    function step(ts){ if(t0==null)t0=ts; const tt=(ts-t0)/1000; x.clearRect(0,0,w,h);
+      const sweep=a0+(a1-a0)*((tt*0.55)%1), bx=cxp+Math.cos(sweep)*rad, by=cyp+Math.sin(sweep)*rad;
+      const g=x.createLinearGradient(cxp,cyp,bx,by); g.addColorStop(0,'rgba(123,230,189,.32)'); g.addColorStop(1,'rgba(123,230,189,0)');
+      x.strokeStyle=g; x.lineWidth=3; x.beginPath(); x.moveTo(cxp,cyp); x.lineTo(bx,by); x.stroke();
+      dots.forEach(d=>{ const p=Math.max(0,Math.min(1,(tt-d.delay)/0.6)); if(p<=0)return; const tw=.6+.4*Math.sin(tt*3*d.s+d.tw);
+        x.globalAlpha=p*tw; x.fillStyle='#9be7ff'; x.shadowBlur=10; x.shadowColor='#7fd6ff'; x.beginPath(); x.arc(d.x,d.y,2.4*p+1,0,6.28); x.fill(); x.shadowBlur=0; x.globalAlpha=1; });
+      secRAF=requestAnimationFrame(step); }
+    secRAF=requestAnimationFrame(step); }
+  function maybeSectorShowcase(){ const cur=sectorNow();
+    if(state.lastSeenSector==null){ state.lastSeenSector=cur; save(); return; }   // first-ever visit: prime it, no popup
+    if(cur>state.lastSeenSector && FRONTIER.length){ setTimeout(()=>openSector(cur),700); } }
   function gauss(s){ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random(); return s*Math.sqrt(-2*Math.log(u))*Math.cos(6.2831853*v); }
   function synthCard(){ const roll=Math.random(),N=200,f=[]; for(let i=0;i<N;i++)f.push(1+gauss(.006)); let truth,kind,why;
     if(roll<.45){truth='planet';kind='transit';why='Evenly-spaced, flat-bottomed dips — the signature of a transiting planet.'; const P=40+Math.random()*20,t0=Math.random()*P,d=.012+Math.random()*.01; for(let i=0;i<N;i++){const ph=((i-t0)%P+P)%P; if(ph<4||ph>P-4)f[i]-=d;}}
@@ -758,6 +822,9 @@
     document.getElementById('cSave').onclick=saveConst;
     document.getElementById('cDone').onclick=exitConst;
     const _sm=document.getElementById('skyMapBtn'); if(_sm)_sm.onclick=openSky;
+    document.getElementById('secGo').onclick=function(){ closeSector(); openFrontier(); };
+    document.getElementById('secLater').onclick=closeSector;
+    const _scp=document.getElementById('secChip'); if(_scp)_scp.onclick=function(){ openSector(sectorNow()); };
     document.getElementById('cardSave').onclick=saveCard; document.getElementById('cardShareBtn').onclick=shareCardImg; document.getElementById('cardClose').onclick=function(){document.getElementById('cardModal').classList.remove('show');}; }
   function renderAtlas(){
     // progression header: rank + XP + streak, regions, achievements
@@ -809,7 +876,7 @@
   const syncEl=document.getElementById('synced');
   if(window.LOPSync&&LOPSync.enabled){ syncEl.textContent='Cloud sync on · your discoveries are saved'; LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5'); }
   else { syncEl.textContent='Saving to this device'; }
-  updateHUD(); updateRank(); checkBadges(); renderAtlas(); loadDeck(); loadFrontier(); frame();
+  updateHUD(); updateRank(); checkBadges(); renderAtlas(); updateSecChip(); loadDeck(); loadFrontier(); frame();
 })();
 </script>
 </body>
