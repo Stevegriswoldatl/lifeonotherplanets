@@ -614,9 +614,24 @@
   function sectorFill(id){ return Math.min(1, sectorWork(id)/SECTOR_GOAL); }
   function isMine(id){ return state.graduated && (id===state.homeSector || sectorWork(id)>0); }
   function currentSector(){ if(!state.graduated)return TRAIN_ID; return state.activeSector!=null?state.activeSector:state.homeSector; }
-  function creditSectorWork(){ const id=currentSector(); if(id==null)return; state.sectorWork=state.sectorWork||{}; state.sectorWork[id]=(state.sectorWork[id]||0)+1; save(); }
-  function graduate(){ if(state.graduated)return; state.graduated=true; state.playerColor=myColor(); state.homeSector=pickHome(); state.activeSector=state.homeSector; save();
-    celebrate('🎓 Graduated — '+secName(state.homeSector)+' is yours!', state.playerColor); burst(W/2,H/2,state.playerColor,50,true); checkBadges(); }
+  function creditSectorWork(){ const id=currentSector(); if(id==null)return; state.sectorWork=state.sectorWork||{}; state.sectorWork[id]=(state.sectorWork[id]||0)+1; save();
+    if(state.graduated && window.LOPSync && LOPSync.enabled){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer',myColor()).then(function(){ LOPSync.logSectorWork(id, myColor()); }); } }
+  function pickUnclaimedHome(taken){ const t=new Set(taken||[]), start=hashStr((state.explorer||'Explorer')+'home')%GAL_N;
+    for(let i=0;i<GAL_N;i++){ const id=(start+i)%GAL_N; if(id!==TRAIN_ID && !t.has(id)) return id; } return pickHome(); }
+  function finishGraduation(homeId){ state.graduated=true; state.playerColor=myColor(); state.homeSector=homeId; state.activeSector=homeId; state.homeSynced=true; save();
+    if(window.LOPSync && LOPSync.enabled){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer',state.playerColor).then(function(){ LOPSync.claimHome(homeId,state.playerColor); }); }
+    celebrate('🎓 Graduated — '+secName(homeId)+' is yours!', state.playerColor); burst(W/2,H/2,state.playerColor,50,true); checkBadges(); }
+  let gradInFlight=false;
+  function graduate(){ if(state.graduated || gradInFlight)return; gradInFlight=true; const done=function(id){ gradInFlight=false; finishGraduation(id); };
+    if(window.LOPSync && LOPSync.enabled){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer',myColor())
+        .then(function(){ return LOPSync.getClaimedHomes(); }).then(function(taken){ done(pickUnclaimedHome(taken)); }).catch(function(){ done(pickHome()); }); }
+    else { done(pickHome()); } }
+  function mergeClaims(rows){ if(!rows||!rows.length)return; let home=null, changed=false; const work={};
+    rows.forEach(function(r){ if(r.kind==='home'){ if(home==null)home=r.sector_id; } else { work[r.sector_id]=(work[r.sector_id]||0)+1; } });
+    state.sectorWork=state.sectorWork||{};
+    Object.keys(work).forEach(function(id){ if((state.sectorWork[id]||0) < work[id]){ state.sectorWork[id]=work[id]; changed=true; } });
+    if(home!=null && !state.graduated){ state.graduated=true; state.playerColor=state.playerColor||myColor(); state.homeSector=home; if(state.activeSector==null)state.activeSector=home; state.homeSynced=true; changed=true; }
+    if(changed){ save(); const g=document.getElementById('galaxy'); if(g&&g.classList.contains('show')) renderGalaxy(); } }
   function trainCredit(correct){ if(state.graduated)return; state.trainDone=(state.trainDone||0)+1; if(correct)state.trainCorrect=(state.trainCorrect||0)+1; save();
     if((state.trainCorrect||0)>=TRAIN_GOAL) graduate(); }
   function openGalaxy(){ renderGalaxy(); document.getElementById('galaxy').classList.add('show'); }
@@ -932,7 +947,11 @@
 
   // ---------- boot ----------
   const syncEl=document.getElementById('synced');
-  if(window.LOPSync&&LOPSync.enabled){ syncEl.textContent='Cloud sync on · your discoveries are saved'; LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5'); }
+  if(window.LOPSync&&LOPSync.enabled){ syncEl.textContent='Cloud sync on · your discoveries are saved';
+    LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer',myColor())
+      .then(function(){ return LOPSync.getMyClaims(); })
+      .then(function(rows){ mergeClaims(rows);
+        if(state.graduated && !state.homeSynced && state.homeSector!=null){ LOPSync.claimHome(state.homeSector, myColor()); state.homeSynced=true; save(); } }); }
   else { syncEl.textContent='Saving to this device'; }
   // grandfather existing explorers (played before territories existed) straight past training
   if(!state.graduated && (chartedCount()>=1 || (state.bestStreak||0)>=TRAIN_GOAL)){ state.graduated=true; state.playerColor=myColor(); state.homeSector=pickHome(); state.activeSector=state.homeSector; save(); }

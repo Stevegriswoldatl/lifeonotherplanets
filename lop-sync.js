@@ -26,7 +26,8 @@
     discoveries:     { last: 0, count: 0, minGap: 1500, cap: 400  },
     votes:           { last: 0, count: 0, minGap: 500,  cap: 4000 },
     dossiers:        { last: 0, count: 0, minGap: 1500, cap: 300  },
-    dvotes:          { last: 0, count: 0, minGap: 500,  cap: 2000 }
+    dvotes:          { last: 0, count: 0, minGap: 500,  cap: 2000 },
+    sectors:         { last: 0, count: 0, minGap: 1200, cap: 1500 }
   };
   function allow(kind) {
     const t = _thr[kind], now = Date.now();
@@ -143,6 +144,33 @@
           .order("created_at", { ascending: false }).limit(200);
         return r.data || [];
       } catch (e) { return []; }
+    },
+    // ---- territory: sector claims + shared galaxy map ----
+    async logSectorWork(sectorId, color) {
+      if (!client || sectorId == null) return;
+      if (!allow("sectors")) return;
+      try { await client.from("sector_claims").insert({ explorer_id: explorerId, sector_id: sectorId, kind: "work", color: color }); }
+      catch (e) { console.warn("LOP sync: logSectorWork", e); }
+    },
+    async claimHome(sectorId, color) {
+      if (!client || sectorId == null) return;
+      try { await client.from("sector_claims").insert({ explorer_id: explorerId, sector_id: sectorId, kind: "home", color: color }); }
+      catch (e) { console.warn("LOP sync: claimHome", e); }
+    },
+    async getClaimedHomes() {
+      if (!client) return [];
+      try { const r = await client.from("sector_claims").select("sector_id").eq("kind", "home"); return (r.data || []).map(x => x.sector_id); }
+      catch (e) { return []; }
+    },
+    async getMyClaims() {
+      if (!client || !explorerId) return [];
+      try { const r = await client.from("sector_claims").select("sector_id,kind").eq("explorer_id", explorerId).limit(500); return r.data || []; }
+      catch (e) { return []; }
+    },
+    async getSectorMap() {
+      if (!client) return [];
+      try { const r = await client.from("sector_map").select("*"); return r.data || []; }
+      catch (e) { return []; }
     }
   };
 
