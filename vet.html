@@ -33,6 +33,7 @@
   .cardtag { display:inline-flex; align-items:center; gap:6px; font-family:"Space Grotesk",sans-serif; font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; padding:4px 10px; border-radius:999px; }
   .cardtag.real { color:#5DCAA5; background:rgba(93,202,165,.12); border:1px solid rgba(93,202,165,.3); }
   .cardtag.practice { color:#f5c977; background:rgba(245,201,119,.12); border:1px solid rgba(245,201,119,.32); }
+  .cardtag.frontier { color:#b79cf6; background:rgba(150,120,246,.14); border:1px solid rgba(150,120,246,.36); }
   canvas { width:100%; height:300px; display:block; background:#0a0f1c; border-radius:12px; margin:10px 0 4px; touch-action:pan-y; }
   .axhint { display:flex; justify-content:space-between; font-size:11px; color:#6f7ea3; font-family:"Space Grotesk",sans-serif; }
   .q { font-size:16px; margin:14px 0 4px; font-weight:600; }
@@ -182,6 +183,7 @@
 <script>
 /* ---- real TESS deck is fetched; synthetic generator powers practice + graceful fallback ---- */
 let REAL = [];
+let FRONTIER = [];   // real OPEN candidates (truth=null) — first-look review, fed to the consensus
 const MISSION = (function(){ const p=new URLSearchParams(location.search); return { system:p.get('system'), ret:p.get('return'), target:3, count:0, done:false }; })();
 const R = { done:0, correct:0, planetsTotal:0, planetsCaught:0, fpTotal:0, fpAvoided:0, streak:0, last10Real:[] };
 let current = null, answered = false, phase = "practice", practiceIx = 0, realQueue = [], usingFallback = false;
@@ -287,7 +289,15 @@ function nextTessDays(){ const anchor=Date.UTC(2026,5,13), period=27.4*86400000,
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 function buildRealQueue(){
   const easy=REAL.filter(c=>c.difficulty==="easy"), rest=shuffle(REAL.filter(c=>c.difficulty!=="easy"));
-  realQueue = shuffle(easy).concat(rest);   // confidence-building easy card first-ish, then mixed
+  const controls = shuffle(easy).concat(rest);   // confidence-building easy card first-ish, then mixed
+  // MIXED DECK: sprinkle real OPEN candidates in among the known-answer controls
+  // (~1 frontier card after every 3 controls). Scoring stays on controls only.
+  const front = shuffle(FRONTIER.slice());
+  if(!front.length){ realQueue = controls; return; }
+  const q=[];
+  controls.forEach((c,i)=>{ q.push(c); if((i+1)%3===0 && front.length) q.push(front.shift()); });
+  while(front.length) q.push(front.shift());   // any leftover frontier cards at the end
+  realQueue = q;
 }
 
 function setTag(isPractice){
@@ -325,10 +335,17 @@ function next(){
     phase="real";
     if(!realQueue.length) buildRealQueue();
     current=realQueue.shift();
-    current.isReal = !usingFallback;
-    document.getElementById("tasklabel").textContent = (usingFallback?"Training curve #":"Light curve #")+(R.done+1);
-    setTag(false);
-    if(usingFallback){ const t=document.getElementById("cardtag"); t.className="cardtag practice"; t.textContent="Training (offline)"; }
+    if(current.frontier){
+      current.isReal = true;
+      document.getElementById("tasklabel").textContent = "Open candidate · first look";
+      const t=document.getElementById("cardtag"); t.className="cardtag frontier"; t.textContent="New — open candidate";
+      document.getElementById("practicetrack").style.display="none";
+    } else {
+      current.isReal = !usingFallback;
+      document.getElementById("tasklabel").textContent = (usingFallback?"Training curve #":"Light curve #")+(R.done+1);
+      setTag(false);
+      if(usingFallback){ const t=document.getElementById("cardtag"); t.className="cardtag practice"; t.textContent="Training (offline)"; }
+    }
   }
   document.getElementById("question").textContent="Is there a real planet transiting this star?";
   draw(current.f);
@@ -342,10 +359,37 @@ function synthFallbackCard(){
   return { f:synthNoise(), truth:"not", kind:"noise", why:"Just noise — no repeating dip.", difficulty:"easy" };
 }
 
+/* frontier = a REAL open candidate with no answer key: no correct/wrong, just a
+   genuine first look whose vote joins the community consensus (card_votes). */
+function answerFrontier(a){
+  R.frontierDone=(R.frontierDone||0)+1;
+  const v=document.getElementById("verdict");
+  v.className="verdict show correct";
+  let html="<h3>🛰️ First look recorded — thank you!</h3>";
+  html+="<p><b>A real, still-open TESS candidate.</b> No one has confirmed or ruled this one out yet — there's no answer key, so your read is a genuine first look. It joins the community's consensus below.</p>";
+  const kv=[];
+  kv.push('<div class="kv"><span>Candidate</span> <b>'+esc(current.name)+'</b></div>');
+  kv.push('<div class="kv"><span>Status</span> <b>Planet candidate (open)</b></div>');
+  if(current.constellation) kv.push('<div class="kv"><span>Constellation</span> <b>'+esc(current.constellation)+'</b></div>');
+  if(current.distance_ly!=null) kv.push('<div class="kv"><span>Distance</span> <b>'+current.distance_ly+' ly</b></div>');
+  if(current.tic) kv.push('<div class="kv"><span>Catalog</span> <b>'+esc(String(current.tic))+'</b></div>');
+  if(current.period_days) kv.push('<div class="kv"><span>Period</span> <b>'+current.period_days+' d</b></div>');
+  if(current.depth_ppm) kv.push('<div class="kv"><span>Dip depth</span> <b>'+Number(current.depth_ppm).toLocaleString()+' ppm</b></div>');
+  html+='<div class="starcard">'+kv.join("")+'</div>';
+  html+='<div class="src">📡 '+esc(current.source||"Real TESS data · open candidate")+'</div>';
+  if(window.LOPSync && LOPSync.enabled && current.id){ html+='<div class="crowd" id="crowd">Checking the crowd…</div>'; }
+  else { html+='<div class="crowd"><span class="demoflag">Saved locally</span> — turn on cloud sync to join the live community consensus on this candidate.</div>'; }
+  html+='<div style="margin-top:12px;"><button id="nextbtn" style="flex:0 0 auto;">Next light curve &rarr;</button></div>';
+  v.innerHTML=html;
+  document.getElementById("nextbtn").onclick=advance;
+  if(window.LOPSync && LOPSync.enabled && current.id){ const key=current.id, mv=a; LOPSync.ensureExplorer(explorerName(),"stargazer","#f5c977").then(function(){ return LOPSync.logVote(key,mv); }).then(function(){ return LOPSync.getConsensus(key); }).then(function(c){ renderCrowd(c,mv,"unknown"); }); }
+}
+
 function answer(a){
   if(answered||!current) return; answered=true;
   document.querySelectorAll(".btns button").forEach(b=>b.disabled=true);
   document.getElementById("hint").className="hint";
+  if(current.frontier){ return answerFrontier(a); }
   const truth=current.truth, correct=(a===truth), scored = (phase==="real");
 
   if(scored){
@@ -487,9 +531,16 @@ function boot(){
   if(window.LOPSync && LOPSync.enabled){ if(el) el.textContent=' · Cloud sync on'; LOPSync.ensureExplorer(explorerName(),'stargazer','#f5c977'); }
   else if(el){ el.textContent=' · saving locally'; }
 
-  fetch('real_curves.json',{cache:"no-store"}).then(r=>{ if(!r.ok) throw 0; return r.json(); })
-    .then(data=>{ REAL = Array.isArray(data)&&data.length ? data : null; if(!REAL) throw 0; buildRealQueue(); startFlow(); })
-    .catch(()=>{ usingFallback=true; REAL = Array.from({length:12}, synthFallbackCard); buildRealQueue(); startFlow(); });
+  // load the OPEN-candidate deck first (optional — empty if the file isn't there yet),
+  // then the known-answer deck; buildRealQueue mixes them.
+  fetch('frontier_curves.json',{cache:"no-store"}).then(r=>r.ok?r.json():[]).catch(()=>[])
+    .then(fd=>{ FRONTIER = Array.isArray(fd) ? fd.filter(c=>c&&Array.isArray(c.f)&&c.f.length).map(c=>Object.assign({frontier:true},c)) : []; })
+    .catch(()=>{ FRONTIER=[]; })
+    .finally(()=>{
+      fetch('real_curves.json',{cache:"no-store"}).then(r=>{ if(!r.ok) throw 0; return r.json(); })
+        .then(data=>{ REAL = Array.isArray(data)&&data.length ? data : null; if(!REAL) throw 0; buildRealQueue(); startFlow(); })
+        .catch(()=>{ usingFallback=true; REAL = Array.from({length:12}, synthFallbackCard); buildRealQueue(); startFlow(); });
+    });
 }
 function startFlow(){
   const intro=document.getElementById("intro");
