@@ -24,14 +24,14 @@
   #app{ position:fixed; inset:0; }
   canvas#sky{ position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; }
   .sg{ font-family:"Space Grotesk",sans-serif; }
-  .glass{ background:rgba(20,28,46,.55); backdrop-filter:blur(18px) saturate(1.4); -webkit-backdrop-filter:blur(18px) saturate(1.4);
-          border:1px solid rgba(255,255,255,.12); box-shadow:0 8px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.14); }
+  .glass{ background:rgba(9,22,42,.6); backdrop-filter:blur(18px) saturate(1.3); -webkit-backdrop-filter:blur(18px) saturate(1.3);
+          border:1px solid rgba(79,216,255,.26); box-shadow:0 8px 30px rgba(0,0,0,.42), inset 0 1px 0 rgba(79,216,255,.14), 0 0 20px rgba(31,110,165,.1); }
 
   /* HUD */
   .hud{ position:absolute; top:0; left:0; right:0; z-index:3; display:flex; align-items:center; gap:10px;
         padding:calc(env(safe-area-inset-top) + 12px) 14px 0; }
   .brand{ border-radius:16px; padding:9px 13px; font-weight:800; font-size:14.5px; letter-spacing:-.01em; display:flex; align-items:center; gap:8px; text-decoration:none; color:#fff; }
-  .brand .lg{ width:15px; height:15px; border-radius:50%; background:radial-gradient(circle at 32% 30%,#bff0d8,#5DCAA5 55%,#12604a); box-shadow:0 0 12px #5DCAA5; }
+  .brand .lg{ width:15px; height:15px; border-radius:50%; background:radial-gradient(circle at 32% 30%,#bfefff,#4fd8ff 55%,#125a7a); box-shadow:0 0 12px #4fd8ff; }
   .brand .q{ color:#f5c977; }
   .spacer{ margin-left:auto; }
   .counter{ border-radius:16px; padding:8px 13px; display:flex; align-items:center; gap:9px; }
@@ -77,8 +77,8 @@
   .vfeed.show{ padding:11px 13px; } .vfeed.ok{ background:rgba(93,202,165,.12); border:1px solid rgba(93,202,165,.32); } .vfeed.no{ background:rgba(201,107,74,.12); border:1px solid rgba(201,107,74,.3); }
   .vfeed .h{ font-weight:800; font-size:14px; } .vfeed .p{ font-size:12.5px; color:#c7d2ea; margin-top:3px; line-height:1.5; }
   .vfeed .src{ font-size:10.5px; color:#5DCAA5; margin-top:6px; font-weight:700; }
-  .nextb{ margin-top:11px; width:100%; padding:14px; border:none; border-radius:15px; font:800 15px "Space Grotesk"; color:#05231b; cursor:pointer; background:linear-gradient(180deg,#7fe6bd,#5DCAA5); box-shadow:0 8px 24px rgba(93,202,165,.34); }
-  .nextb:active{ transform:scale(.98); }
+  .nextb{ margin-top:11px; width:100%; padding:14px; border:1px solid rgba(79,216,255,.5); border-radius:15px; font:800 15px "Space Grotesk"; color:#bff0ff; cursor:pointer; background:linear-gradient(180deg,rgba(18,42,72,.95),rgba(9,24,44,.95)); box-shadow:0 0 20px rgba(79,216,255,.25), inset 0 1px 0 rgba(79,216,255,.18); }
+  .nextb:active{ transform:scale(.98); box-shadow:0 0 30px rgba(79,216,255,.4), inset 0 1px 0 rgba(79,216,255,.18); }
 
   /* reward sheet */
   .sheet{ position:absolute; left:12px; right:12px; bottom:0; z-index:7; transform:translateY(135%); transition:transform .55s cubic-bezier(.16,1,.3,1);
@@ -99,7 +99,7 @@
   .sheet .stat .k{ font-size:9px; letter-spacing:.05em; text-transform:uppercase; color:#8fa0c4; font-weight:800; }
   .sheet .stat .v{ font-size:14px; font-weight:800; margin-top:2px; }
   .sheet .row{ display:flex; gap:9px; margin-top:16px; }
-  .sheet .go{ flex:1; padding:15px; border:none; border-radius:16px; font:800 15px "Space Grotesk"; color:#05231b; cursor:pointer; background:linear-gradient(180deg,#7fe6bd,#5DCAA5); box-shadow:0 8px 24px rgba(93,202,165,.4), inset 0 1px 0 rgba(255,255,255,.5); }
+  .sheet .go{ flex:1; padding:15px; border:1px solid rgba(79,216,255,.5); border-radius:16px; font:800 15px "Space Grotesk"; color:#bff0ff; cursor:pointer; background:linear-gradient(180deg,rgba(18,42,72,.95),rgba(9,24,44,.95)); box-shadow:0 0 22px rgba(79,216,255,.28), inset 0 1px 0 rgba(79,216,255,.2); }
   .sheet .name2{ flex:none; padding:15px 16px; border:none; border-radius:16px; font:800 15px "Space Grotesk"; color:#fff; cursor:pointer; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); }
   .sheet .go:active,.sheet .name2:active{ transform:scale(.97); }
 
@@ -127,9 +127,9 @@
   /* progression: rank chip, celebration toast, atlas sections */
   .hud{ flex-wrap:wrap; }
   .rankchip{ padding:8px 12px; display:flex; align-items:center; gap:8px; border-radius:16px; }
-  .rankchip .rlab{ font-size:12px; font-weight:800; color:#f5c977; }
+  .rankchip .rlab{ font-family:'Orbitron',sans-serif; font-size:11px; font-weight:700; letter-spacing:.06em; color:#9be7ff; }
   .rbar{ width:44px; height:5px; border-radius:3px; background:rgba(255,255,255,.16); overflow:hidden; }
-  .rbar i{ display:block; height:100%; width:0; background:linear-gradient(90deg,#5DCAA5,#f5c977); transition:width .5s ease; }
+  .rbar i{ display:block; height:100%; width:0; background:linear-gradient(90deg,#1d6ea5,#4fd8ff); transition:width .5s ease; }
   .rbar.big{ width:100%; height:9px; margin-top:8px; }
   .funtoast{ position:absolute; left:50%; top:34%; transform:translate(-50%,-50%) scale(.7); z-index:20; pointer-events:none; opacity:0;
     font:800 21px "Space Grotesk"; text-align:center; text-shadow:0 3px 16px rgba(0,0,0,.75); padding:0 24px; }
@@ -276,7 +276,7 @@
     <a class="glass brand" href="index.html"><span class="lg"></span>The Search<span class="q">?</span></a>
     <div class="glass rankchip"><span class="rlab sg" id="rankName">Cadet</span><span class="rbar"><i id="rankBar"></i></span></div>
     <div class="spacer"></div>
-    <div class="glass counter"><div class="ring"><svg width="26" height="26"><circle cx="13" cy="13" r="10" stroke="rgba(255,255,255,.14)" stroke-width="3" fill="none"/><circle id="ringp" cx="13" cy="13" r="10" stroke="#5DCAA5" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="62.8" stroke-dashoffset="62.8"/></svg><b id="rn">0</b></div><div class="lab">charted<br><b><span id="n">0</span>/<span id="tot">0</span></b></div></div>
+    <div class="glass counter"><div class="ring"><svg width="26" height="26"><circle cx="13" cy="13" r="10" stroke="rgba(255,255,255,.14)" stroke-width="3" fill="none"/><circle id="ringp" cx="13" cy="13" r="10" stroke="#4fd8ff" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="62.8" stroke-dashoffset="62.8"/></svg><b id="rn">0</b></div><div class="lab">charted<br><b><span id="n">0</span>/<span id="tot">0</span></b></div></div>
     <div class="glass iconbtn" id="galaxyBtn" title="Your Galaxy">🌌</div>
     <div class="glass iconbtn" id="constBtn" title="Constellations">✷</div>
     <div class="glass iconbtn" id="atlasBtn" title="My Atlas">✦</div>
@@ -996,6 +996,11 @@
   function frame(){ t+=1/60; ctx.setTransform(DPR,0,0,DPR,0,0); let sxx=0,syy=0; if(shake>0){ sxx=(Math.random()-.5)*shake; syy=(Math.random()-.5)*shake; shake*=.85; if(shake<.4)shake=0; }
     ctx.clearRect(0,0,W,H); ctx.drawImage(neb,0,0,W,H); ctx.save(); ctx.translate(sxx,syy);
     bgStars.forEach(b=>{ const a=.4+.6*Math.sin(t*b.s+b.t); ctx.globalAlpha=a; ctx.fillStyle='#fff'; ctx.shadowBlur=6; ctx.shadowColor='#cfe0ff'; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,6.28); ctx.fill(); }); ctx.shadowBlur=0; ctx.globalAlpha=1;
+    // mission-control radar backdrop
+    (function(){ const cxr=W/2, cyr=H*0.5, Rr=Math.max(W,H)*0.62, ang=(t*0.32)%6.28318;
+      ctx.strokeStyle='rgba(79,216,255,.06)'; ctx.lineWidth=1; for(let k=1;k<=3;k++){ ctx.beginPath(); ctx.arc(cxr,cyr,Rr*k/3.1,0,6.283); ctx.stroke(); }
+      if(ctx.createConicGradient){ const g=ctx.createConicGradient(ang,cxr,cyr); g.addColorStop(0,'rgba(79,216,255,.12)'); g.addColorStop(.05,'rgba(79,216,255,0)'); g.addColorStop(1,'rgba(79,216,255,0)'); ctx.save(); ctx.globalAlpha=.7; ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cxr,cyr,Rr,0,6.283); ctx.fill(); ctx.restore(); }
+      ctx.save(); ctx.globalAlpha=.16; ctx.strokeStyle='#4fd8ff'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(cxr,cyr); ctx.lineTo(cxr+Math.cos(ang)*Rr,cyr+Math.sin(ang)*Rr); ctx.stroke(); ctx.restore(); })();
     // links between charted
     ctx.lineWidth=1.6; SYSTEMS.forEach(s=>{ if(!state.charted[s.h])return; s._lk.forEach(j=>{ const o=SYSTEMS[j]; if(!state.charted[o.h])return; const g=ctx.createLinearGradient(s.x,s.y,o.x,o.y); g.addColorStop(0,'#5DCAA5'); g.addColorStop(1,'#7fb2ff'); ctx.strokeStyle=g; ctx.globalAlpha=.32; ctx.beginPath(); ctx.moveTo(s.x,s.y); ctx.lineTo(o.x,o.y); ctx.stroke(); }); }); ctx.globalAlpha=1;
     // saved user constellations (your personal sky) — always visible
@@ -1010,6 +1015,8 @@
       cDraft.forEach(e=>{ const a=SYSBYH[e[0]],b=SYSBYH[e[1]]; if(a&&b){ ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); } }); ctx.stroke(); ctx.shadowBlur=0; }
     SYSTEMS.forEach(s=>{ const charted=state.charted[s.h];
       if(charted){ let scv=1; if(s._grow>0){ s._grow=Math.min(1,s._grow+.05); scv=1-Math.pow(1-s._grow,3); } const sz=54*scv, bob=Math.sin(t*1.1+s.seed)*2.2; drawSpin(s.x, s.y+bob, sz*0.32, s.pl[0].p, s.seed, t+s.seed);
+        const oa=t*0.9+s.seed*1.7, orx=sz*0.42, stx=s.x+Math.cos(oa)*orx, sty=(s.y+bob)+Math.sin(oa)*orx*0.42;
+        ctx.globalAlpha=.9; ctx.fillStyle='#9be7ff'; ctx.shadowBlur=6; ctx.shadowColor='#4fd8ff'; ctx.beginPath(); ctx.arc(stx,sty,1.5,0,6.283); ctx.fill(); ctx.shadowBlur=0; ctx.globalAlpha=1;
         if(s.pl.length>1){ ctx.fillStyle='rgba(255,255,255,.85)'; ctx.font='700 9px "Space Grotesk"'; }
       } else { const pp=.5+.5*Math.sin(t*1.6+s.seed); ctx.fillStyle='#eaf2ff'; ctx.shadowBlur=10+pp*10; ctx.shadowColor='#9fc0ff'; ctx.beginPath(); ctx.arc(s.x,s.y,2.4+pp*1,0,6.28); ctx.fill(); ctx.shadowBlur=0;
         ctx.globalAlpha=.3+pp*.3; ctx.strokeStyle='#cfe0ff'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(s.x-7-pp*4,s.y); ctx.lineTo(s.x+7+pp*4,s.y); ctx.moveTo(s.x,s.y-7-pp*4); ctx.lineTo(s.x,s.y+7+pp*4); ctx.stroke(); ctx.globalAlpha=1; }
