@@ -18,6 +18,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
 <script src="lop-sync.js"></script>
+<script src="icons.js"></script>
 <style>
   * { box-sizing:border-box; }
   body { margin:0; background:#05070f; color:#e8ecf6; font-family:"Hanken Grotesk",-apple-system,sans-serif; }
@@ -144,7 +145,7 @@
   <div class="modebar" id="modebar" style="display:none;"></div>
 
   <div style="display:flex;justify-content:center;margin:0 0 12px;">
-    <button id="huntBtn" style="font-family:'Space Grotesk';font-weight:700;font-size:13px;border:1px solid #6b511f;background:#1c1608;color:#f5c977;border-radius:999px;padding:8px 16px;cursor:pointer;">🎯 Try the Mono-Transit Hunt</button>
+    <button id="huntBtn" style="font-family:'Space Grotesk';font-weight:700;font-size:13px;border:1px solid #6b511f;background:#1c1608;color:#f5c977;border-radius:999px;padding:8px 16px;cursor:pointer;"><i class="ico" data-i="target"></i> Try the Mono-Transit Hunt</button>
   </div>
   <div class="mission" id="huntBanner" style="display:none;background:linear-gradient(180deg,#1c1608,#120f08);border-color:#6b511f;color:#f0d9a4;">🎯 <b>Mono-Transit Hunt</b> — hunt the planets that cross their star just <b>once</b>. Automated pipelines search for <i>repeating</i> dips, so they throw single transits away — but human eyes catch them, and they're the #1 thing citizen scientists find. Spot the lone dip, or call it noise. <span style="color:#9fb0d0;">(Training signals — practicing the catch that matters most.)</span> <a href="#" id="huntExit" style="color:#7fb2ff;">exit hunt</a></div>
 
@@ -160,9 +161,9 @@
       <div class="q" id="question">Is there a real planet transiting this star?</div>
       <div class="swipehint" id="swipehint">Tap a button — or on a phone, swipe → for planet, ← for not, ↑ for unsure.</div>
       <div class="btns">
-        <button class="yes" data-a="planet">🪐 Real planet</button>
-        <button class="no" data-a="not">🚫 Not a planet</button>
-        <button class="maybe" data-a="unsure">🤔 Unsure</button>
+        <button class="yes" data-a="planet"><i class="ico" data-i="planet"></i> Real planet</button>
+        <button class="no" data-a="not"><i class="ico" data-i="notplanet"></i> Not a planet</button>
+        <button class="maybe" data-a="unsure"><i class="ico" data-i="unsure"></i> Unsure</button>
       </div>
       <div class="hint" id="hint"></div>
       <div class="verdict" id="verdict"></div>
@@ -341,16 +342,16 @@ function setTag(isPractice){
 /* persistent banner: always says exactly what kind of data you're on right now */
 function updateModeBar(){
   const el=document.getElementById('modebar'); if(!el) return; el.style.display='flex';
-  if(huntMode){ el.className='modebar training'; el.innerHTML='<span class="dot">🎯</span><div><b>Mono-transit hunt</b> — training signals, not scored. Practicing the catch automated pipelines miss.</div>'; return; }
-  if(phase==="practice" && !onboarded()){ el.className='modebar practice'; el.innerHTML='<span class="dot">🟢</span><div><b>Practice</b> — learning the shapes. Not scored yet.</div>'; return; }
+  if(huntMode){ el.className='modebar training'; el.innerHTML='<span class="dot">'+(window.LOPIcon?LOPIcon('target'):'')+'</span><div><b>Mono-transit hunt</b> — training signals, not scored. Practicing the catch automated pipelines miss.</div>'; return; }
+  if(phase==="practice" && !onboarded()){ el.className='modebar practice'; el.innerHTML='<span class="sdot green"></span><div><b>Practice</b> — learning the shapes. Not scored yet.</div>'; return; }
   if(!LICENSED){
     const t=trainHits();
     el.className='modebar training';
-    el.innerHTML='<span class="dot">🟡</span><div><b>Training · real NASA data, known answers.</b> These stars are already confirmed — you\'re building accuracy, not doing new science yet. Get <b>'+LIC_NEED+' of your last '+LIC_WINDOW+'</b> right to earn your observer\'s license and unlock the real unverified data. &nbsp;<span class="prog">'+Math.min(t.hits,LIC_WINDOW)+'/'+LIC_NEED+' · last '+Math.min(t.n,LIC_WINDOW)+'</span></div>';
+    el.innerHTML='<span class="sdot amber"></span><div><b>Training · real NASA data, known answers.</b> These stars are already confirmed — you\'re building accuracy, not doing new science yet. Get <b>'+LIC_NEED+' of your last '+LIC_WINDOW+'</b> right to earn your observer\'s license and unlock the real unverified data. &nbsp;<span class="prog">'+Math.min(t.hits,LIC_WINDOW)+'/'+LIC_NEED+' · last '+Math.min(t.n,LIC_WINDOW)+'</span></div>';
     return;
   }
-  if(current && current.frontier){ el.className='modebar real'; el.innerHTML='<span class="dot">🟣</span><div><b>REAL DATA · NASA needs this.</b> An unverified TESS candidate — no one has confirmed or ruled it out yet. Your read is genuine, first-look science.</div>'; return; }
-  el.className='modebar training'; el.innerHTML='<span class="dot">🟡</span><div><b>Accuracy check</b> — a known-answer star slipped in to keep your score honest. Standard practice on real science projects.</div>';
+  if(current && current.frontier){ el.className='modebar real'; el.innerHTML='<span class="sdot violet"></span><div><b>REAL DATA · NASA needs this.</b> An unverified TESS candidate — no one has confirmed or ruled it out yet. Your read is genuine, first-look science.</div>'; return; }
+  el.className='modebar training'; el.innerHTML='<span class="sdot amber"></span><div><b>Accuracy check</b> — a known-answer star slipped in to keep your score honest. Standard practice on real science projects.</div>';
 }
 
 function next(){
@@ -426,7 +427,7 @@ function answerFrontier(a){
   // objective red-flag checks (Candidate check A) — run on the data, shown after your read
   if(Array.isArray(current.checks) && current.checks.length){
     const nf=current.checks.filter(c=>c.flag).length;
-    html+='<div class="checks"><div class="checkhead">🔬 Automated checks — run on the data, not a guess'+(nf?' · <b style="color:#f3a9a9;">'+nf+' red flag'+(nf>1?'s':'')+'</b>':' · <span style="color:#9fd9c2;">all clear</span>')+':</div>';
+    html+='<div class="checks"><div class="checkhead">'+(window.LOPIcon?LOPIcon('scan'):'')+' Automated checks — run on the data, not a guess'+(nf?' · <b style="color:#f3a9a9;">'+nf+' red flag'+(nf>1?'s':'')+'</b>':' · <span style="color:#9fd9c2;">all clear</span>')+':</div>';
     current.checks.forEach(function(ch){ html+='<div class="checkrow '+(ch.flag?'flagged':'')+'">'+(ch.flag?'⚠ ':'✓ ')+'<b>'+esc(ch.test)+'</b> — '+esc(ch.note)+'</div>'; });
     html+='</div>';
   }

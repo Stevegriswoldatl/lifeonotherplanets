@@ -42,3 +42,11 @@ nav.nav-enhanced{ position:relative; }
 }
 @keyframes navslide{ from{ opacity:0; transform:translateY(-6px);} to{ opacity:1; transform:translateY(0);} }
 @media (prefers-reduced-motion:reduce){ nav.nav-enhanced.nav-open .nav-links{ animation:none; } }
+
+/* ===== custom icon set (icons.js) — inherits color, sizes to 1em ===== */
+.lopico{ width:1em; height:1em; vertical-align:-0.13em; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+.lopico .f{ fill:currentColor; stroke:none; }
+i.ico{ display:inline-flex; font-style:normal; line-height:0; }
+/* status dots (replace 🟢🟡🟣) */
+.sdot{ display:inline-block; width:10px; height:10px; border-radius:50%; vertical-align:-1px; margin-right:2px; }
+.sdot.green{ background:#7fe6a0; } .sdot.amber{ background:#f5c977; } .sdot.violet{ background:#b79cf6; }

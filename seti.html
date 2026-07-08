@@ -18,6 +18,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
 <script src="lop-sync.js"></script>
+<script src="icons.js"></script>
 <style>
   * { box-sizing:border-box; }
   body { margin:0; background:#05070f; color:#e8ecf6; font-family:"Hanken Grotesk",-apple-system,sans-serif; }
@@ -106,7 +107,7 @@
 <!-- onboarding intro -->
 <div class="overlay" id="intro">
   <div class="modal">
-    <h2>Welcome to the Signal Lab 📡</h2>
+    <h2>Welcome to the Signal Lab <i class="ico" data-i="signal"></i></h2>
     <p>This is the <b>other</b> search for life: not planets, but <b>radio signals</b>. If another civilization is broadcasting, a telescope would catch a thin, steady tone from their star.</p>
     <p>The hard part is Earth's own noise — phones, satellites, radar. So telescopes use a trick called the <b>cadence test</b>:</p>
     <ul class="steps">
@@ -135,9 +136,9 @@
       <div class="q" id="question">Is this a signal from the star, interference, or nothing?</div>
       <div class="swipehint">A real signal sits in the <b>ON</b> panels only. Interference is in the <b>OFF</b> panels too.</div>
       <div class="btns">
-        <button class="cand" data-a="candidate">🛸 Candidate (ON only)</button>
-        <button class="rfi" data-a="interference">📡 Interference (all panels)</button>
-        <button class="nosig" data-a="none">🌫️ No signal</button>
+        <button class="cand" data-a="candidate"><i class="ico" data-i="candidate"></i> Candidate (ON only)</button>
+        <button class="rfi" data-a="interference"><i class="ico" data-i="signal"></i> Interference (all panels)</button>
+        <button class="nosig" data-a="none"><i class="ico" data-i="mute"></i> No signal</button>
       </div>
       <div class="hint" id="hint"></div>
       <div class="verdict" id="verdict"></div>
@@ -339,8 +340,8 @@ function renderCard(){
     const h=document.getElementById('hint');
     h.className='hint show';
     h.innerHTML = current.truth==='candidate'
-      ? '👀 <b>Warm-up:</b> look for a thin bright streak that appears in the blue <b>ON</b> panels but NOT the dim <b>OFF</b> ones.'
-      : '👀 <b>Warm-up:</b> see how the streak shows up in the <b>OFF</b> panels too? That means it\'s from Earth.';
+      ? (window.LOPIcon?LOPIcon('eye'):'')+' <b>Warm-up:</b> look for a thin bright streak that appears in the blue <b>ON</b> panels but NOT the dim <b>OFF</b> ones.'
+      : (window.LOPIcon?LOPIcon('eye'):'')+' <b>Warm-up:</b> see how the streak shows up in the <b>OFF</b> panels too? That means it\'s from Earth.';
   }
 }
 
