@@ -173,6 +173,17 @@
   .fchecks{ margin-top:10px; font-size:12px; line-height:1.45; }
   .fchecks .fh{ font-weight:800; color:#c7aef8; margin-bottom:4px; }
   .fchk{ color:#c7d2ea; margin:2px 0; } .fchk.flag{ color:#f3a9a9; }
+  /* constellation creator */
+  .cmode{ position:absolute; top:calc(env(safe-area-inset-top) + 64px); left:12px; right:12px; z-index:5; border-radius:16px; padding:11px 14px; text-align:center; font-size:13px; font-weight:600; color:#eaf2ff; display:none; }
+  .cmode.show{ display:block; } .cmode b{ color:#c7aef8; }
+  .ctools{ position:absolute; left:0; right:0; bottom:calc(env(safe-area-inset-bottom) + 20px); z-index:5; display:none; justify-content:center; gap:8px; padding:0 12px; flex-wrap:wrap; }
+  .ctools.show{ display:flex; }
+  .ctools button{ font:800 14px "Space Grotesk"; padding:12px 15px; border-radius:14px; cursor:pointer; color:#fff; background:rgba(20,28,46,.72); border:1px solid rgba(255,255,255,.14); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
+  .ctools button:active{ transform:scale(.96); }
+  .ctools button.save{ background:linear-gradient(180deg,#c7aef8,#9a6ad0); color:#1a0f2e; border:none; }
+  .ctools button:disabled{ opacity:.4; }
+  .skybtn{ width:100%; margin-bottom:14px; padding:15px; border:none; border-radius:16px; font:800 15px "Space Grotesk"; color:#1a0f2e; cursor:pointer; background:linear-gradient(180deg,#c7aef8,#9a6ad0); box-shadow:0 8px 24px rgba(150,120,246,.32); }
+  .skybtn:active{ transform:scale(.98); }
   .cardmodal{ position:absolute; inset:0; z-index:15; display:flex; align-items:center; justify-content:center; flex-direction:column; background:rgba(3,4,12,.9); backdrop-filter:blur(8px); padding:20px; opacity:0; visibility:hidden; pointer-events:none; transition:opacity .28s ease, visibility .28s; }
   .cardmodal.show{ opacity:1; visibility:visible; pointer-events:auto; }
   .cardmodal img{ max-width:min(92vw,400px); max-height:68vh; border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,.6); transition:transform .42s cubic-bezier(.16,1,.3,1), opacity .3s ease; transform:scale(.9); opacity:0; }
@@ -194,6 +205,7 @@
     <div class="glass rankchip"><span class="rlab sg" id="rankName">Cadet</span><span class="rbar"><i id="rankBar"></i></span></div>
     <div class="spacer"></div>
     <div class="glass counter"><div class="ring"><svg width="26" height="26"><circle cx="13" cy="13" r="10" stroke="rgba(255,255,255,.14)" stroke-width="3" fill="none"/><circle id="ringp" cx="13" cy="13" r="10" stroke="#5DCAA5" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="62.8" stroke-dashoffset="62.8"/></svg><b id="rn">0</b></div><div class="lab">charted<br><b><span id="n">0</span>/<span id="tot">0</span></b></div></div>
+    <div class="glass iconbtn" id="constBtn" title="Constellations">✷</div>
     <div class="glass iconbtn" id="atlasBtn" title="My Atlas">✦</div>
   </div>
 
@@ -203,6 +215,15 @@
   <div class="glass todpill frontpill" id="frontPill" style="display:none;"></div>
   <div class="glass seltip" id="seltip"></div>
   <div class="funtoast" id="funtoast"></div>
+
+  <!-- constellation creator -->
+  <div class="glass cmode" id="cmode">✷ <b>Constellation mode</b> — tap two of your charted stars to connect them.</div>
+  <div class="ctools" id="ctools">
+    <button id="cUndo">↶ Undo</button>
+    <button id="cClear">Clear</button>
+    <button class="save" id="cSave">Save ✎</button>
+    <button id="cDone">Done</button>
+  </div>
 
   <!-- SCAN -->
   <div class="scan" id="scan">
@@ -242,6 +263,7 @@
   <div class="atlas" id="atlas">
     <div class="ah"><div class="glass close" id="atlasClose">✕</div><h2>My <span>Atlas</span></h2><div class="spacer sg" style="color:#9fb0d0;font-size:13px;font-weight:700;" id="atlasCount"></div><div class="glass sharebtn" id="shareBtn">Share ↗</div></div>
     <div class="atlas-scroll">
+      <button class="skybtn" id="skyMapBtn">🗺️ View your Sky Map</button>
       <div class="prog-sec" id="atlasProg"></div>
       <div class="grid" id="atlasGrid"></div>
       <div class="empty-msg" id="atlasEmpty" style="display:none;">Your Atlas is empty.<br>Scan a star to discover your first world ✦</div>
@@ -383,12 +405,13 @@
     {h:"Kepler-442",d:1206.0,seed:25,pl:[{n:"Kepler-442 b",p:"ice",t:"one of the most promising super-Earths"}]}
   ];
   document.getElementById('tot').textContent=SYSTEMS.length;
+  const SYSBYH={}; SYSTEMS.forEach(s=>SYSBYH[s.h]=s);
 
   // ---------- state (compatible with game.html / vet.html) ----------
   const KEY="loop_search_state_v2";
   function load(){ try{ return Object.assign({explorer:"",avatar:"astronaut",charted:{},claims:{},names:{}}, JSON.parse(localStorage.getItem(KEY))||{}); }catch(e){ return {explorer:"",avatar:"astronaut",charted:{},claims:{},names:{}}; } }
   function save(){ localStorage.setItem(KEY,JSON.stringify(state)); }
-  let state=load(); state.charted=state.charted||{}; state.names=state.names||{}; state.xp=state.xp||0; state.badges=state.badges||{}; state.bestStreak=state.bestStreak||0;
+  let state=load(); state.charted=state.charted||{}; state.names=state.names||{}; state.xp=state.xp||0; state.badges=state.badges||{}; state.bestStreak=state.bestStreak||0; state.constellations=state.constellations||[];
   const R={done:0,correct:0}; // session accuracy
   let curStreak=0;
 
@@ -406,6 +429,7 @@
     {id:'first',n:'First Light',d:'Chart your first system',got:()=>chartedCount()>=1},
     {id:'sharp',n:'Sharp Eye',d:'5 correct vets in a row',got:()=>state.bestStreak>=5},
     {id:'namer',n:'Namer',d:'Name a world',got:()=>Object.keys(state.names).length>=1},
+    {id:'stargazer',n:'Stargazer',d:'Create a constellation',got:()=>(state.constellations||[]).length>=1},
     {id:'carto',n:'Cartographer',d:'Chart 10 systems',got:()=>chartedCount()>=10},
     {id:'r_doorstep',n:'Doorstep',d:'Complete The Doorstep',got:()=>regionDone('doorstep')},
     {id:'r_reaches',n:'Near Reaches',d:'Complete The Near Reaches',got:()=>regionDone('reaches')},
@@ -453,7 +477,9 @@
   function updateTod(){ const el=document.getElementById('todPill'); if(!el)return; const s=todaySys(); el.style.display='inline-flex'; el.innerHTML='🎯 <b>Target of the Day</b> · '+esc(s.h)+(state.charted[s.h]?' ✓':''); }
 
   // ---------- map interaction ----------
-  cv.addEventListener('pointerdown',e=>{ audio(); if(over){ if(document.getElementById('sheet').classList.contains('show')) closeReward(); return; } const r=cv.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
+  cv.addEventListener('pointerdown',e=>{ audio(); const r=cv.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
+    if(constMode){ handleConstTap(mx,my); return; }
+    if(over){ if(document.getElementById('sheet').classList.contains('show')) closeReward(); return; }
     let best=null,bd=1e9; SYSTEMS.forEach(s=>{ const dx=s.x-mx,dy=s.y-my,d=dx*dx+dy*dy; if(d<bd){bd=d;best=s;} });
     if(best&&bd<44*44){ if(state.charted[best.h]){ sel=best; showTip(best); openReward(best,true); } else { openScan(best); } document.getElementById('hint').style.opacity=0; }
   },{passive:true});
@@ -467,6 +493,31 @@
     .then(fd=>{ FRONTIER=Array.isArray(fd)?fd.filter(c=>c&&Array.isArray(c.f)&&c.f.length):[]; updateFrontPill(); }); }
   function updateFrontPill(){ const el=document.getElementById('frontPill'); if(!el)return;
     if(FRONTIER.length){ el.style.display='inline-flex'; el.innerHTML='🔭 <b>Review new candidates</b> · '+FRONTIER.length+' open'; } else el.style.display='none'; }
+
+  // ---------- constellation creator (your personal sky) ----------
+  let constMode=false, cDraft=[], cLastNode=null;
+  function enterConst(){ constMode=true; cDraft=[]; cLastNode=null;
+    document.getElementById('cmode').classList.add('show'); document.getElementById('ctools').classList.add('show');
+    document.getElementById('hint').style.opacity=0;
+    document.getElementById('todPill').style.display='none'; document.getElementById('frontPill').style.display='none';
+    updateCTools(); }
+  function exitConst(){ constMode=false; cDraft=[]; cLastNode=null;
+    document.getElementById('cmode').classList.remove('show'); document.getElementById('ctools').classList.remove('show');
+    updateTod(); updateFrontPill(); }
+  function updateCTools(){ const u=document.getElementById('cUndo'),s=document.getElementById('cSave'); if(u)u.disabled=!cDraft.length; if(s)s.disabled=!cDraft.length; }
+  function handleConstTap(mx,my){ let best=null,bd=1e9; SYSTEMS.forEach(s=>{ if(!state.charted[s.h])return; const dx=s.x-mx,dy=s.y-my,d=dx*dx+dy*dy; if(d<bd){bd=d;best=s;} });
+    if(!best||bd>44*44){ cLastNode=null; return; }              // tapped empty space → deselect
+    if(!cLastNode){ cLastNode=best; tone(600,.12,'sine',.09); return; }   // pick the first star
+    if(cLastNode.h===best.h){ cLastNode=null; return; }          // tapped same star → deselect
+    const a=cLastNode.h,b=best.h, dup=cDraft.some(e=>(e[0]===a&&e[1]===b)||(e[0]===b&&e[1]===a));
+    if(!dup){ cDraft.push([a,b]); burst(best.x,best.y,'#c7aef8',16,true); tone(720,.18,'triangle',.11,960); }
+    cLastNode=best;                                              // chain from here for easy multi-segment shapes
+    updateCTools(); }
+  function saveConst(){ if(!cDraft.length)return; const nm=prompt('Name your constellation:',''); if(!nm)return;
+    const c=cleanName(nm.trim()); if(!c.ok){ alert(c.reason); return; }
+    state.constellations.push({name:nm.trim(),edges:cDraft.slice()}); save(); addXP(30); checkBadges();
+    celebrate('✷ '+nm.trim()+' — added to your sky!','#c7aef8'); burst(W/2,H/2,'#c7aef8',46,true);
+    exitConst(); }
   function gauss(s){ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random(); return s*Math.sqrt(-2*Math.log(u))*Math.cos(6.2831853*v); }
   function synthCard(){ const roll=Math.random(),N=200,f=[]; for(let i=0;i<N;i++)f.push(1+gauss(.006)); let truth,kind,why;
     if(roll<.45){truth='planet';kind='transit';why='Evenly-spaced, flat-bottomed dips — the signature of a transiting planet.'; const P=40+Math.random()*20,t0=Math.random()*P,d=.012+Math.random()*.01; for(let i=0;i<N;i++){const ph=((i-t0)%P+P)%P; if(ph<4||ph>P-4)f[i]-=d;}}
@@ -661,9 +712,52 @@
   }
   function openCard(){ if(!state.explorer){ const nm=prompt('Your explorer name (shown on your card):',''); if(nm && cleanName(nm.trim()).ok){ state.explorer=nm.trim(); save(); } }
     (document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()).then(function(){ showImageModal(makeShareCard(),'my-search-card.png'); }); }
+
+  // ---------- your completed-map view (My Sky) ----------
+  function makeSkyMap(){
+    const w=1080,h=1440,c=document.createElement('canvas'); c.width=w;c.height=h; const x=c.getContext('2d');
+    x.fillStyle='#03040c'; x.fillRect(0,0,w,h);
+    [['rgba(93,202,165,.14)',.3,.28,.6],['rgba(127,178,255,.13)',.72,.6,.62],['rgba(160,106,208,.12)',.5,.85,.5]]
+      .forEach(cl=>{ const g=x.createRadialGradient(cl[1]*w,cl[2]*h,0,cl[1]*w,cl[2]*h,Math.max(w,h)*cl[3]); g.addColorStop(0,cl[0]); g.addColorStop(1,'rgba(0,0,0,0)'); x.fillStyle=g; x.fillRect(0,0,w,h); });
+    const rnd=mulberry(321); for(let i=0;i<240;i++){ x.globalAlpha=.15+rnd()*.6; x.fillStyle=rnd()<.14?'#bfe9ff':'#fff'; x.beginPath(); x.arc(rnd()*w,rnd()*h,rnd()*1.7+.3,0,6.283); x.fill(); } x.globalAlpha=1;
+    x.textAlign='center';
+    x.fillStyle='#5DCAA5'; x.font='800 26px "Space Grotesk"'; x.fillText('✦   M Y   S K Y   ✦', w/2, 74);
+    x.fillStyle='#fff'; x.font='700 46px "Fredoka"'; x.fillText((state.explorer||'Explorer')+'’s Neighborhood', w/2, 128);
+    const charted=SYSTEMS.filter(s=>state.charted[s.h]); const worlds=charted.reduce((n,s)=>n+s.pl.length,0);
+    const pct=Math.round(charted.length/SYSTEMS.length*100);
+    x.fillStyle='#9fb0d0'; x.font='500 22px system-ui'; x.fillText(pct+'% of the neighborhood charted · real NASA discoveries', w/2, 166);
+    // layout systems by distance (reuses each system's saved angle so it matches the live map)
+    const cx=w/2, cy=h*0.48, R=Math.min(w,h)*0.36, lmin=Math.log(4), lmax=Math.log(1250), pos={};
+    SYSTEMS.forEach((s,i)=>{ const ang=(i/SYSTEMS.length)*6.283 + (s._a||0); const rn=0.14+0.82*((Math.log(s.d)-lmin)/(lmax-lmin)); pos[s.h]={x:cx+Math.cos(ang)*rn*R, y:cy+Math.sin(ang)*rn*R}; });
+    // auto-links between charted neighbours
+    x.lineWidth=2; SYSTEMS.forEach(s=>{ if(!state.charted[s.h])return; (s._lk||[]).forEach(j=>{ const o=SYSTEMS[j]; if(!state.charted[o.h])return; const a=pos[s.h],b=pos[o.h]; const g=x.createLinearGradient(a.x,a.y,b.x,b.y); g.addColorStop(0,'#5DCAA5'); g.addColorStop(1,'#7fb2ff'); x.strokeStyle=g; x.globalAlpha=.3; x.beginPath(); x.moveTo(a.x,a.y); x.lineTo(b.x,b.y); x.stroke(); }); }); x.globalAlpha=1;
+    // your constellations
+    (state.constellations||[]).forEach(cst=>{ x.strokeStyle='rgba(199,174,248,.62)'; x.lineWidth=2.4; x.beginPath(); let sx=0,sy=0,n=0; cst.edges.forEach(e=>{ const a=pos[e[0]],b=pos[e[1]]; if(a&&b){ x.moveTo(a.x,a.y); x.lineTo(b.x,b.y); sx+=a.x+b.x; sy+=a.y+b.y; n+=2; } }); x.stroke(); if(n){ x.fillStyle='rgba(199,174,248,.92)'; x.font='700 20px "Space Grotesk"'; x.fillText('✷ '+cst.name, sx/n, sy/n-16); } });
+    // systems: charted = lit world + name; uncharted = faint dot
+    SYSTEMS.forEach(s=>{ const p=pos[s.h];
+      if(state.charted[s.h]){ x.drawImage(planet(72,s.pl[0].p,s.seed), p.x-25, p.y-25, 50, 50); x.fillStyle='#eaf2ff'; x.font='700 17px "Space Grotesk"'; x.fillText(s.h, p.x, p.y+42); }
+      else { x.globalAlpha=.4; x.fillStyle='#8fa0c4'; x.beginPath(); x.arc(p.x,p.y,3,0,6.283); x.fill(); x.globalAlpha=1; } });
+    // footer stats
+    const stats=[['Systems',charted.length+'/'+SYSTEMS.length],['Worlds',worlds],['Constellations',(state.constellations||[]).length]];
+    const sw=300,sg=20,tot=3*sw+2*sg,sx0=w/2-tot/2,sy0=h-250;
+    stats.forEach((s2,i)=>{ const bx=sx0+i*(sw+sg); rr(x,bx,sy0,sw,110,18); x.fillStyle='rgba(255,255,255,.06)'; x.fill(); x.strokeStyle='rgba(255,255,255,.1)'; x.lineWidth=1.5; x.stroke(); x.fillStyle='#8fa0c4'; x.font='800 18px "Space Grotesk"'; x.fillText(String(s2[0]).toUpperCase(),bx+sw/2,sy0+42); x.fillStyle='#fff'; x.font='800 40px "Space Grotesk"'; x.fillText(String(s2[1]),bx+sw/2,sy0+92); });
+    const rl=REGIONS.map(rg=>{ const p=regionProg(rg); return rg.n+' '+(p.done===p.total?'✓':p.done+'/'+p.total); }).join('    ·    ');
+    x.fillStyle='#c7d2ea'; x.font='600 22px system-ui'; x.fillText(rl, w/2, h-118);
+    x.fillStyle='#5DCAA5'; x.font='800 34px "Space Grotesk"'; x.fillText('lifeonotherplanets.space', w/2, h-52);
+    return c;
+  }
+  function openSky(){ if(chartedCount()<1){ celebrate('Chart a star first ✦','#f5c977'); return; }
+    if(!state.explorer){ const nm=prompt('Your explorer name (shown on your sky map):',''); if(nm && cleanName(nm.trim()).ok){ state.explorer=nm.trim(); save(); } }
+    (document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()).then(function(){ showImageModal(makeSkyMap(),'my-sky-map.png'); }); }
   function saveCard(){ if(!_cardCanvas)return; _cardCanvas.toBlob(function(b){ const u=URL.createObjectURL(b),a=document.createElement('a'); a.href=u; a.download=_cardFile; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(u);},3000); }); }
   function shareCardImg(){ if(!_cardCanvas)return; _cardCanvas.toBlob(function(b){ const f=new File([b],_cardFile,{type:'image/png'}); if(navigator.canShare&&navigator.canShare({files:[f]})){ navigator.share({files:[f],title:'The Search',text:'I’m charting real worlds in The Search — join me! lifeonotherplanets.space'}).catch(function(){}); } else saveCard(); }); }
   { const _sb=document.getElementById('shareBtn'); if(_sb)_sb.onclick=openCard; const _ws=document.getElementById('winShare'); if(_ws)_ws.onclick=openCard; const _sc=document.getElementById('shCert'); if(_sc)_sc.onclick=openCertificate; const _tp=document.getElementById('todPill'); if(_tp)_tp.onclick=function(){ const s=todaySys(); if(state.charted[s.h]) openReward(s,true); else openScan(s); }; const _fp=document.getElementById('frontPill'); if(_fp)_fp.onclick=openFrontier;
+    const _cb=document.getElementById('constBtn'); if(_cb)_cb.onclick=function(){ if(constMode){ exitConst(); return; } if(chartedCount()<2){ celebrate('Chart 2+ stars first ✦','#f5c977'); return; } enterConst(); };
+    document.getElementById('cUndo').onclick=function(){ cDraft.pop(); cLastNode=null; updateCTools(); };
+    document.getElementById('cClear').onclick=function(){ cDraft=[]; cLastNode=null; updateCTools(); };
+    document.getElementById('cSave').onclick=saveConst;
+    document.getElementById('cDone').onclick=exitConst;
+    const _sm=document.getElementById('skyMapBtn'); if(_sm)_sm.onclick=openSky;
     document.getElementById('cardSave').onclick=saveCard; document.getElementById('cardShareBtn').onclick=shareCardImg; document.getElementById('cardClose').onclick=function(){document.getElementById('cardModal').classList.remove('show');}; }
   function renderAtlas(){
     // progression header: rank + XP + streak, regions, achievements
@@ -690,6 +784,16 @@
     bgStars.forEach(b=>{ const a=.4+.6*Math.sin(t*b.s+b.t); ctx.globalAlpha=a; ctx.fillStyle='#fff'; ctx.shadowBlur=6; ctx.shadowColor='#cfe0ff'; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,6.28); ctx.fill(); }); ctx.shadowBlur=0; ctx.globalAlpha=1;
     // links between charted
     ctx.lineWidth=1.6; SYSTEMS.forEach(s=>{ if(!state.charted[s.h])return; s._lk.forEach(j=>{ const o=SYSTEMS[j]; if(!state.charted[o.h])return; const g=ctx.createLinearGradient(s.x,s.y,o.x,o.y); g.addColorStop(0,'#5DCAA5'); g.addColorStop(1,'#7fb2ff'); ctx.strokeStyle=g; ctx.globalAlpha=.32; ctx.beginPath(); ctx.moveTo(s.x,s.y); ctx.lineTo(o.x,o.y); ctx.stroke(); }); }); ctx.globalAlpha=1;
+    // saved user constellations (your personal sky) — always visible
+    (state.constellations||[]).forEach(cst=>{ ctx.strokeStyle=hex('#c7aef8',.55); ctx.lineWidth=1.8; ctx.beginPath();
+      let sx2=0,sy2=0,ncnt=0; cst.edges.forEach(e=>{ const a=SYSBYH[e[0]],b=SYSBYH[e[1]]; if(a&&b){ ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); sx2+=a.x+b.x; sy2+=a.y+b.y; ncnt+=2; } }); ctx.stroke();
+      if(ncnt){ ctx.fillStyle='rgba(199,174,248,.85)'; ctx.font='700 11px "Space Grotesk"'; ctx.textAlign='center'; ctx.fillText('✷ '+cst.name, sx2/ncnt, sy2/ncnt-12); ctx.textAlign='left'; } });
+    // constellation mode: highlight charted stars as nodes + show the draft in progress
+    if(constMode){ SYSTEMS.forEach(s=>{ if(!state.charted[s.h])return; const pul=.5+.5*Math.sin(t*2+s.seed);
+        ctx.strokeStyle=hex('#c7aef8',.4+pul*.4); ctx.lineWidth=2; ctx.beginPath(); ctx.arc(s.x,s.y,16,0,6.283); ctx.stroke();
+        if(cLastNode&&cLastNode.h===s.h){ ctx.strokeStyle='#fff'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.arc(s.x,s.y,21,0,6.283); ctx.stroke(); } });
+      ctx.strokeStyle='#e6d8ff'; ctx.lineWidth=2.4; ctx.shadowBlur=8; ctx.shadowColor='#c7aef8'; ctx.beginPath();
+      cDraft.forEach(e=>{ const a=SYSBYH[e[0]],b=SYSBYH[e[1]]; if(a&&b){ ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); } }); ctx.stroke(); ctx.shadowBlur=0; }
     SYSTEMS.forEach(s=>{ const charted=state.charted[s.h];
       if(charted){ let scv=1; if(s._grow>0){ s._grow=Math.min(1,s._grow+.05); scv=1-Math.pow(1-s._grow,3); } const sz=54*scv, bob=Math.sin(t*1.1+s.seed)*2.2; drawSpin(s.x, s.y+bob, sz*0.32, s.pl[0].p, s.seed, t+s.seed);
         if(s.pl.length>1){ ctx.fillStyle='rgba(255,255,255,.85)'; ctx.font='700 9px "Space Grotesk"'; }
