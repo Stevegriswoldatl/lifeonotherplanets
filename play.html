@@ -165,6 +165,7 @@
   .todpill{ position:absolute; left:50%; transform:translateX(-50%); bottom:130px; z-index:3; padding:8px 14px; border-radius:999px; font-size:12.5px; color:#f5c977; cursor:pointer; align-items:center; gap:5px; border:1px solid rgba(245,201,119,.28) !important; }
   .todpill b{ color:#fff; font-weight:700; }
   .frontpill{ bottom:174px; color:#c7aef8; border:1px solid rgba(150,120,246,.34) !important; }
+  .frontpill.locked{ color:#f5c977; border-color:rgba(245,201,119,.36) !important; }
   /* frontier (open-candidate) styling */
   .tag.front{ color:#c7aef8; background:rgba(150,120,246,.14); border-color:rgba(150,120,246,.4); }
   .vfeed.front{ background:rgba(150,120,246,.1); border:1px solid rgba(150,120,246,.34); }
@@ -594,8 +595,12 @@
   let FRONTIER=[], frontierMode=false, fQueue=[], fIdx=0;
   function loadFrontier(){ return fetch('frontier_curves.json',{cache:'no-store'}).then(r=>r.ok?r.json():[]).catch(()=>[])
     .then(fd=>{ FRONTIER=Array.isArray(fd)?fd.filter(c=>c&&Array.isArray(c.f)&&c.f.length):[]; updateFrontPill(); updateSecChip(); maybeSectorShowcase(); }); }
-  function updateFrontPill(){ const el=document.getElementById('frontPill'); if(!el)return;
-    if(FRONTIER.length){ el.style.display='inline-flex'; el.innerHTML='🔭 <b>Review new candidates</b> · '+FRONTIER.length+' open'; } else el.style.display='none'; }
+  // the frontier pill doubles as the persistent TRAINING-vs-REAL status indicator on the map.
+  function updateFrontPill(){ const el=document.getElementById('frontPill'); if(!el)return; if(constMode){ el.style.display='none'; return; }
+    el.style.display='inline-flex';
+    if(!state.observerLicense){ el.classList.add('locked'); el.innerHTML='🔒 <b>Training</b> · earn your observer’s license →'; return; }
+    el.classList.remove('locked');
+    el.innerHTML = FRONTIER.length ? ('🟣 <b>Real data</b> · '+FRONTIER.length+' open — NASA needs this') : '🟣 <b>Real-data explorer</b> · next TESS batch soon'; }
 
   // ---------- constellation creator (your personal sky) ----------
   let constMode=false, cDraft=[], cLastNode=null;
@@ -742,7 +747,10 @@
   // ---------- frontier review (real open candidates) ----------
   function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const tmp=a[i]; a[i]=a[j]; a[j]=tmp; } return a; }
   function fkv(k,v){ return '<div class="fkv"><span>'+esc(k)+'</span><b>'+esc(v)+'</b></div>'; }
-  function openFrontier(){ if(!FRONTIER.length){ loadFrontier(); return; }
+  function openFrontier(){
+    // gate: real unverified data is earned. Unlicensed explorers go train in the Data Lab first.
+    if(!state.observerLicense){ celebrate('🔒 Earn your observer’s license first','#f5c977'); setTimeout(()=>{ location.href='vet.html'; }, 650); return; }
+    if(!FRONTIER.length){ loadFrontier(); return; }
     frontierMode=true; over=true; fQueue=shuffle(FRONTIER).slice(0,6); fIdx=0;
     document.getElementById('scanTitle').firstChild.textContent='Reviewing new candidates';
     document.getElementById('scanSub').textContent='real open TESS candidates · no answer key';
@@ -845,7 +853,22 @@
     document.getElementById('shAcc').textContent=R.done?Math.round(R.correct/R.done*100)+'%':'—';
     document.getElementById('sheet').classList.add('show'); tone(523,.5,'triangle',.12);
   }
-  function closeReward(){ document.getElementById('sheet').classList.remove('show'); over=false; renderAtlas(); if(chartedCount()>=SYSTEMS.length) setTimeout(()=>{ document.getElementById('win').classList.add('show'); playSfx('win'); },450); }
+  // Section 1 (Training) complete → congratulate → hand off to Section 2 (real data)
+  function prepWin(){
+    const lic=!!state.observerLicense, w=document.getElementById('win');
+    const h1=w.querySelector('h1'), p=w.querySelector('p'), btn=document.getElementById('again');
+    h1.textContent='🎉 Section 1 complete — Training charted!';
+    if(lic){
+      p.innerHTML='You charted every star in the Training neighborhood <b>and</b> earned your observer’s license. Section 2 is <b>real, unverified TESS data</b> — candidates NASA hasn’t classified yet, where your reads are genuine science.';
+      btn.textContent='Begin Section 2 — Real data →';
+      btn.onclick=function(){ w.classList.remove('show'); openFrontier(); };
+    } else {
+      p.innerHTML='You charted every star in the Training neighborhood! One step left before real science: earn your <b>observer’s license</b> by getting 8 of your last 10 right in the Data Lab. Then Section 2 — real unverified TESS data — unlocks.';
+      btn.textContent='Earn my license →';
+      btn.onclick=function(){ w.classList.remove('show'); location.href='vet.html'; };
+    }
+  }
+  function closeReward(){ document.getElementById('sheet').classList.remove('show'); over=false; renderAtlas(); if(chartedCount()>=SYSTEMS.length) setTimeout(()=>{ prepWin(); document.getElementById('win').classList.add('show'); playSfx('win'); },450); }
   document.getElementById('shGo').onclick=closeReward; document.getElementById('sheetClose').onclick=closeReward;
   document.getElementById('shName2').onclick=()=>{ if(!curSys)return; const which=curSys.pl[0].n; const nn=prompt('Give '+which+' an honorary nickname:',state.names[which]||''); if(nn){ const c=cleanName(nn.trim()); if(!c.ok){ alert(c.reason); return; } state.names[which]=nn.trim(); save(); addXP(15); checkBadges(); if(window.LOPSync){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5').then(()=>LOPSync.logDiscovery(nn.trim(),which)); } openReward(curSys,true); } };
   function cleanName(s){ if(!s||s.length<2)return{ok:false,reason:'Name is too short.'}; if(s.length>28)return{ok:false,reason:'Name is too long.'}; if(/(fuck|shit|bitch|cunt|nazi|damn|ass\b|sex)/i.test(s))return{ok:false,reason:'Please choose a friendly name.'}; return{ok:true}; }

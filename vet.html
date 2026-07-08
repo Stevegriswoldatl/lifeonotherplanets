@@ -97,6 +97,15 @@
   .mission { margin:0 0 16px; padding:12px 16px; border-radius:14px; background:linear-gradient(180deg,#0e1a2e,#0b1424); border:1px solid #2a4066; font-family:"Space Grotesk",sans-serif; font-size:14px; color:#dbe4fb; }
   .mission a { color:#7fb2ff; margin-left:8px; }
   .mission.done { background:linear-gradient(180deg,#0d211b,#0a1a16); border-color:#2c6b56; }
+  /* persistent training-vs-real status banner */
+  .modebar{ margin:0 0 14px; padding:11px 15px; border-radius:14px; font-family:"Space Grotesk",sans-serif; font-size:13.5px; line-height:1.5; display:flex; gap:10px; align-items:flex-start; border:1px solid #24304e; background:#0b1224; }
+  .modebar .dot{ flex:0 0 auto; font-size:15px; margin-top:1px; }
+  .modebar b{ color:#f2f5fc; }
+  .modebar.training{ border-color:#6b511f; background:linear-gradient(180deg,#1c1608,#12100a); color:#f0d9a4; }
+  .modebar.real{ border-color:#6a45a0; background:linear-gradient(180deg,#1a1030,#110b22); color:#dcccf7; }
+  .modebar.real b{ color:#efe6ff; }
+  .modebar.practice{ border-color:#2c6b56; background:linear-gradient(180deg,#0d211b,#0a1a16); color:#a7e0c8; }
+  .modebar .prog{ color:#f5c977; font-weight:700; white-space:nowrap; }
 </style>
 <link rel="stylesheet" href="theme-mc.css">
 </head>
@@ -106,6 +115,7 @@
 <a href="play.html" style="color:#9aa6bf;text-decoration:none;">Explore</a>
 <a href="rankings.html" style="color:#9aa6bf;text-decoration:none;">Rankings</a>
 <a href="vet.html" style="color:#e8ecf6;text-decoration:none;">Data Lab</a>
+<a href="seti.html" style="color:#9aa6bf;text-decoration:none;">Signal Lab</a>
 <a href="guide.html" style="color:#9aa6bf;text-decoration:none;">Field Guide</a>
 <a href="scoreboard.html" style="color:#9aa6bf;text-decoration:none;">Scoreboard</a>
 </nav>
@@ -131,6 +141,7 @@
 
   <div id="tessCountdown" style="text-align:center;margin:2px 0 14px;font-family:'Space Grotesk',sans-serif;font-size:12.5px;color:#7fb2ff;"></div>
   <div class="mission" id="mission" style="display:none;"></div>
+  <div class="modebar" id="modebar" style="display:none;"></div>
 
   <div style="display:flex;justify-content:center;margin:0 0 12px;">
     <button id="huntBtn" style="font-family:'Space Grotesk';font-weight:700;font-size:13px;border:1px solid #6b511f;background:#1c1608;color:#f5c977;border-radius:999px;padding:8px 16px;cursor:pointer;">🎯 Try the Mono-Transit Hunt</button>
@@ -192,6 +203,18 @@ let FRONTIER = [];   // real OPEN candidates (truth=null) — first-look review,
 const MISSION = (function(){ const p=new URLSearchParams(location.search); return { system:p.get('system'), ret:p.get('return'), target:3, count:0, done:false }; })();
 const R = { done:0, correct:0, planetsTotal:0, planetsCaught:0, fpTotal:0, fpAvoided:0, streak:0, last10Real:[] };
 let current = null, answered = false, phase = "practice", practiceIx = 0, realQueue = [], usingFallback = false;
+
+/* ---------- training → real-data gate: the "observer's license" ----------
+   Unlicensed = you only see real NASA stars whose answer is already known
+   (training). Clear 8 of your last 10 and you graduate to real UNVERIFIED
+   TESS candidates — with ~20% known-answer controls still mixed in, the way
+   real citizen-science projects keep everyone's accuracy honest. */
+function vstate(){ try{ return JSON.parse(localStorage.getItem('loop_search_state_v2'))||{}; }catch(e){ return {}; } }
+function vsave(s){ try{ localStorage.setItem('loop_search_state_v2', JSON.stringify(s)); }catch(e){} }
+let LICENSED = !!(vstate().observerLicense);
+let pendingGrad = false;
+const LIC_WINDOW = 10, LIC_NEED = 8;   // 80% correct on your last 10 known-answer cards
+function trainHits(){ const a=(vstate().trainLast10)||[]; return { hits:a.reduce((x,y)=>x+y,0), n:a.length }; }
 
 function explorerName(){ try{ return (JSON.parse(localStorage.getItem('loop_search_state_v2'))||{}).explorer || 'Explorer'; }catch(e){ return 'Explorer'; } }
 const onboarded = () => localStorage.getItem('lop_vet_onboarded') === '1';
@@ -294,22 +317,40 @@ function nextTessDays(){ const anchor=Date.UTC(2026,5,13), period=27.4*86400000,
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 function buildRealQueue(){
   const easy=REAL.filter(c=>c.difficulty==="easy"), rest=shuffle(REAL.filter(c=>c.difficulty!=="easy"));
-  const controls = shuffle(easy).concat(rest);   // confidence-building easy card first-ish, then mixed
-  // MIXED DECK: sprinkle real OPEN candidates in among the known-answer controls
-  // (~1 frontier card after every 3 controls). Scoring stays on controls only.
+  const controls = shuffle(easy).concat(rest);   // known-answer cards (confidence-building easy-ish first)
   const front = shuffle(FRONTIER.slice());
-  if(!front.length){ realQueue = controls; return; }
+
+  // TRAINING (no license yet): known-answer cards ONLY. No unverified data until earned.
+  if(!LICENSED || !front.length){ realQueue = controls; return; }
+
+  // LICENSED real section: mostly real UNVERIFIED candidates, with ~1 known-answer
+  // control mixed in every ~5 cards (~20%) so accuracy keeps being measured.
+  const ctrl = shuffle(controls.slice());
   const q=[];
-  controls.forEach((c,i)=>{ q.push(c); if((i+1)%3===0 && front.length) q.push(front.shift()); });
-  while(front.length) q.push(front.shift());   // any leftover frontier cards at the end
-  realQueue = q;
+  front.forEach((fc,i)=>{ q.push(fc); if((i+1)%4===0 && ctrl.length) q.push(ctrl.shift()); });
+  realQueue = q.length ? q : controls;
 }
 
 function setTag(isPractice){
   const tag=document.getElementById("cardtag");
-  tag.className = "cardtag " + (isPractice?"practice":"real");
-  tag.textContent = isPractice ? "Practice" : "Real TESS data";
+  if(!isPractice && LICENSED){ tag.className="cardtag practice"; tag.textContent="Accuracy check"; }
+  else { tag.className = "cardtag " + (isPractice?"practice":"real"); tag.textContent = isPractice ? "Practice" : "Real TESS data"; }
   document.getElementById("practicetrack").style.display = isPractice ? "flex" : "none";
+}
+
+/* persistent banner: always says exactly what kind of data you're on right now */
+function updateModeBar(){
+  const el=document.getElementById('modebar'); if(!el) return; el.style.display='flex';
+  if(huntMode){ el.className='modebar training'; el.innerHTML='<span class="dot">🎯</span><div><b>Mono-transit hunt</b> — training signals, not scored. Practicing the catch automated pipelines miss.</div>'; return; }
+  if(phase==="practice" && !onboarded()){ el.className='modebar practice'; el.innerHTML='<span class="dot">🟢</span><div><b>Practice</b> — learning the shapes. Not scored yet.</div>'; return; }
+  if(!LICENSED){
+    const t=trainHits();
+    el.className='modebar training';
+    el.innerHTML='<span class="dot">🟡</span><div><b>Training · real NASA data, known answers.</b> These stars are already confirmed — you\'re building accuracy, not doing new science yet. Get <b>'+LIC_NEED+' of your last '+LIC_WINDOW+'</b> right to earn your observer\'s license and unlock the real unverified data. &nbsp;<span class="prog">'+Math.min(t.hits,LIC_WINDOW)+'/'+LIC_NEED+' · last '+Math.min(t.n,LIC_WINDOW)+'</span></div>';
+    return;
+  }
+  if(current && current.frontier){ el.className='modebar real'; el.innerHTML='<span class="dot">🟣</span><div><b>REAL DATA · NASA needs this.</b> An unverified TESS candidate — no one has confirmed or ruled it out yet. Your read is genuine, first-look science.</div>'; return; }
+  el.className='modebar training'; el.innerHTML='<span class="dot">🟡</span><div><b>Accuracy check</b> — a known-answer star slipped in to keep your score honest. Standard practice on real science projects.</div>';
 }
 
 function next(){
@@ -326,7 +367,7 @@ function next(){
     document.getElementById("practicetrack").style.display="none";
     document.getElementById("hint").className="hint";
     document.getElementById("question").textContent="Is there a single transit hiding here?";
-    draw(current.f); return;
+    updateModeBar(); draw(current.f); return;
   }
 
   if(phase==="practice" && !onboarded()){
@@ -353,7 +394,7 @@ function next(){
     }
   }
   document.getElementById("question").textContent="Is there a real planet transiting this star?";
-  draw(current.f);
+  updateModeBar(); draw(current.f);
 }
 
 /* fallback: if real data can't load, synthesize a labeled training deck so the lab still works */
@@ -410,6 +451,13 @@ function answer(a){
     else { R.fpTotal++; if(a==="not") R.fpAvoided++; }
     if(a!=="unsure"){ if(correct){ R.correct++; R.streak++; } else R.streak=0; }
     R.last10Real.push(correct?1:0); if(R.last10Real.length>10) R.last10Real.shift();
+    // observer's-license gate: only real KNOWN-ANSWER cards count (not hunt / offline fallback)
+    if(!LICENSED && current.isReal && a!=="unsure"){
+      const st=vstate(); st.trainLast10=(st.trainLast10||[]).concat(correct?1:0);
+      if(st.trainLast10.length>LIC_WINDOW) st.trainLast10=st.trainLast10.slice(-LIC_WINDOW); vsave(st);
+      const hh=st.trainLast10.reduce((x,y)=>x+y,0);
+      if(st.trainLast10.length>=LIC_WINDOW && hh>=LIC_NEED) grantLicense();
+    }
     const isCorrectVal=(a==="unsure")?null:correct;
     if(window.LOPSync){ LOPSync.ensureExplorer(explorerName(),"stargazer","#f5c977").then(function(){ LOPSync.logClassification(a,isCorrectVal); }); }
     updateStats();
@@ -474,11 +522,22 @@ function renderCrowd(c,myVote,truth){ const el=document.getElementById('crowd');
     (reached && ((topIsPlanet&&myVote==='planet')||(!topIsPlanet&&myVote==='not')) ? '<div style="margin-top:7px;color:#4fd8ff;font-weight:700;">🤝 You share co-discovery credit on this candidate.</div>' : '');
 }
 
+function grantLicense(){ LICENSED=true; const st=vstate(); st.observerLicense=true; vsave(st); pendingGrad=true; }
+function gradFlash(){
+  buildRealQueue();   // switch the deck to real unverified candidates + hidden controls
+  const v=document.getElementById("verdict");
+  v.className="verdict show correct celebrate";
+  v.innerHTML='<h3>🎓 Observer’s license earned!</h3>'+
+    '<p>You just cleared <b>'+LIC_NEED+' of 10</b> on real NASA training stars. From here you’re reviewing <b>real, unverified TESS candidates</b> — data NASA hasn’t classified yet, where your read is genuine science. We’ll still slip in the occasional known-answer star to keep your accuracy honest (that’s how the pros do it).</p>'+
+    '<div style="margin-top:12px;"><button id="nextbtn" style="flex:0 0 auto;">Start real science →</button></div>';
+  document.getElementById("nextbtn").onclick=next;
+}
 function advance(){
+  if(pendingGrad){ pendingGrad=false; gradFlash(); return; }
   if(phase==="practice" && !onboarded()){
     practiceIx++;
     if(practiceIx>=PRACTICE.length){ localStorage.setItem('lop_vet_onboarded','1'); phase="real";
-      flash("✅ Practice complete — you're now on real NASA TESS data. Your accuracy counts from here."); }
+      flash("✅ Practice complete — now on <b>Training</b>: real NASA stars with known answers. Nail <b>8 of your last 10</b> to earn your observer’s license and unlock the real unverified data."); }
   }
   next();
 }

@@ -1,0 +1,419 @@
+{
+  "version": 1,
+  "cadence": [
+    "ON",
+    "OFF",
+    "ON",
+    "OFF",
+    "ON",
+    "OFF"
+  ],
+  "note": "Track B SETI cadence deck. 'truth' is candidate (signal in ON only) / interference (in OFF too) / none (noise). Training cards are synthetic with known answers; real cards are famous historical cases.",
+  "real": [
+    {
+      "id": "seti_real_wow",
+      "kind": "real",
+      "name": "The Wow! Signal",
+      "constellation": "Sagittarius",
+      "freq_mhz": 1420.4,
+      "cadence": [
+        "ON",
+        "OFF",
+        "ON",
+        "OFF",
+        "ON",
+        "OFF"
+      ],
+      "difficulty": "real",
+      "truth": "candidate",
+      "signal": {
+        "present": true,
+        "type": "narrowband",
+        "freq": 0.42,
+        "drift": 0.0,
+        "width": 0.014,
+        "snr": "strong",
+        "in_off": false
+      },
+      "source": "Real event \u00b7 Big Ear Radio Observatory, Ohio State, 1977",
+      "why": "A strong, narrowband burst right near the 1420 MHz 'water hole' frequency, in the beam for ~72 seconds and gone. It behaved exactly like a candidate should \u2014 but it never repeated, so it was never confirmed. Still the most famous unexplained signal in SETI history.",
+      "story": "On Aug 15, 1977, astronomer Jerry Ehman circled six characters on a printout and wrote 'Wow!' in the margin. Decades of searches have never seen it again. Unconfirmed \u2014 not proof of anything \u2014 but a perfect example of the shape we hunt for."
+    },
+    {
+      "id": "seti_real_blc1",
+      "kind": "real",
+      "name": "BLC1 \u2014 toward Proxima Centauri",
+      "constellation": "Centaurus",
+      "freq_mhz": 982.002,
+      "cadence": [
+        "ON",
+        "OFF",
+        "ON",
+        "OFF",
+        "ON",
+        "OFF"
+      ],
+      "difficulty": "real",
+      "truth": "interference",
+      "signal": {
+        "present": true,
+        "type": "narrowband",
+        "freq": 0.55,
+        "drift": 0.12,
+        "width": 0.012,
+        "snr": "strong",
+        "in_off": true
+      },
+      "source": "Real event \u00b7 Breakthrough Listen, Parkes telescope, 2019 (analyzed 2020\u201321)",
+      "why": "For months this looked like the real thing: a pure narrowband tone from our nearest neighbor star. But careful cadence analysis found look-alike signals in the OFF pointings \u2014 the mark of interference. It was ruled out as human radio junk. This is the process working.",
+      "story": "'Breakthrough Listen Candidate 1' was the most promising SETI hit in years. The team didn't announce a discovery \u2014 they did the hard vetting, found matching tones where there shouldn't be any, and published that it was interference. Ruling it out was the science."
+    },
+    {
+      "id": "seti_real_tabby",
+      "kind": "real",
+      "name": "Tabby's Star (KIC 8462852)",
+      "constellation": "Cygnus",
+      "freq_mhz": 8400.0,
+      "cadence": [
+        "ON",
+        "OFF",
+        "ON",
+        "OFF",
+        "ON",
+        "OFF"
+      ],
+      "difficulty": "real",
+      "truth": "none",
+      "signal": {
+        "present": false,
+        "type": "none"
+      },
+      "source": "Real target \u00b7 searched by Breakthrough Listen, Green Bank, 2016",
+      "why": "Its weird, deep flickers set off 'alien megastructure' headlines. So SETI pointed the big dish at it and listened. Result: silence \u2014 no narrowband signals. The dips turned out to be ordinary dust. A quiet star is still a real answer.",
+      "story": "KIC 8462852 dimmed in strange, irregular ways no planet could explain, and 'megastructure' theories went viral in 2015. Radio SETI found nothing artificial; follow-up showed uneven dust clouds. Honest ending \u2014 and exactly why we check instead of assume."
+    }
+  ],
+  "training": [
+    {
+      "id": "seti_train_001",
+      "kind": "training",
+      "name": "Target URS-101",
+      "constellation": "Ursa Major",
+      "freq_mhz": 4500.0,
+      "cadence": [
+        "ON",
+        "OFF",
+        "ON",
+        "OFF",
+        "ON",
+        "OFF"
+      ],
+      "difficulty": "easy",
+      "truth": "candidate",
+      "source": "Training signal \u00b7 modeled on Breakthrough Listen C-band cadence",
+      "signal": {
+        "present": true,
+        "type": "narrowband",
+        "freq": 0.259,
+        "drift": -0.313,
+        "width": 0.025,
+        "snr": "strong",
+        "in_off": false
+      },
+      "why": "A steady, narrow, drifting tone that appears ONLY when the dish points at the star. That 'in the ON pointings only' fingerprint is exactly what a signal from that star should do."
+    },
+    {
+      "id": "seti_train_002",
+      "kind": "training",
+      "name": "Target COR-102",
+      "constellation": "Corona Borealis",
+      "freq_mhz": 2250.0,
+      "cadence": [
+        "ON",
+        "OFF",
+        "ON",
+        "OFF",
+        "ON",
+        "OFF"
+      ],
+      "difficulty": "easy",
+      "truth": "interference",
+      "source": "Training signal \u00b7 modeled on Breakthrough Listen S-band cadence",
+      "signal": {
+        "present": true,
+        "type": "narrowband",
+        "freq": 0.235,
+        "drift": -0.044,
+        "width": 0.03,
+        "snr": "strong",
+        "in_off": true
+      },
+      "why": "The signal is also there when the telescope looks AWAY from the star (the OFF pointings). A real cosmic source can't do that \u2014 so this is radio interference from here on Earth."
+    },
+    {
+      "id": "seti_train_003",
+      "kind": "training",
+      "name": "Target COR-103",
+      "constellation": "Corona Borealis",
+      "freq_mhz": 8400.0,
+      "cadence": [
+        "ON",
+        "OFF",
+        "ON",
+        "OFF",
+        "ON",
+        "OFF"
+      ],
+      "difficulty": "easy",
+      "truth": "none",
+      "source": "Training signal \u00b7 modeled on Breakthrough Listen X-band cadence",
+      "signal": {
+        "present": false,
+        "type": "none"
+      },
+      "why": "No coherent signal \u2014 only the receiver's own noise. Ruling a star out is a real, publishable result: it's one more place the galaxy is quiet."
+    },
+    {
+      "id": "seti_train_004",
+      "kind": "training",
+      "name": "Target LYR-104",
+      "constellation": "Lyra",
+      "freq_mhz": 4500.0,
+      "cadence": [
+        "ON",
+        "OFF",
+        "ON",
+        "OFF",
+        "ON",
+        "OFF"
+      ],
+      "difficulty": "easy",
+      "truth": "candidate",
+      "source": "Training signal \u00b7 modeled on Breakthrough Listen C-band cadence",
+      "signal": {
+        "present": true,
+        "type": "narrowband",
+        "freq": 0.665,
+        "drift": -0.037,
+        "width": 0.011,
+        "snr": "strong",
+        "in_off": false
+      },
+      "why": "A steady, narrow, drifting tone that appears ONLY when the dish points at the star. That 'in the ON pointings only' fingerprint is exactly what a signal from that star should do."
+    },
+    {
+      "id": "seti_train_005",
+      "kind": "training",
+      "name": "Target VUL-105",
+      "constellation": "Vulpecula",
+      "freq_mhz": 4500.0,
+      "cadence": [
+        "ON",
+        "OFF",
+        "ON",
+        "OFF",
+        "ON",
+        "OFF"
+      ],
+      "difficulty": "medium",
+      "truth": "interference",
+      "source": "Training signal \u00b7 modeled on Breakthrough Listen C-band cadence",
+      "signal": {
+        "present": true,
+        "type": "narrowband",
+        "freq": 0.251,
+        "drift": -0.058,
+        "width": 0.032,
+        "snr": "faint",
+        "in_off": true
+      },
+      "why": "The signal is also there when the telescope looks AWAY from the star (the OFF pointings). A real cosmic source can't do that \u2014 so this is radio interference from here on Earth."
+    },
+    {
+      "id": "seti_train_006",
+      "kind": "training",
+      "name": "Target HER-106",
+      "constellation": "Hercules",
+      "freq_mhz": 1665.0,
+      "cadence": [
+        "ON",
+        "OFF",
+        "ON",
+        "OFF",
+        "ON",
+        "OFF"
+      ],
+      "difficulty": "medium",
+      "truth": "candidate",
+      "source": "Training signal \u00b7 modeled on Breakthrough Listen S-band cadence",
+      "signal": {
+        "present": true,
+        "type": "narrowband",
+        "freq": 0.371,
+        "drift": -0.25,
+        "width": 0.020999999999999998,
+        "snr": "faint",
+        "in_off": false
+      },
+      "why": "A steady, narrow, drifting tone that appears ONLY when the dish points at the star. That 'in the ON pointings only' fingerprint is exactly what a signal from that star should do."
+    },
+    {
+      "id": "seti_train_007",
+      "kind": "training",
+      "name": "Target CYG-107",
+      "constellation": "Cygnus",
+      "freq_mhz": 1420.4,
+      "cadence": [
+        "ON",
+        "OFF",
+        "ON",
+        "OFF",
+        "ON",
+        "OFF"
+      ],
+      "difficulty": "medium",
+      "truth": "none",
+      "source": "Training signal \u00b7 modeled on Breakthrough Listen L-band cadence",
+      "signal": {
+        "present": false,
+        "type": "none"
+      },
+      "why": "No coherent signal \u2014 only the receiver's own noise. Ruling a star out is a real, publishable result: it's one more place the galaxy is quiet."
+    },
+    {
+      "id": "seti_train_008",
+      "kind": "training",
+      "name": "Target BO\u00d6-108",
+      "constellation": "Bo\u00f6tes",
+      "freq_mhz": 1665.0,
+      "cadence": [
+        "ON",
+        "OFF",
+        "ON",
+        "OFF",
+        "ON",
+        "OFF"
+      ],
+      "difficulty": "medium",
+      "truth": "interference",
+      "source": "Training signal \u00b7 modeled on Breakthrough Listen S-band cadence",
+      "signal": {
+        "present": true,
+        "type": "narrowband",
+        "freq": 0.385,
+        "drift": 0.024,
+        "width": 0.035,
+        "snr": "faint",
+        "in_off": true
+      },
+      "why": "The signal is also there when the telescope looks AWAY from the star (the OFF pointings). A real cosmic source can't do that \u2014 so this is radio interference from here on Earth."
+    },
+    {
+      "id": "seti_train_009",
+      "kind": "training",
+      "name": "Target HER-109",
+      "constellation": "Hercules",
+      "freq_mhz": 1250.0,
+      "cadence": [
+        "ON",
+        "OFF",
+        "ON",
+        "OFF",
+        "ON",
+        "OFF"
+      ],
+      "difficulty": "hard",
+      "truth": "candidate",
+      "source": "Training signal \u00b7 modeled on Breakthrough Listen L-band cadence",
+      "signal": {
+        "present": true,
+        "type": "narrowband",
+        "freq": 0.797,
+        "drift": -0.022,
+        "width": 0.033,
+        "snr": "faint",
+        "in_off": false
+      },
+      "why": "A steady, narrow, drifting tone that appears ONLY when the dish points at the star. That 'in the ON pointings only' fingerprint is exactly what a signal from that star should do."
+    },
+    {
+      "id": "seti_train_010",
+      "kind": "training",
+      "name": "Target AQU-110",
+      "constellation": "Aquila",
+      "freq_mhz": 1250.0,
+      "cadence": [
+        "ON",
+        "OFF",
+        "ON",
+        "OFF",
+        "ON",
+        "OFF"
+      ],
+      "difficulty": "medium",
+      "truth": "none",
+      "source": "Training signal \u00b7 modeled on Breakthrough Listen L-band cadence",
+      "signal": {
+        "present": false,
+        "type": "none"
+      },
+      "why": "No coherent signal \u2014 only the receiver's own noise. Ruling a star out is a real, publishable result: it's one more place the galaxy is quiet."
+    },
+    {
+      "id": "seti_train_011",
+      "kind": "training",
+      "name": "Target LYR-111",
+      "constellation": "Lyra",
+      "freq_mhz": 8400.0,
+      "cadence": [
+        "ON",
+        "OFF",
+        "ON",
+        "OFF",
+        "ON",
+        "OFF"
+      ],
+      "difficulty": "hard",
+      "truth": "interference",
+      "source": "Training signal \u00b7 modeled on Breakthrough Listen X-band cadence",
+      "signal": {
+        "present": true,
+        "type": "narrowband",
+        "freq": 0.452,
+        "drift": 0.005,
+        "width": 0.022,
+        "snr": "faint",
+        "in_off": true
+      },
+      "why": "The signal is also there when the telescope looks AWAY from the star (the OFF pointings). A real cosmic source can't do that \u2014 so this is radio interference from here on Earth."
+    },
+    {
+      "id": "seti_train_012",
+      "kind": "training",
+      "name": "Target HER-112",
+      "constellation": "Hercules",
+      "freq_mhz": 1250.0,
+      "cadence": [
+        "ON",
+        "OFF",
+        "ON",
+        "OFF",
+        "ON",
+        "OFF"
+      ],
+      "difficulty": "medium",
+      "truth": "candidate",
+      "source": "Training signal \u00b7 modeled on Breakthrough Listen L-band cadence",
+      "signal": {
+        "present": true,
+        "type": "narrowband",
+        "freq": 0.462,
+        "drift": -0.057,
+        "width": 0.031,
+        "snr": "faint",
+        "in_off": false
+      },
+      "why": "A steady, narrow, drifting tone that appears ONLY when the dish points at the star. That 'in the ON pointings only' fingerprint is exactly what a signal from that star should do."
+    }
+  ]
+}
