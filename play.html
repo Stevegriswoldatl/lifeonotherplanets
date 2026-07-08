@@ -118,6 +118,36 @@
   .win.show{ display:flex; } .win h1{ font-family:"Fredoka"; font-size:30px; font-weight:600; } .win p{ color:#c7d2ea; margin-top:10px; max-width:320px; line-height:1.55; }
   .win button{ margin-top:22px; padding:15px 30px; border:none; border-radius:16px; font:800 16px "Space Grotesk"; color:#05231b; background:linear-gradient(180deg,#7fe6bd,#5DCAA5); cursor:pointer; }
   a.textlink{ color:#7fb2ff; text-decoration:none; }
+
+  /* progression: rank chip, celebration toast, atlas sections */
+  .hud{ flex-wrap:wrap; }
+  .rankchip{ padding:8px 12px; display:flex; align-items:center; gap:8px; border-radius:16px; }
+  .rankchip .rlab{ font-size:12px; font-weight:800; color:#f5c977; }
+  .rbar{ width:44px; height:5px; border-radius:3px; background:rgba(255,255,255,.16); overflow:hidden; }
+  .rbar i{ display:block; height:100%; width:0; background:linear-gradient(90deg,#5DCAA5,#f5c977); transition:width .5s ease; }
+  .rbar.big{ width:100%; height:9px; margin-top:8px; }
+  .funtoast{ position:absolute; left:50%; top:34%; transform:translate(-50%,-50%) scale(.7); z-index:20; pointer-events:none; opacity:0;
+    font:800 21px "Space Grotesk"; text-align:center; text-shadow:0 3px 16px rgba(0,0,0,.75); padding:0 24px; }
+  .funtoast.show{ animation:funpop 1.9s cubic-bezier(.2,1,.3,1) forwards; }
+  @keyframes funpop{ 0%{opacity:0;transform:translate(-50%,-50%) scale(.6);} 14%{opacity:1;transform:translate(-50%,-50%) scale(1.06);} 22%{transform:translate(-50%,-50%) scale(1);} 78%{opacity:1;} 100%{opacity:0;transform:translate(-50%,-64%) scale(1);} }
+  .atlas-scroll{ flex:1; overflow-y:auto; }
+  .prog-sec{ margin-bottom:14px; }
+  .pcard{ background:rgba(20,28,46,.5); border:1px solid rgba(255,255,255,.1); border-radius:18px; padding:14px 16px; }
+  .pcard .prow{ display:flex; align-items:center; }
+  .pcard .rttl{ font-family:"Fredoka"; font-size:20px; font-weight:600; color:#f5c977; }
+  .pcard .rsub{ font-size:12px; color:#9fb0d0; font-weight:600; margin-top:1px; }
+  .pcard .rstreak{ margin-left:auto; font-size:16px; font-weight:800; }
+  .seclbl{ font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#8fa0c4; font-weight:800; margin:16px 2px 8px; }
+  .regions{ display:flex; flex-direction:column; gap:8px; }
+  .reg{ background:rgba(20,28,46,.45); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:10px 13px; display:grid; grid-template-columns:1fr auto; gap:4px 10px; align-items:center; }
+  .reg.done{ border-color:rgba(93,202,165,.4); }
+  .reg .rn3{ font-size:13.5px; font-weight:700; grid-column:1; grid-row:1; } .reg.done .rn3{ color:#7fe6b0; }
+  .reg .rc{ font-size:12px; color:#9fb0d0; font-weight:700; font-variant-numeric:tabular-nums; grid-row:1; grid-column:2; text-align:right; }
+  .reg .rbar{ width:100%; grid-column:1 / span 2; grid-row:2; }
+  .badges{ display:grid; grid-template-columns:repeat(auto-fill,minmax(78px,1fr)); gap:9px; padding-bottom:24px; }
+  .bdg{ background:rgba(20,28,46,.4); border:1px solid rgba(255,255,255,.07); border-radius:14px; padding:10px 6px; text-align:center; opacity:.45; }
+  .bdg.on{ opacity:1; border-color:rgba(127,178,255,.35); background:rgba(127,178,255,.08); }
+  .bdg .bi{ font-size:20px; } .bdg .bn{ font-size:10px; font-weight:700; margin-top:3px; line-height:1.15; }
 </style>
 </head>
 <body>
@@ -126,6 +156,7 @@
 
   <div class="hud">
     <a class="glass brand" href="index.html"><span class="lg"></span>The Search<span class="q">?</span></a>
+    <div class="glass rankchip"><span class="rlab sg" id="rankName">Cadet</span><span class="rbar"><i id="rankBar"></i></span></div>
     <div class="spacer"></div>
     <div class="glass counter"><div class="ring"><svg width="26" height="26"><circle cx="13" cy="13" r="10" stroke="rgba(255,255,255,.14)" stroke-width="3" fill="none"/><circle id="ringp" cx="13" cy="13" r="10" stroke="#5DCAA5" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="62.8" stroke-dashoffset="62.8"/></svg><b id="rn">0</b></div><div class="lab">charted<br><b><span id="n">0</span>/<span id="tot">0</span></b></div></div>
     <div class="glass iconbtn" id="atlasBtn" title="My Atlas">✦</div>
@@ -134,6 +165,7 @@
   <div class="hint" id="hint">Tap a glowing star to scan it</div>
   <div class="synced" id="synced"></div>
   <div class="glass seltip" id="seltip"></div>
+  <div class="funtoast" id="funtoast"></div>
 
   <!-- SCAN -->
   <div class="scan" id="scan">
@@ -171,8 +203,11 @@
   <!-- atlas -->
   <div class="atlas" id="atlas">
     <div class="ah"><div class="glass close" id="atlasClose">✕</div><h2>My <span>Atlas</span></h2><div class="spacer sg" style="color:#9fb0d0;font-size:13px;font-weight:700;" id="atlasCount"></div></div>
-    <div class="grid" id="atlasGrid"></div>
-    <div class="empty-msg" id="atlasEmpty" style="display:none;">Your Atlas is empty.<br>Scan a star to discover your first world ✦</div>
+    <div class="atlas-scroll">
+      <div class="prog-sec" id="atlasProg"></div>
+      <div class="grid" id="atlasGrid"></div>
+      <div class="empty-msg" id="atlasEmpty" style="display:none;">Your Atlas is empty.<br>Scan a star to discover your first world ✦</div>
+    </div>
   </div>
 
   <div class="win" id="win"><h1>🌌 The Neighborhood is charted</h1><p>You explored every nearby system and lit up your whole constellation — by doing real science on real NASA data. This is Season 1 complete.</p><button id="again">Keep exploring</button></div>
@@ -238,8 +273,35 @@
   const KEY="loop_search_state_v2";
   function load(){ try{ return Object.assign({explorer:"",avatar:"astronaut",charted:{},claims:{},names:{}}, JSON.parse(localStorage.getItem(KEY))||{}); }catch(e){ return {explorer:"",avatar:"astronaut",charted:{},claims:{},names:{}}; } }
   function save(){ localStorage.setItem(KEY,JSON.stringify(state)); }
-  let state=load(); state.charted=state.charted||{}; state.names=state.names||{};
+  let state=load(); state.charted=state.charted||{}; state.names=state.names||{}; state.xp=state.xp||0; state.badges=state.badges||{}; state.bestStreak=state.bestStreak||0;
   const R={done:0,correct:0}; // session accuracy
+  let curStreak=0;
+
+  // ---------- progression: XP, ranks, regions, badges ----------
+  const RANKS=[{xp:0,n:'Cadet'},{xp:120,n:'Scout'},{xp:350,n:'Analyst'},{xp:750,n:'Navigator'},{xp:1500,n:'Pathfinder'},{xp:3000,n:'Pioneer'}];
+  function rankFor(xp){ let r=RANKS[0],nx=null; for(let i=0;i<RANKS.length;i++){ if(xp>=RANKS[i].xp){ r=RANKS[i]; nx=RANKS[i+1]||null; } } return {r,nx}; }
+  const REGIONS=[
+    {id:'doorstep',n:'The Doorstep',sys:["Proxima Centauri","Barnard's Star","Ross 128","Teegarden's Star"]},
+    {id:'reaches',n:'The Near Reaches',sys:["GJ 1002","GJ 667 C","Wolf 1069","Gliese 12","TRAPPIST-1","LHS 1140"]},
+    {id:'deepfield',n:'The Deep Field',sys:["Pi Mensae","TOI-700","LP 890-9","K2-18","Kepler-442"]}
+  ];
+  function regionProg(rg){ return {done:rg.sys.filter(h=>state.charted[h]).length, total:rg.sys.length}; }
+  function regionDone(id){ const rg=REGIONS.find(r=>r.id===id); return rg? rg.sys.every(h=>state.charted[h]) : false; }
+  const BADGES=[
+    {id:'first',n:'First Light',d:'Chart your first system',got:()=>chartedCount()>=1},
+    {id:'sharp',n:'Sharp Eye',d:'5 correct vets in a row',got:()=>state.bestStreak>=5},
+    {id:'namer',n:'Namer',d:'Name a world',got:()=>Object.keys(state.names).length>=1},
+    {id:'carto',n:'Cartographer',d:'Chart 10 systems',got:()=>chartedCount()>=10},
+    {id:'r_doorstep',n:'Doorstep',d:'Complete The Doorstep',got:()=>regionDone('doorstep')},
+    {id:'r_reaches',n:'Near Reaches',d:'Complete The Near Reaches',got:()=>regionDone('reaches')},
+    {id:'r_deepfield',n:'Deep Field',d:'Complete The Deep Field',got:()=>regionDone('deepfield')},
+    {id:'season',n:'Season 1 ★',d:'Chart the whole Neighborhood',got:()=>chartedCount()>=SYSTEMS.length}
+  ];
+  function addXP(n){ const before=rankFor(state.xp).r.n; state.xp+=n; save(); const after=rankFor(state.xp).r.n; updateRank(); if(after!==before) celebrate('⭐ Rank up — '+after+'!','#f5c977'); }
+  function checkBadges(){ BADGES.forEach(b=>{ if(!state.badges[b.id] && b.got()){ state.badges[b.id]=true; save(); celebrate('🏅 '+b.n,'#7fb2ff'); } }); }
+  function checkRegion(){ REGIONS.forEach(rg=>{ const k='rg_'+rg.id; if(!state.badges[k] && regionDone(rg.id)){ state.badges[k]=true; save(); celebrate('🌠 Region charted — '+rg.n+'!','#5DCAA5'); burst(W/2,H/2,'#5DCAA5',44,true); } }); }
+  function updateRank(){ const o=rankFor(state.xp); const el=document.getElementById('rankName'); if(el)el.textContent=o.r.n; const bar=document.getElementById('rankBar'); if(bar){ const lo=o.r.xp, hi=o.nx?o.nx.xp:o.r.xp+1; bar.style.width=Math.max(6,Math.min(100,((state.xp-lo)/(hi-lo))*100))+'%'; } }
+  function celebrate(msg,color){ const ft=document.getElementById('funtoast'); if(ft){ ft.textContent=msg; ft.style.color=color||'#fff'; ft.classList.remove('show'); void ft.offsetWidth; ft.classList.add('show'); } tone(700,.4,'triangle',.11); setTimeout(()=>tone(1050,.4,'triangle',.09),110); }
 
   // ---------- layout systems by distance ----------
   const rndPos=mulberry(4242);
@@ -313,6 +375,8 @@
     for(let i=0;i<f.length;i++){ const x=pad+i/(f.length-1)*(Wc-2*pad), y=pad+(1-(f[i]-mn)/sp)*(Hc-2*pad); lctx.beginPath(); lctx.arc(x,y,1.5,0,6.28); lctx.fill(); } lctx.shadowBlur=0; }
   function answer(a){ if(answered||!curCard)return; answered=true; audio(); document.querySelectorAll('.vbtns button').forEach(b=>b.disabled=true);
     const truth=curCard.truth, correct=(a===truth); R.done++; if(a!=='unsure'&&correct)R.correct++;
+    addXP(10+(correct?5:0));
+    if(a!=='unsure'){ if(correct){ curStreak++; if(curStreak>state.bestStreak){ state.bestStreak=curStreak; save(); } if(curStreak===5) celebrate('🔥 5 in a row!','#f5c977'); checkBadges(); } else curStreak=0; }
     const isCorrect=(a==='unsure')?null:correct;
     if(window.LOPSync){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5').then(()=>LOPSync.logClassification(a,isCorrect)); }
     if(correct){ tone(660,.18,'sine',.13,990); } else if(a==='unsure'){ tone(440,.15,'sine',.1); } else { tone(200,.2,'sawtooth',.09); }
@@ -332,6 +396,7 @@
   // ---------- chart + reward ----------
   function chartSystem(sys){ if(!state.charted[sys.h]){ state.charted[sys.h]=true; save(); if(window.LOPSync){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5').then(()=>LOPSync.logClaim(sys.h,'#5DCAA5')); } }
     sys._grow=.0001; shake=8; burst(sys.x,sys.y,'#5DCAA5',40,true); chord(392); updateHUD();
+    addXP(25); checkRegion(); checkBadges();
     setTimeout(()=>openReward(sys,false),520);
   }
   function openReward(sys,revisit){ over=true; curSys=sys;
@@ -348,7 +413,7 @@
   }
   function closeReward(){ document.getElementById('sheet').classList.remove('show'); over=false; renderAtlas(); if(chartedCount()>=SYSTEMS.length) setTimeout(()=>document.getElementById('win').classList.add('show'),450); }
   document.getElementById('shGo').onclick=closeReward;
-  document.getElementById('shName2').onclick=()=>{ if(!curSys)return; const which=curSys.pl[0].n; const nn=prompt('Give '+which+' an honorary nickname:',state.names[which]||''); if(nn){ const c=cleanName(nn.trim()); if(!c.ok){ alert(c.reason); return; } state.names[which]=nn.trim(); save(); if(window.LOPSync){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5').then(()=>LOPSync.logDiscovery(nn.trim(),which)); } openReward(curSys,true); } };
+  document.getElementById('shName2').onclick=()=>{ if(!curSys)return; const which=curSys.pl[0].n; const nn=prompt('Give '+which+' an honorary nickname:',state.names[which]||''); if(nn){ const c=cleanName(nn.trim()); if(!c.ok){ alert(c.reason); return; } state.names[which]=nn.trim(); save(); addXP(15); checkBadges(); if(window.LOPSync){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5').then(()=>LOPSync.logDiscovery(nn.trim(),which)); } openReward(curSys,true); } };
   function cleanName(s){ if(!s||s.length<2)return{ok:false,reason:'Name is too short.'}; if(s.length>28)return{ok:false,reason:'Name is too long.'}; if(/(fuck|shit|bitch|cunt|nazi|damn|ass\b|sex)/i.test(s))return{ok:false,reason:'Please choose a friendly name.'}; return{ok:true}; }
   function esc(s){ return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
   document.getElementById('again').onclick=()=>document.getElementById('win').classList.remove('show');
@@ -357,7 +422,18 @@
   const atlasBtn=document.getElementById('atlasBtn');
   atlasBtn.onclick=()=>{ renderAtlas(); document.getElementById('atlas').classList.add('show'); };
   document.getElementById('atlasClose').onclick=()=>document.getElementById('atlas').classList.remove('show');
-  function renderAtlas(){ const grid=document.getElementById('atlasGrid'), charted=SYSTEMS.filter(s=>state.charted[s.h]); const worlds=[];
+  function renderAtlas(){
+    // progression header: rank + XP + streak, regions, achievements
+    const o=rankFor(state.xp), pct=o.nx?Math.round(((state.xp-o.r.xp)/(o.nx.xp-o.r.xp))*100):100;
+    let ph='<div class="pcard"><div class="prow"><div><div class="rttl">'+o.r.n+'</div><div class="rsub">'+state.xp+' XP'+(o.nx?' · '+(o.nx.xp-state.xp)+' to '+o.nx.n:' · max rank')+'</div></div><div class="rstreak">🔥 '+(state.bestStreak||0)+'</div></div><div class="rbar big"><i style="width:'+pct+'%"></i></div></div>';
+    ph+='<div class="seclbl">Regions of the Neighborhood</div><div class="regions">';
+    REGIONS.forEach(rg=>{ const p=regionProg(rg), done=p.done===p.total; ph+='<div class="reg'+(done?' done':'')+'"><div class="rn3">'+rg.n+(done?' ✓':'')+'</div><div class="rc">'+p.done+'/'+p.total+'</div><div class="rbar"><i style="width:'+(p.done/p.total*100)+'%"></i></div></div>'; });
+    ph+='</div><div class="seclbl">Achievements</div><div class="badges">';
+    BADGES.forEach(b=>{ const got=!!state.badges[b.id]; ph+='<div class="bdg'+(got?' on':'')+'" title="'+esc(b.d)+'"><div class="bi">'+(got?'🏅':'🔒')+'</div><div class="bn">'+esc(b.n)+'</div></div>'; });
+    ph+='</div>';
+    const pe=document.getElementById('atlasProg'); if(pe) pe.innerHTML=ph;
+    // worlds grid
+    const grid=document.getElementById('atlasGrid'), charted=SYSTEMS.filter(s=>state.charted[s.h]); const worlds=[];
     charted.forEach(s=>s.pl.forEach((pl,i)=>worlds.push({pl,s,i})));
     document.getElementById('atlasCount').textContent=worlds.length+' world'+(worlds.length!==1?'s':'');
     document.getElementById('atlasEmpty').style.display=worlds.length?'none':'block';
@@ -385,7 +461,7 @@
   const syncEl=document.getElementById('synced');
   if(window.LOPSync&&LOPSync.enabled){ syncEl.textContent='Cloud sync on · your discoveries are saved'; LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5'); }
   else { syncEl.textContent='Saving to this device'; }
-  updateHUD(); renderAtlas(); loadDeck(); frame();
+  updateHUD(); updateRank(); checkBadges(); renderAtlas(); loadDeck(); frame();
 })();
 </script>
 </body>
