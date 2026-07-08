@@ -78,12 +78,14 @@
   <div class="panel">
     <select id="planet"></select>
     <div class="note" id="pmeta"></div>
+    <div id="candChecks"></div>
   </div>
 
   <div class="step">Step 2 — Choose a task, then copy its prompt into your AI</div>
   <div class="panel">
     <div class="modes" id="modes"></div>
     <div class="hint" id="modedesc"></div>
+    <div class="modes" id="ladder" style="margin-top:8px;"></div>
     <div class="prompt" id="prompt" style="margin-top:10px;"></div>
     <div class="row">
       <button class="primary" id="copy">Copy prompt</button>
@@ -99,18 +101,18 @@
     <div class="subs" id="subs"></div>
   </div>
 
-  <div class="step">Step 4 — Build the cross-checked consensus</div>
-  <div class="panel">
+  <div class="step" id="s4step">Step 4 — Build the cross-checked consensus</div>
+  <div class="panel" id="s4panel">
     <div class="row"><button class="primary" id="build" disabled>Build consensus</button>
       <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#9aa6bf;"><input type="checkbox" id="incComm" checked> include the community's answers</label>
       <span id="buildhint" class="hint" style="margin-top:0;"></span></div>
     <div class="dossier" id="dossier"></div>
   </div>
 
-  <div class="step">Step 5 — The community wall <span id="syncpill" class="pill" style="margin-left:6px;"></span></div>
+  <div class="step" id="s5step">Step 5 — The community wall <span id="syncpill" class="pill" style="margin-left:6px;"></span></div>
   <div class="panel">
     <p class="hint" id="wallintro" style="margin-top:0;">Answers shared here are pooled across every explorer. Add yours, then validate others' — only what the community trusts advances toward the professional record.</p>
-    <div class="row">
+    <div class="row" id="sharerow">
       <button class="primary" id="share" disabled>Add my answers to the wall</button>
       <span id="sharemsg" class="ok" style="font-size:13px;"></span>
     </div>
@@ -173,6 +175,47 @@ Compare how this planet's key measured parameters are reported across the major 
 Rules: only report values you are confident are documented, never fabricate numbers or citations, and explicitly flag disagreements in "conflicts". Return valid JSON only.`
   }
 };
+
+// Candidate check (research ladder) — targets the REAL OPEN candidates, not the flagship planets.
+MODES.candidate = {
+  label: "Candidate check",
+  candidate: true,
+  desc: "Point your AI at a real OPEN candidate and answer ONE research question at a time. We route you to the least-answered question, so the case gets stronger as more people help — not the same question repeated."
+};
+let CANDIDATES = [];   // loaded from frontier_curves.json
+let candQ = null;      // which ladder question is active
+
+const LADDER = [
+  { key:"followup",      label:"Published follow-up?",
+    q:"Has anyone published or reported follow-up observations of this candidate (ground-based photometry, spectroscopy, high-resolution imaging, an ExoFOP note, or a paper)? Summarize what exists." },
+  { key:"secondary",     label:"Eclipsing-binary signs?",
+    q:"Is there any evidence this is an eclipsing binary rather than a planet — a secondary eclipse, an unusually deep transit, or a V-shape? Note anything documented." },
+  { key:"starsize",      label:"Host star & planet size",
+    q:"What is the host star's type, temperature, and radius, and given the transit depth, is the IMPLIED planet size physically reasonable for a planet (roughly under ~2 Jupiter radii)?" },
+  { key:"contamination", label:"Nearby-star contamination",
+    q:"Is there a nearby or blended star (for example from Gaia, including a high RUWE / astrometric-binary flag) that could contaminate the light or be the true source of the dip?" },
+  { key:"catalog",       label:"Catalog agreement",
+    q:"Do the public catalogs (NASA Exoplanet Archive, ExoFOP/TOI, discovery papers) AGREE on this candidate's period, transit depth, and radius, or do they disagree? Give the numbers." }
+];
+
+function candidatePrompt(cand, qkey){
+  const item = LADDER.find(l=>l.key===qkey) || LADDER[0];
+  return `You are assisting a citizen-science project vetting a REAL, still-open TESS planet candidate before it goes to a professional.
+Candidate: ${cand.name} (a TESS Object of Interest). Known data: host star ${cand.tic||"?"}, constellation ${cand.constellation||"?"}, ~${cand.distance_ly!=null?cand.distance_ly+" light-years":"distance unknown"}, orbital period ~${cand.period_days||"?"} days, transit depth ~${cand.depth_ppm||"?"} ppm.
+
+Answer ONLY this one question:
+"${item.q}"
+
+Use only verifiable, publicly documented information. If you cannot find reliable information, say so — "unknown" is a valid and useful answer; do NOT guess or invent. Return ONE JSON object and nothing else:
+{
+  "question": "${item.key}",
+  "finding": "a concise, factual answer to the question above",
+  "verdict": "supports_planet | suggests_false_positive | inconclusive",
+  "evidence": ["cited facts — Author Year, catalog name, or 'unknown'; never invent a source"],
+  "confidence": 0.0
+}
+Return valid JSON only.`;
+}
 
 const AIS = ["ChatGPT","Claude","Gemini","Local model","Other"];
 
@@ -283,6 +326,89 @@ function combinedList(){
   return list;
 }
 
+/* ================= Candidate check (research ladder, layer B) ================= */
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+function isCandidateMode(){ return !!(MODES[mode] && MODES[mode].candidate); }
+async function loadCandidates(){
+  if(CANDIDATES.length) return CANDIDATES;
+  try{ const r=await fetch('frontier_curves.json',{cache:'no-store'}); if(r.ok){ const d=await r.json(); CANDIDATES = Array.isArray(d)?d:[]; } }catch(e){ CANDIDATES=[]; }
+  return CANDIDATES;
+}
+function populateTargets(){
+  const cand=isCandidateMode(), list=cand?CANDIDATES:PLANETS;
+  sel.innerHTML="";
+  list.forEach((p,i)=>{ const o=document.createElement("option"); o.value=i; o.textContent=cand?p.name:p.n; sel.appendChild(o); });
+}
+function setClassicUI(on){
+  $("s4step").style.display = on?"":"none";
+  $("s4panel").style.display = on?"":"none";
+  $("sharerow").style.display = on?"":"none";
+  $("ladder").innerHTML=""; $("candChecks").innerHTML="";
+  $("add").textContent = on ? "Add this answer" : "Submit finding";
+  if(on) $("wallintro").textContent = "Answers shared here are pooled across every explorer. Add yours, then validate others' — only what the community trusts advances toward the professional record.";
+}
+async function refreshCandidate(){
+  setClassicUI(false);
+  $("modedesc").textContent = MODES.candidate.desc;
+  $("answer").value=""; $("err").style.color=""; $("err").textContent=""; $("copied").textContent="";
+  if(!CANDIDATES.length){ $("candChecks").innerHTML='<div class="hint">Loading open candidates…</div>'; $("prompt").textContent=""; $("wall").innerHTML=""; await loadCandidates(); populateTargets(); }
+  if(!CANDIDATES.length){ $("candChecks").innerHTML='<div class="hint">No open candidates are available right now.</div>'; $("prompt").textContent=""; $("wall").innerHTML=""; return; }
+  const cand = CANDIDATES[+sel.value] || CANDIDATES[0];
+  $("pmeta").textContent = [cand.constellation, (cand.distance_ly!=null?("~"+cand.distance_ly+" ly"):null), (cand.period_days?("P="+cand.period_days+" d"):null), (cand.depth_ppm?("depth "+cand.depth_ppm+" ppm"):null)].filter(Boolean).join("  ·  ");
+  renderCandChecks(cand);
+  await renderLadder(cand);
+}
+function renderCandChecks(cand){
+  const el=$("candChecks");
+  if(!Array.isArray(cand.checks)||!cand.checks.length){ el.innerHTML=""; return; }
+  const nf=cand.checks.filter(c=>c.flag).length;
+  el.innerHTML='<div class="hint" style="margin-top:10px;">What the data already shows'+(nf?(' · '+nf+' red flag'+(nf>1?'s':'')):' · all clear')+':</div>'+
+    cand.checks.map(c=>`<div class="factli" style="color:${c.flag?'#f3a9a9':'#9fd9c2'};">${c.flag?'⚠':'✓'} <b>${escapeHtml(c.test)}</b> — ${escapeHtml(c.note)}</div>`).join("");
+}
+async function renderLadder(cand){
+  let findings=[];
+  if(syncOn()){ try{ findings = await LOPSync.getCandidateFindings(cand.id) || []; }catch(e){} }
+  const counts={}; LADDER.forEach(l=>counts[l.key]=0);
+  findings.forEach(f=>{ const k=String(f.mode||"").replace(/^check:/,""); if(counts[k]!=null) counts[k]++; });
+  if(!candQ || !LADDER.some(l=>l.key===candQ)) candQ = LADDER.slice().sort((a,b)=>counts[a.key]-counts[b.key])[0].key;  // least-answered first
+  paintLadder(cand, findings, counts);
+}
+function paintLadder(cand, findings, counts){
+  $("ladder").innerHTML = LADDER.map(l=>`<button data-q="${l.key}" class="${l.key===candQ?'on':''}">${escapeHtml(l.label)} <span class="who-tag">${counts[l.key]||0}</span></button>`).join("");
+  $("ladder").querySelectorAll("button").forEach(b=> b.addEventListener("click", ()=>{ candQ=b.dataset.q; paintLadder(cand, findings, counts); }));
+  $("prompt").textContent = candidatePrompt(cand, candQ);
+  renderCandDossier(cand, findings);
+}
+function renderCandDossier(cand, findings){
+  $("wallintro").textContent = "This candidate's gathered dossier — every explorer's AI findings, organized by question. More answers across more questions = a stronger case.";
+  const byKey={}; findings.forEach(f=>{ const k=String(f.mode||"").replace(/^check:/,""); (byKey[k]=byKey[k]||[]).push(f); });
+  $("wall").innerHTML = LADDER.map(l=>{
+    const items=byKey[l.key]||[];
+    let h=`<div class="subrow" style="flex-direction:column;align-items:stretch;"><div style="display:flex;gap:10px;align-items:center;"><span class="who">${escapeHtml(l.label)}</span><span class="who-tag" style="margin-left:auto;">${items.length} finding${items.length!==1?"s":""}</span></div>`;
+    if(items.length){
+      h+=items.slice(0,4).map(f=>{ const p=f.payload||{}, verd=String(p.verdict||""), vc = verd==="supports_planet"?"#9fd9c2":verd==="suggests_false_positive"?"#f3a9a9":"#c9b6e6";
+        return `<div class="factli">• ${escapeHtml(p.finding||"(no summary)")} <span class="who-tag" style="color:${vc};">${escapeHtml(verd||"—")} · ${escapeHtml(f.model||"AI")}</span></div>`; }).join("");
+    } else h+=`<div class="hint" style="margin-top:4px;">No answers yet — pick this question above and be the first.</div>`;
+    return h+`</div>`;
+  }).join("");
+}
+async function submitFinding(){
+  $("err").style.color=""; $("err").textContent="";
+  const raw=$("answer").value.trim();
+  if(!raw){ $("err").textContent="Paste your AI's answer first."; return; }
+  const res=parseAnswer(raw);
+  if(res.err){ $("err").textContent=res.err; return; }
+  if(!syncOn()){ $("err").textContent="Cloud sync is off — turn it on to contribute to the community dossier."; return; }
+  const cand=CANDIDATES[+sel.value]; if(!cand) return;
+  $("add").disabled=true; $("err").style.color=""; $("err").textContent="Saving…";
+  try{ await LOPSync.ensureExplorer(); }catch(e){}
+  const id = await LOPSync.saveDossier(cand.id, "check:"+candQ, curAI, res.data);
+  $("add").disabled=false;
+  if(id){ $("answer").value=""; $("err").style.color="#8fe3c4"; $("err").textContent="Finding added to the dossier — thank you!"; renderLadder(cand); }
+  else { $("err").style.color=""; $("err").textContent="Couldn't save right now, try again."; }
+}
+/* ============================================================================= */
+
 // build mode buttons
 Object.keys(MODES).forEach(k=>{
   const b=document.createElement("button");
@@ -304,22 +430,25 @@ function setMode(k){
   if(subs.length){
     if(!confirm("Switching tasks clears the answers you've added for this target. Continue?")) return;
   }
-  mode=k; subs=[];
+  mode=k; subs=[]; candQ=null;
   document.querySelectorAll("#modes button").forEach(b=>b.classList.toggle("on", b.dataset.mode===k));
+  populateTargets();
   refresh();
 }
 
 function refresh(){
+  if(isCandidateMode()){ refreshCandidate(); return; }
+  setClassicUI(true);
   const p = PLANETS[+sel.value];
   $("pmeta").textContent = p.note + `  ·  ~${p.d} light-years`;
   $("modedesc").textContent = MODES[mode].desc;
   $("prompt").textContent = MODES[mode].prompt(p);
-  $("answer").value=""; $("err").textContent=""; $("copied").textContent=""; $("sharemsg").textContent="";
+  $("answer").value=""; $("err").style.color=""; $("err").textContent=""; $("copied").textContent=""; $("sharemsg").textContent="";
   renderSubs(); renderBuildState();
   $("dossier").innerHTML="";
   loadWall();
 }
-sel.addEventListener("change", ()=>{ subs=[]; refresh(); });
+sel.addEventListener("change", ()=>{ subs=[]; candQ=null; refresh(); });
 
 $("copy").addEventListener("click", ()=>{
   const t = $("prompt").textContent;
@@ -333,7 +462,8 @@ function parseAnswer(raw){
 }
 
 $("add").addEventListener("click", ()=>{
-  $("err").textContent="";
+  if(isCandidateMode()){ return submitFinding(); }
+  $("err").style.color=""; $("err").textContent="";
   const raw=$("answer").value.trim();
   if(!raw){ $("err").textContent="Paste your AI's answer first."; return; }
   const res=parseAnswer(raw);
@@ -575,6 +705,7 @@ function buildCrosscheckConsensus(list){
 
 refresh();
 initSync();
+loadCandidates();
 </script>
 </body>
 </html>

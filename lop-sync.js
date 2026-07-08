@@ -132,6 +132,17 @@
       if (!client || !dossierId) return null;
       try { const r = await client.from("ai_dossier_consensus").select("*").eq("dossier_id", dossierId).limit(1); return (r.data && r.data[0]) || null; }
       catch (e) { return null; }
+    },
+    // ---- Candidate check (research ladder): findings per open candidate ----
+    // reuses ai_dossiers; mode is 'check:<question>' so no new table is needed.
+    async getCandidateFindings(planet) {
+      if (!client || !planet) return [];
+      try {
+        const r = await client.from("ai_dossiers").select("id,mode,model,payload,created_at")
+          .eq("planet", String(planet)).like("mode", "check:%")
+          .order("created_at", { ascending: false }).limit(200);
+        return r.data || [];
+      } catch (e) { return []; }
     }
   };
 
