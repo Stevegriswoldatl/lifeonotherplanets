@@ -709,7 +709,7 @@
   }
   function answerFrontier(a){ if(answered||!curCard)return; answered=true; audio();
     document.querySelectorAll('.vbtns button').forEach(b=>b.disabled=true);
-    addXP(8); tone(560,.18,'sine',.11,840); creditSectorWork();
+    addXP(8); tone(560,.18,'sine',.11,840); creditSectorWork(); logImpact(true);
     const c=curCard, vf=document.getElementById('vfeed'); vf.className='vfeed show front';
     const kv=[ fkv('Candidate',c.name), fkv('Status','Planet candidate (open)') ];
     if(c.constellation) kv.push(fkv('Constellation',c.constellation));
@@ -747,6 +747,7 @@
     const truth=curCard.truth, correct=(a===truth); R.done++; if(a!=='unsure'&&correct)R.correct++;
     addXP(10+(correct?5:0));
     creditSectorWork(); if(!state.graduated) trainCredit(a!=='unsure' && correct);
+    if(curCard.source && curCard.source.indexOf('Real')===0) logImpact(false);
     if(a!=='unsure'){ if(correct){ curStreak++; if(curStreak>state.bestStreak){ state.bestStreak=curStreak; save(); } if(curStreak===5) celebrate('🔥 5 in a row!','#f5c977'); checkBadges(); } else curStreak=0; }
     const isCorrect=(a==='unsure')?null:correct;
     if(window.LOPSync){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5').then(()=>LOPSync.logClassification(a,isCorrect)); }
@@ -915,10 +916,25 @@
     document.getElementById('galClose').onclick=closeGalaxy;
     const _scp=document.getElementById('secChip'); if(_scp)_scp.onclick=function(){ openSector(sectorNow()); };
     document.getElementById('cardSave').onclick=saveCard; document.getElementById('cardShareBtn').onclick=shareCardImg; document.getElementById('cardClose').onclick=function(){document.getElementById('cardModal').classList.remove('show');}; }
+  // ---------- real-science impact: gratitude + awareness, kept light ----------
+  function logImpact(isOpen){ state.realReviews=(state.realReviews||0)+1; if(isOpen)state.openReviews=(state.openReviews||0)+1; save();
+    const r=state.realReviews, o=state.openReviews||0;
+    if(r===1){ setTimeout(function(){ celebrate('🔬 That was REAL NASA data — thank you!','#5DCAA5'); },350); return; }
+    const M={5:'5 open candidates reviewed — real help going through NASA’s backlog 🙏',15:'15 open candidates! Genuine first-pass science.',30:'30 first looks — this is how real signals get sorted from noise.',60:'60 open candidates vetted — a serious contributor. Thank you.'};
+    if(isOpen && M[o]){ setTimeout(function(){ celebrate('🛰️ '+M[o],'#c7aef8'); },350); } }
+  function impactCard(){ const r=state.realReviews||0, o=state.openReviews||0; if(!r)return '';
+    return '<div class="pcard" style="border-color:rgba(93,202,165,.32);margin-bottom:14px;">'
+      +'<div style="font-size:11px;font-weight:800;letter-spacing:.08em;color:#9be7c6;">🔬 YOUR REAL-SCIENCE IMPACT</div>'
+      +'<div style="display:flex;gap:18px;margin-top:9px;">'
+      +'<div><div style="font-weight:800;font-size:24px;color:#fff;">'+r+'</div><div style="font-size:10.5px;color:#8fa0c4;">real light curves reviewed</div></div>'
+      +'<div><div style="font-weight:800;font-size:24px;color:#c7aef8;">'+o+'</div><div style="font-size:10.5px;color:#8fa0c4;">open NASA candidates vetted</div></div>'
+      +'</div>'
+      +'<div style="font-size:11.5px;color:#9fb0d0;margin-top:9px;line-height:1.5;">Every review helps sort real TESS signals from false alarms — the work that separates candidates before a NASA submission. Thank you for being one of the eyes on the data.</div>'
+      +'</div>'; }
   function renderAtlas(){
     // progression header: rank + XP + streak, regions, achievements
     const o=rankFor(state.xp), pct=o.nx?Math.round(((state.xp-o.r.xp)/(o.nx.xp-o.r.xp))*100):100;
-    let ph='<div class="pcard"><div class="prow"><div><div class="rttl">'+o.r.n+'</div><div class="rsub">'+state.xp+' XP'+(o.nx?' · '+(o.nx.xp-state.xp)+' to '+o.nx.n:' · max rank')+'</div></div><div class="rstreak">🔥 '+(state.bestStreak||0)+'</div></div><div class="rbar big"><i style="width:'+pct+'%"></i></div></div>';
+    let ph=impactCard()+'<div class="pcard"><div class="prow"><div><div class="rttl">'+o.r.n+'</div><div class="rsub">'+state.xp+' XP'+(o.nx?' · '+(o.nx.xp-state.xp)+' to '+o.nx.n:' · max rank')+'</div></div><div class="rstreak">🔥 '+(state.bestStreak||0)+'</div></div><div class="rbar big"><i style="width:'+pct+'%"></i></div></div>';
     ph+='<div class="seclbl">Regions of the Neighborhood</div><div class="regions">';
     REGIONS.forEach(rg=>{ const p=regionProg(rg), done=p.done===p.total; ph+='<div class="reg'+(done?' done':'')+'"><div class="rn3">'+rg.n+(done?' ✓':'')+'</div><div class="rc">'+p.done+'/'+p.total+'</div><div class="rbar"><i style="width:'+(p.done/p.total*100)+'%"></i></div></div>'; });
     ph+='</div><div class="seclbl">Achievements</div><div class="badges">';
