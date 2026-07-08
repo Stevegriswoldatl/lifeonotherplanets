@@ -171,6 +171,46 @@
       if (!client) return [];
       try { const r = await client.from("sector_map").select("*"); return r.data || []; }
       catch (e) { return []; }
+    },
+    // ---- accounts: optional magic-link sign-in + cross-device progress sync ----
+    async currentUser() {
+      if (!client) return null;
+      try { const r = await client.auth.getUser(); return (r.data && r.data.user) || null; }
+      catch (e) { return null; }
+    },
+    async signInEmail(email) {
+      if (!client) return { error: "offline" };
+      try {
+        const redirect = location.origin + location.pathname;
+        const r = await client.auth.signInWithOtp({ email: email, options: { emailRedirectTo: redirect } });
+        return { error: r.error && r.error.message };
+      } catch (e) { return { error: String(e) }; }
+    },
+    async signOut() {
+      if (!client) return;
+      try { await client.auth.signOut(); } catch (e) {}
+    },
+    onAuth(cb) {
+      if (!client) return;
+      try { client.auth.onAuthStateChange(function (_evt, session) { cb((session && session.user) || null); }); }
+      catch (e) {}
+    },
+    async saveState(state) {
+      if (!client) return;
+      try {
+        const u = await api.currentUser();
+        if (!u) return;
+        await client.from("player_state").upsert({ user_id: u.id, state: state, updated_at: new Date().toISOString() });
+      } catch (e) { console.warn("LOP sync: saveState", e); }
+    },
+    async loadState() {
+      if (!client) return null;
+      try {
+        const u = await api.currentUser();
+        if (!u) return null;
+        const r = await client.from("player_state").select("state").eq("user_id", u.id).limit(1);
+        return (r.data && r.data[0] && r.data[0].state) || null;
+      } catch (e) { return null; }
     }
   };
 

@@ -42,7 +42,19 @@
 
   .hint{ position:absolute; left:0; right:0; bottom:96px; text-align:center; font-size:14.5px; color:#aeb9d6; z-index:2; pointer-events:none;
          text-shadow:0 2px 10px rgba(0,0,0,.6); transition:opacity .5s; padding:0 30px; font-weight:600; }
-  .synced{ position:absolute; left:0; right:0; bottom:70px; text-align:center; font-size:11px; color:#5f6e92; z-index:2; pointer-events:none; }
+  .synced{ position:absolute; left:0; right:0; bottom:70px; text-align:center; font-size:11px; color:#5f6e92; z-index:2; pointer-events:none; padding:0 16px; }
+  .synced a.authlink{ pointer-events:auto; color:#7fb2ff; cursor:pointer; white-space:nowrap; }
+  .authsheet{ position:fixed; inset:0; z-index:70; display:none; align-items:center; justify-content:center; padding:22px; background:rgba(3,4,12,.74); backdrop-filter:blur(5px); }
+  .authsheet.show{ display:flex; }
+  .authcard{ width:100%; max-width:360px; background:#0b1120; border:1px solid #24304e; border-radius:20px; padding:22px; text-align:center; }
+  .authcard h3{ font-family:'Fredoka'; font-weight:600; font-size:20px; margin:0 0 6px; color:#e8ecf6; }
+  .authcard p{ color:#c3cee6; font-size:13.5px; line-height:1.55; margin:6px 0 14px; }
+  .authcard input{ width:100%; padding:12px 14px; border-radius:12px; border:1px solid #29365a; background:#0a1120; color:#e8ecf6; font-size:15px; font-family:'Space Grotesk'; }
+  .authcard .arow{ display:flex; gap:8px; margin-top:12px; }
+  .authcard .arow button{ flex:1; padding:12px; border-radius:12px; border:none; font:700 14px 'Space Grotesk'; cursor:pointer; }
+  .authcard .send{ background:#4fd8ff; color:#052029; }
+  .authcard .cancel{ background:#16203a; color:#dbe4fb; border:1px solid #29365a; }
+  .authcard .msg{ font-size:13px; margin-top:10px; min-height:16px; font-family:'Space Grotesk'; }
 
   /* selected-system tooltip pill */
   .seltip{ position:absolute; z-index:3; transform:translate(-50%,-140%); pointer-events:none; opacity:0; transition:opacity .2s; white-space:nowrap;
@@ -362,6 +374,17 @@
 
   <div class="win" id="win"><h1>🌌 The Neighborhood is charted</h1><p>You explored every nearby system and lit up your whole constellation — by doing real science on real NASA data. This is Season 1 complete.</p><button id="winShare" style="margin-top:12px;background:#141c2e;color:#fff;border:1px solid rgba(255,255,255,.16);padding:14px 26px;border-radius:14px;font:800 15px 'Space Grotesk';cursor:pointer;">📤 Share your card</button><button id="again">Keep exploring</button></div>
 
+  <!-- sign-in (magic link) -->
+  <div class="authsheet" id="authSheet">
+    <div class="authcard">
+      <h3>Save your progress ✦</h3>
+      <p>Get a one-tap sign-in link by email — no password. Your galaxy, score, and accuracy sync to any device you play on.</p>
+      <input id="authEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com">
+      <div class="arow"><button class="cancel" id="authCancel">Cancel</button><button class="send" id="authSend">Email me a link</button></div>
+      <div class="msg" id="authMsg"></div>
+    </div>
+  </div>
+
   <!-- sector showcase -->
   <div class="glass secchip" id="secChip"></div>
   <div class="sector" id="sector">
@@ -508,7 +531,7 @@
   // ---------- state (compatible with game.html / vet.html) ----------
   const KEY="loop_search_state_v2";
   function load(){ try{ return Object.assign({explorer:"",avatar:"astronaut",charted:{},claims:{},names:{}}, JSON.parse(localStorage.getItem(KEY))||{}); }catch(e){ return {explorer:"",avatar:"astronaut",charted:{},claims:{},names:{}}; } }
-  function save(){ localStorage.setItem(KEY,JSON.stringify(state)); }
+  function save(){ try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){} pushRemote(); }
   let state=load(); state.charted=state.charted||{}; state.names=state.names||{}; state.xp=state.xp||0; state.badges=state.badges||{}; state.bestStreak=state.bestStreak||0; state.constellations=state.constellations||[]; state.sector=state.sector||0;
   const R={done:0,correct:0}; // session accuracy
   let curStreak=0;
@@ -1147,15 +1170,59 @@
     ctx.globalAlpha=1; ctx.restore(); requestAnimationFrame(frame);
   }
 
+  // ---------- account sign-in (magic link) + cross-device sync ----------
+  var _signedUser=null, _remoteTimer=null, _authMerging=false;
+  function pushRemote(){ if(!_signedUser || !(window.LOPSync&&LOPSync.enabled)) return; clearTimeout(_remoteTimer); _remoteTimer=setTimeout(function(){ LOPSync.saveState(state); }, 4000); }
+  function mergeState(a,b){ a=a||{}; b=b||{}; var m=Object.assign({}, a, b);
+    m.charted=Object.assign({}, a.charted||{}, b.charted||{});
+    m.badges=Object.assign({}, a.badges||{}, b.badges||{});
+    m.names=Object.assign({}, a.names||{}, b.names||{});
+    m.claims=Object.assign({}, a.claims||{}, b.claims||{});
+    m.sectorWork=Object.assign({}, a.sectorWork||{}, b.sectorWork||{});
+    m.xp=Math.max(a.xp||0, b.xp||0);
+    m.sector=Math.max(a.sector||0, b.sector||0);
+    m.bestStreak=Math.max(a.bestStreak||0, b.bestStreak||0);
+    m.observerLicense=!!(a.observerLicense||b.observerLicense);
+    m.graduated=!!(a.graduated||b.graduated);
+    m.explorer=b.explorer||a.explorer||'';
+    m.trainLast10=(b.trainLast10&&b.trainLast10.length)?b.trainLast10:(a.trainLast10||[]);
+    var as=a.seti||{}, bs=b.seti||{}; m.seti={ reviewed:Math.max(as.reviewed||0,bs.reviewed||0), candidates:Math.max(as.candidates||0,bs.candidates||0), ruledOut:Math.max(as.ruledOut||0,bs.ruledOut||0), bestStreak:Math.max(as.bestStreak||0,bs.bestStreak||0) };
+    var cons=(a.constellations||[]).concat(b.constellations||[]), seen={}; m.constellations=cons.filter(function(c){ var k=c&&c.name; if(!k||seen[k])return false; seen[k]=1; return true; });
+    return m; }
+  function authOpen(){ var s=document.getElementById('authSheet'); if(s){ s.classList.add('show'); var e=document.getElementById('authEmail'); if(e)setTimeout(function(){ try{e.focus();}catch(_){} },60); } }
+  function authClose(){ var s=document.getElementById('authSheet'); if(s)s.classList.remove('show'); }
+  function updateAuthUI(u){ var el=document.getElementById('synced'); if(!el)return;
+    if(u){ el.innerHTML='✓ Signed in as '+esc(u.email||'your account')+' · <a class="authlink" id="signOutLink">sign out</a>'; var so=document.getElementById('signOutLink'); if(so)so.onclick=function(){ if(window.LOPSync)LOPSync.signOut().then(function(){ location.reload(); }); }; }
+    else if(window.LOPSync&&LOPSync.enabled){ el.innerHTML='Progress saved on this device · <a class="authlink" id="saveAcctLink">save to my account →</a>'; var sl=document.getElementById('saveAcctLink'); if(sl)sl.onclick=authOpen; }
+    else { el.textContent='Saving to this device'; } }
+  function onSignedIn(u){ _signedUser=u; if(!u)return;
+    if(state && state.__acct===u.id){ pushRemote(); return; }         // already merged for this account
+    if(_authMerging)return; _authMerging=true;
+    LOPSync.loadState().then(function(remote){
+      var merged=mergeState(remote, state); merged.__acct=u.id; merged.account=u.email;
+      try{ localStorage.setItem(KEY, JSON.stringify(merged)); }catch(e){}
+      LOPSync.saveState(merged);
+      location.reload();                                              // reboot once with merged progress
+    }); }
+  (function(){ var send=document.getElementById('authSend'), cancel=document.getElementById('authCancel');
+    if(cancel)cancel.onclick=authClose;
+    if(send)send.onclick=function(){ var email=(document.getElementById('authEmail').value||'').trim(), msg=document.getElementById('authMsg');
+      if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ msg.style.color='#f3a9a9'; msg.textContent='Please enter a valid email.'; return; }
+      msg.style.color='#9fb0d0'; msg.textContent='Sending…';
+      LOPSync.signInEmail(email).then(function(r){ if(r&&r.error){ msg.style.color='#f3a9a9'; msg.textContent='Hmm — '+r.error; } else { msg.style.color='#7fe6bd'; msg.textContent='✓ Check your email for a one-tap sign-in link.'; } }); }; })();
+
   // ---------- boot ----------
   const syncEl=document.getElementById('synced');
-  if(window.LOPSync&&LOPSync.enabled){ syncEl.textContent='Cloud sync on · your discoveries are saved';
+  if(window.LOPSync&&LOPSync.enabled){
     LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer',myColor())
       .then(function(id){ myId=id; return LOPSync.getMyClaims(); })
       .then(function(rows){ mergeClaims(rows);
         if(state.graduated && !state.homeSynced && state.homeSector!=null){ LOPSync.claimHome(state.homeSector, myColor()); state.homeSynced=true; save(); }
-        refreshGalaxyMap(); }); }
-  else { syncEl.textContent='Saving to this device'; }
+        refreshGalaxyMap(); });
+    LOPSync.currentUser().then(function(u){ updateAuthUI(u); if(u) onSignedIn(u); });
+    LOPSync.onAuth(function(u){ updateAuthUI(u); if(u) onSignedIn(u); });
+  }
+  else { updateAuthUI(null); }
   // grandfather existing explorers (played before territories existed) straight past training
   if(!state.graduated && (chartedCount()>=1 || (state.bestStreak||0)>=TRAIN_GOAL)){ state.graduated=true; state.playerColor=myColor(); state.homeSector=pickHome(); state.activeSector=state.homeSector; save(); }
   if(!state.graduated){ const h=document.getElementById('hint'); if(h)h.textContent='🎓 Training — tap a glowing star to scan real data'; }
