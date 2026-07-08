@@ -203,6 +203,17 @@
   .sector .seclater{ padding:15px 22px; border-radius:16px; font:800 15px "Space Grotesk"; color:#fff; cursor:pointer; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); }
   .sector .secgo:active,.sector .seclater:active{ transform:scale(.97); }
   @media (prefers-reduced-motion: reduce){ .sector{ transition-duration:.01ms !important; } }
+  /* territory / galaxy map */
+  .galaxy{ position:absolute; inset:0; z-index:8; display:flex; flex-direction:column; background:rgba(3,4,12,.9); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    padding:calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px); opacity:0; visibility:hidden; pointer-events:none; transition:opacity .28s ease, visibility .28s; overflow-y:auto; touch-action:pan-y; }
+  .galaxy.show{ opacity:1; visibility:visible; pointer-events:auto; }
+  .galstatus{ font-size:13px; color:#c7d2ea; margin:2px 2px 14px; font-weight:600; line-height:1.5; }
+  .galgrid{ display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+  .gcell{ aspect-ratio:1/1; border:1.5px solid; border-radius:14px; padding:6px 5px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; cursor:pointer; transition:transform .1s; }
+  .gcell:active{ transform:scale(.95); }
+  .gcell.active{ box-shadow:0 0 0 2px rgba(255,255,255,.55) inset; }
+  .gcell .gbadge{ font-size:15px; } .gcell .gname{ font-size:10px; font-weight:700; margin-top:2px; line-height:1.05; } .gcell .gpct{ font-size:9.5px; color:#c7d2ea; margin-top:1px; }
+  .gallegend{ font-size:12px; color:#9fb0d0; margin-top:16px; line-height:1.5; } .gallegend b{ color:#e8ecf6; }
   .cardmodal{ position:absolute; inset:0; z-index:15; display:flex; align-items:center; justify-content:center; flex-direction:column; background:rgba(3,4,12,.9); backdrop-filter:blur(8px); padding:20px; opacity:0; visibility:hidden; pointer-events:none; transition:opacity .28s ease, visibility .28s; }
   .cardmodal.show{ opacity:1; visibility:visible; pointer-events:auto; }
   .cardmodal img{ max-width:min(92vw,400px); max-height:68vh; border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,.6); transition:transform .42s cubic-bezier(.16,1,.3,1), opacity .3s ease; transform:scale(.9); opacity:0; }
@@ -224,6 +235,7 @@
     <div class="glass rankchip"><span class="rlab sg" id="rankName">Cadet</span><span class="rbar"><i id="rankBar"></i></span></div>
     <div class="spacer"></div>
     <div class="glass counter"><div class="ring"><svg width="26" height="26"><circle cx="13" cy="13" r="10" stroke="rgba(255,255,255,.14)" stroke-width="3" fill="none"/><circle id="ringp" cx="13" cy="13" r="10" stroke="#5DCAA5" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="62.8" stroke-dashoffset="62.8"/></svg><b id="rn">0</b></div><div class="lab">charted<br><b><span id="n">0</span>/<span id="tot">0</span></b></div></div>
+    <div class="glass iconbtn" id="galaxyBtn" title="Your Galaxy">🌌</div>
     <div class="glass iconbtn" id="constBtn" title="Constellations">✷</div>
     <div class="glass iconbtn" id="atlasBtn" title="My Atlas">✦</div>
   </div>
@@ -287,6 +299,14 @@
       <div class="grid" id="atlasGrid"></div>
       <div class="empty-msg" id="atlasEmpty" style="display:none;">Your Atlas is empty.<br>Scan a star to discover your first world ✦</div>
     </div>
+  </div>
+
+  <!-- territory / galaxy map -->
+  <div class="galaxy" id="galaxy">
+    <div class="ah"><div class="glass close" id="galClose">✕</div><h2>Your <span>Galaxy</span></h2></div>
+    <div class="galstatus" id="galStatus"></div>
+    <div class="galgrid" id="galGrid"></div>
+    <div class="gallegend">Claim territory by vetting real data — each sector fills in <b>your colour</b> as you work it. New explorers start in the <b>🎓 Training</b> sector; prove yourself and you’re assigned your own home turf. Other explorers’ sectors appear here as they join.</div>
   </div>
 
   <!-- shareable explorer card -->
@@ -582,6 +602,41 @@
   function maybeSectorShowcase(){ const cur=sectorNow();
     if(state.lastSeenSector==null){ state.lastSeenSector=cur; save(); return; }   // first-ever visit: prime it, no popup
     if(cur>state.lastSeenSector && FRONTIER.length){ setTimeout(()=>openSector(cur),700); } }
+
+  // ---------- territory / galaxy (Phase A: your own claimable turf, training -> graduation) ----------
+  const GAL_COLS=5, GAL_ROWS=4, GAL_N=GAL_COLS*GAL_ROWS, TRAIN_ID=7, SECTOR_GOAL=5, TRAIN_GOAL=3;
+  const SECTOR_COLORS=['#5DCAA5','#7fb2ff','#f5c977','#c7aef8','#f0906b','#6be6c1','#e56ba8','#9be77f'];
+  function secName(id){ const c=id%GAL_COLS, r=Math.floor(id/GAL_COLS); return 'Sector '+String.fromCharCode(65+c)+(r+1); }
+  function hashStr(s){ let h=2166136261; s=String(s); for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return (h>>>0); }
+  function myColor(){ return state.playerColor || SECTOR_COLORS[hashStr(state.explorer||'Explorer')%SECTOR_COLORS.length]; }
+  function pickHome(){ let id=hashStr((state.explorer||'Explorer')+'home')%GAL_N; if(id===TRAIN_ID)id=(id+1)%GAL_N; return id; }
+  function sectorWork(id){ return (state.sectorWork&&state.sectorWork[id])||0; }
+  function sectorFill(id){ return Math.min(1, sectorWork(id)/SECTOR_GOAL); }
+  function isMine(id){ return state.graduated && (id===state.homeSector || sectorWork(id)>0); }
+  function currentSector(){ if(!state.graduated)return TRAIN_ID; return state.activeSector!=null?state.activeSector:state.homeSector; }
+  function creditSectorWork(){ const id=currentSector(); if(id==null)return; state.sectorWork=state.sectorWork||{}; state.sectorWork[id]=(state.sectorWork[id]||0)+1; save(); }
+  function graduate(){ if(state.graduated)return; state.graduated=true; state.playerColor=myColor(); state.homeSector=pickHome(); state.activeSector=state.homeSector; save();
+    celebrate('🎓 Graduated — '+secName(state.homeSector)+' is yours!', state.playerColor); burst(W/2,H/2,state.playerColor,50,true); checkBadges(); }
+  function trainCredit(correct){ if(state.graduated)return; state.trainDone=(state.trainDone||0)+1; if(correct)state.trainCorrect=(state.trainCorrect||0)+1; save();
+    if((state.trainCorrect||0)>=TRAIN_GOAL) graduate(); }
+  function openGalaxy(){ renderGalaxy(); document.getElementById('galaxy').classList.add('show'); }
+  function closeGalaxy(){ document.getElementById('galaxy').classList.remove('show'); }
+  function enterSector(id){ if(!state.graduated){ if(id!==TRAIN_ID)return; } else { state.activeSector=id; save(); }
+    closeGalaxy(); const h=document.getElementById('hint'); if(h){ h.style.opacity=1; h.textContent = state.graduated ? ('Working '+secName(id)+' — tap a star to scan') : 'Training — tap a glowing star to scan'; } }
+  function renderGalaxy(){ const grid=document.getElementById('galGrid'); if(!grid)return; const col=myColor(); let html='';
+    for(let id=0; id<GAL_N; id++){ const mine=isMine(id), fill=sectorFill(id), isTrain=(id===TRAIN_ID&&!state.graduated), isHome=(state.graduated&&id===state.homeSector), active=(currentSector()===id);
+      const bg = mine ? hex(col,.16+fill*.5) : (isTrain?'rgba(245,201,119,.14)':'rgba(255,255,255,.03)');
+      const bd = mine?col:(isTrain?'#f5c977':'rgba(255,255,255,.09)');
+      const badge = isHome?'★':(isTrain?'🎓':(mine?'●':(state.graduated?'+':'🔒')));
+      const tappable = state.graduated || isTrain;
+      html+='<div class="gcell'+(active?' active':'')+'" data-id="'+id+'" style="background:'+bg+';border-color:'+bd+';'+(tappable?'':'opacity:.45;')+'">'
+        +'<div class="gbadge">'+badge+'</div><div class="gname">'+secName(id)+'</div>'
+        +(mine?'<div class="gpct">'+Math.round(fill*100)+'%</div>':(isTrain?'<div class="gpct">Training</div>':''))+'</div>'; }
+    grid.innerHTML=html; grid.querySelectorAll('.gcell').forEach(c=>c.onclick=()=>enterSector(+c.dataset.id));
+    const st=document.getElementById('galStatus');
+    if(st){ st.innerHTML = state.graduated
+      ? ('Home: <b style="color:'+col+'">'+secName(state.homeSector)+'</b> · '+Object.keys(state.sectorWork||{}).filter(id=>sectorWork(id)>0).length+' sectors worked — tap an open sector to expand your territory.')
+      : ('🎓 <b>Training</b> — '+(state.trainCorrect||0)+'/'+TRAIN_GOAL+' good vets to earn your own territory. Tap a glowing star to scan real data.'); } }
   function gauss(s){ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random(); return s*Math.sqrt(-2*Math.log(u))*Math.cos(6.2831853*v); }
   function synthCard(){ const roll=Math.random(),N=200,f=[]; for(let i=0;i<N;i++)f.push(1+gauss(.006)); let truth,kind,why;
     if(roll<.45){truth='planet';kind='transit';why='Evenly-spaced, flat-bottomed dips — the signature of a transiting planet.'; const P=40+Math.random()*20,t0=Math.random()*P,d=.012+Math.random()*.01; for(let i=0;i<N;i++){const ph=((i-t0)%P+P)%P; if(ph<4||ph>P-4)f[i]-=d;}}
@@ -623,7 +678,7 @@
   }
   function answerFrontier(a){ if(answered||!curCard)return; answered=true; audio();
     document.querySelectorAll('.vbtns button').forEach(b=>b.disabled=true);
-    addXP(8); tone(560,.18,'sine',.11,840);
+    addXP(8); tone(560,.18,'sine',.11,840); creditSectorWork();
     const c=curCard, vf=document.getElementById('vfeed'); vf.className='vfeed show front';
     const kv=[ fkv('Candidate',c.name), fkv('Status','Planet candidate (open)') ];
     if(c.constellation) kv.push(fkv('Constellation',c.constellation));
@@ -660,6 +715,7 @@
   function answer(a){ if(frontierMode)return answerFrontier(a); if(answered||!curCard)return; answered=true; audio(); document.querySelectorAll('.vbtns button').forEach(b=>b.disabled=true);
     const truth=curCard.truth, correct=(a===truth); R.done++; if(a!=='unsure'&&correct)R.correct++;
     addXP(10+(correct?5:0));
+    creditSectorWork(); if(!state.graduated) trainCredit(a!=='unsure' && correct);
     if(a!=='unsure'){ if(correct){ curStreak++; if(curStreak>state.bestStreak){ state.bestStreak=curStreak; save(); } if(curStreak===5) celebrate('🔥 5 in a row!','#f5c977'); checkBadges(); } else curStreak=0; }
     const isCorrect=(a==='unsure')?null:correct;
     if(window.LOPSync){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5').then(()=>LOPSync.logClassification(a,isCorrect)); }
@@ -690,7 +746,7 @@
   // ---------- chart + reward ----------
   function chartSystem(sys){ if(!state.charted[sys.h]){ state.charted[sys.h]=true; save(); if(window.LOPSync){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5').then(()=>LOPSync.logClaim(sys.h,'#5DCAA5')); } }
     sys._grow=.0001; shake=8; burst(sys.x,sys.y,'#5DCAA5',40,true); chord(392); updateHUD();
-    addXP(25); checkRegion(); checkBadges();
+    addXP(25); checkRegion(); checkBadges(); creditSectorWork();
     setTimeout(()=>openReward(sys,false),520);
   }
   function openReward(sys,revisit){ over=true; curSys=sys;
@@ -824,6 +880,8 @@
     const _sm=document.getElementById('skyMapBtn'); if(_sm)_sm.onclick=openSky;
     document.getElementById('secGo').onclick=function(){ closeSector(); openFrontier(); };
     document.getElementById('secLater').onclick=closeSector;
+    const _gb=document.getElementById('galaxyBtn'); if(_gb)_gb.onclick=openGalaxy;
+    document.getElementById('galClose').onclick=closeGalaxy;
     const _scp=document.getElementById('secChip'); if(_scp)_scp.onclick=function(){ openSector(sectorNow()); };
     document.getElementById('cardSave').onclick=saveCard; document.getElementById('cardShareBtn').onclick=shareCardImg; document.getElementById('cardClose').onclick=function(){document.getElementById('cardModal').classList.remove('show');}; }
   function renderAtlas(){
@@ -876,6 +934,9 @@
   const syncEl=document.getElementById('synced');
   if(window.LOPSync&&LOPSync.enabled){ syncEl.textContent='Cloud sync on · your discoveries are saved'; LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5'); }
   else { syncEl.textContent='Saving to this device'; }
+  // grandfather existing explorers (played before territories existed) straight past training
+  if(!state.graduated && (chartedCount()>=1 || (state.bestStreak||0)>=TRAIN_GOAL)){ state.graduated=true; state.playerColor=myColor(); state.homeSector=pickHome(); state.activeSector=state.homeSector; save(); }
+  if(!state.graduated){ const h=document.getElementById('hint'); if(h)h.textContent='🎓 Training — tap a glowing star to scan real data'; }
   updateHUD(); updateRank(); checkBadges(); renderAtlas(); updateSecChip(); loadDeck(); loadFrontier(); frame();
 })();
 </script>
