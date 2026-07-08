@@ -280,6 +280,7 @@
     <div class="glass iconbtn" id="galaxyBtn" title="Your Galaxy">🌌</div>
     <div class="glass iconbtn" id="constBtn" title="Constellations">✷</div>
     <div class="glass iconbtn" id="atlasBtn" title="My Atlas">✦</div>
+    <div class="glass iconbtn" id="muteBtn" title="Sound">🔊</div>
   </div>
 
   <div class="hint" id="hint">Tap a glowing star to scan it</div>
@@ -530,7 +531,7 @@
     {id:'r_deepfield',n:'Deep Field',d:'Complete The Deep Field',got:()=>regionDone('deepfield')},
     {id:'season',n:'Season 1 ★',d:'Chart the whole Neighborhood',got:()=>chartedCount()>=SYSTEMS.length}
   ];
-  function addXP(n){ const before=rankFor(state.xp).r.n; state.xp+=n; save(); const after=rankFor(state.xp).r.n; updateRank(); if(after!==before) celebrate('⭐ Rank up — '+after+'!','#f5c977'); }
+  function addXP(n){ const before=rankFor(state.xp).r.n; state.xp+=n; save(); const after=rankFor(state.xp).r.n; updateRank(); if(after!==before){ celebrate('⭐ Rank up — '+after+'!','#f5c977'); playSfx('rankup'); } }
   function checkBadges(){ BADGES.forEach(b=>{ if(!state.badges[b.id] && b.got()){ state.badges[b.id]=true; save(); celebrate('🏅 '+b.n,'#7fb2ff'); } }); }
   function checkRegion(){ REGIONS.forEach(rg=>{ const k='rg_'+rg.id; if(!state.badges[k] && regionDone(rg.id)){ state.badges[k]=true; save(); celebrate('🌠 Region charted — '+rg.n+'!','#5DCAA5'); burst(W/2,H/2,'#5DCAA5',44,true); } }); }
   function updateRank(){ const o=rankFor(state.xp); const el=document.getElementById('rankName'); if(el)el.textContent=o.r.n; const bar=document.getElementById('rankBar'); if(bar){ const lo=o.r.xp, hi=o.nx?o.nx.xp:o.r.xp+1; bar.style.width=Math.max(6,Math.min(100,((state.xp-lo)/(hi-lo))*100))+'%'; } }
@@ -558,8 +559,16 @@
 
   // ---------- audio ----------
   let AC=null; function audio(){ if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}} if(AC&&AC.state==='suspended')AC.resume(); return AC; }
-  function tone(f,d,ty,v,slide){ const a=audio(); if(!a)return; const o=a.createOscillator(),g=a.createGain(); o.type=ty||'sine'; o.frequency.value=f; if(slide)o.frequency.exponentialRampToValueAtTime(slide,a.currentTime+d); g.gain.value=0; g.gain.linearRampToValueAtTime(v||.12,a.currentTime+.02); g.gain.exponentialRampToValueAtTime(.001,a.currentTime+d); o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime+d+.02); }
+  function tone(f,d,ty,v,slide){ if(state&&state.muted)return; const a=audio(); if(!a)return; const o=a.createOscillator(),g=a.createGain(); o.type=ty||'sine'; o.frequency.value=f; if(slide)o.frequency.exponentialRampToValueAtTime(slide,a.currentTime+d); g.gain.value=0; g.gain.linearRampToValueAtTime(v||.12,a.currentTime+.02); g.gain.exponentialRampToValueAtTime(.001,a.currentTime+d); o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime+d+.02); }
   function chord(b){ [0,4,7,12,16].forEach((s,i)=>setTimeout(()=>tone(b*Math.pow(2,s/12),.6,'triangle',.10),i*60)); }
+  // ---------- Pixie Pals sample audio (SFX + ambient loop) ----------
+  const SFX={}; ['chart','unlock','rankup','win'].forEach(function(n){ try{ const a=new Audio('assets/sounds/'+n+'.m4a'); a.preload='auto'; a.volume=.5; SFX[n]=a; }catch(e){} });
+  let ambient=null;
+  function playSfx(n){ if(state&&state.muted)return; const a=SFX[n]; if(!a)return; try{ a.currentTime=0; const p=a.play(); if(p&&p.catch)p.catch(function(){}); }catch(e){} }
+  function startAmbient(){ if(state&&state.muted)return; if(!ambient){ try{ ambient=new Audio('assets/sounds/ambient.mp3'); ambient.loop=true; ambient.volume=.26; }catch(e){} } if(ambient){ const p=ambient.play(); if(p&&p.catch)p.catch(function(){}); } }
+  function stopAmbient(){ if(ambient){ try{ ambient.pause(); }catch(e){} } }
+  function updateMuteBtn(){ const b=document.getElementById('muteBtn'); if(b) b.textContent=state.muted?'🔇':'🔊'; }
+  function toggleMute(){ state.muted=!state.muted; save(); updateMuteBtn(); if(state.muted) stopAmbient(); else startAmbient(); }
 
   const parts=[]; let t=0, shake=0, sel=null, over=false;
   function burst(x,y,color,n,glow){ for(let i=0;i<n;i++){ const a=Math.random()*6.28,sp=1+Math.random()*4.5; parts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,color,size:1.2+Math.random()*2.6,glow}); } }
@@ -662,7 +671,7 @@
     for(let i=0;i<GAL_N;i++){ const id=(start+i)%GAL_N; if(id!==TRAIN_ID && !t.has(id)) return id; } return pickHome(); }
   function finishGraduation(homeId){ state.graduated=true; state.playerColor=myColor(); state.homeSector=homeId; state.activeSector=homeId; state.homeSynced=true; save();
     if(window.LOPSync && LOPSync.enabled){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer',state.playerColor).then(function(){ LOPSync.claimHome(homeId,state.playerColor); }); }
-    celebrate('🎓 Graduated — '+secName(homeId)+' is yours!', state.playerColor); burst(W/2,H/2,state.playerColor,50,true); checkBadges(); }
+    celebrate('🎓 Graduated — '+secName(homeId)+' is yours!', state.playerColor); playSfx('unlock'); burst(W/2,H/2,state.playerColor,50,true); checkBadges(); }
   let gradInFlight=false;
   function graduate(){ if(state.graduated || gradInFlight)return; gradInFlight=true; const done=function(id){ gradInFlight=false; finishGraduation(id); };
     if(window.LOPSync && LOPSync.enabled){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer',myColor())
@@ -819,7 +828,7 @@
 
   // ---------- chart + reward ----------
   function chartSystem(sys){ if(!state.charted[sys.h]){ state.charted[sys.h]=true; save(); if(window.LOPSync){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5').then(()=>LOPSync.logClaim(sys.h,'#5DCAA5')); } }
-    sys._grow=.0001; shake=8; burst(sys.x,sys.y,'#5DCAA5',40,true); chord(392); updateHUD();
+    sys._grow=.0001; shake=8; burst(sys.x,sys.y,'#5DCAA5',40,true); playSfx('chart'); updateHUD();
     addXP(25); checkRegion(); checkBadges(); creditSectorWork();
     setTimeout(()=>openReward(sys,false),520);
   }
@@ -836,7 +845,7 @@
     document.getElementById('shAcc').textContent=R.done?Math.round(R.correct/R.done*100)+'%':'—';
     document.getElementById('sheet').classList.add('show'); tone(523,.5,'triangle',.12);
   }
-  function closeReward(){ document.getElementById('sheet').classList.remove('show'); over=false; renderAtlas(); if(chartedCount()>=SYSTEMS.length) setTimeout(()=>document.getElementById('win').classList.add('show'),450); }
+  function closeReward(){ document.getElementById('sheet').classList.remove('show'); over=false; renderAtlas(); if(chartedCount()>=SYSTEMS.length) setTimeout(()=>{ document.getElementById('win').classList.add('show'); playSfx('win'); },450); }
   document.getElementById('shGo').onclick=closeReward; document.getElementById('sheetClose').onclick=closeReward;
   document.getElementById('shName2').onclick=()=>{ if(!curSys)return; const which=curSys.pl[0].n; const nn=prompt('Give '+which+' an honorary nickname:',state.names[which]||''); if(nn){ const c=cleanName(nn.trim()); if(!c.ok){ alert(c.reason); return; } state.names[which]=nn.trim(); save(); addXP(15); checkBadges(); if(window.LOPSync){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5').then(()=>LOPSync.logDiscovery(nn.trim(),which)); } openReward(curSys,true); } };
   function cleanName(s){ if(!s||s.length<2)return{ok:false,reason:'Name is too short.'}; if(s.length>28)return{ok:false,reason:'Name is too long.'}; if(/(fuck|shit|bitch|cunt|nazi|damn|ass\b|sex)/i.test(s))return{ok:false,reason:'Please choose a friendly name.'}; return{ok:true}; }
@@ -955,6 +964,7 @@
     document.getElementById('secGo').onclick=function(){ closeSector(); openFrontier(); };
     document.getElementById('secLater').onclick=closeSector;
     const _gb=document.getElementById('galaxyBtn'); if(_gb)_gb.onclick=openGalaxy;
+    const _mb=document.getElementById('muteBtn'); if(_mb)_mb.onclick=toggleMute;
     document.getElementById('galClose').onclick=closeGalaxy;
     const _scp=document.getElementById('secChip'); if(_scp)_scp.onclick=function(){ openSector(sectorNow()); };
     document.getElementById('cardSave').onclick=saveCard; document.getElementById('cardShareBtn').onclick=shareCardImg; document.getElementById('cardClose').onclick=function(){document.getElementById('cardModal').classList.remove('show');}; }
@@ -1051,7 +1061,8 @@
     window.__mcBoot=function(){ booted=true; };
     (function wait(){ const e=Date.now()-t0; if(ended)return; if((booted && e>2400) || e>5000) finish(); else setTimeout(wait,200); })();
     el.addEventListener('click',finish); })();
-  updateHUD(); updateRank(); checkBadges(); renderAtlas(); updateSecChip();
+  updateHUD(); updateRank(); checkBadges(); renderAtlas(); updateSecChip(); updateMuteBtn();
+  (function(){ function fg(){ startAmbient(); document.removeEventListener('pointerdown',fg,true); } document.addEventListener('pointerdown',fg,true); })();
   loadDeck().then(function(){ if(window.__mcBoot)window.__mcBoot(); }); loadFrontier(); frame();
 })();
 </script>
