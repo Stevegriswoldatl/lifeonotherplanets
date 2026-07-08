@@ -14,7 +14,7 @@
 <meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Space+Grotesk:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Space+Grotesk:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   * { box-sizing:border-box; }
   body { margin:0; background:#05070f; color:#e8ecf6; font-family:"Hanken Grotesk",-apple-system,sans-serif; line-height:1.7; }
@@ -22,6 +22,7 @@
   nav a { text-decoration:none; color:#9aa6bf; }
   nav a.brand { color:#e8ecf6; font-weight:600; margin-right:auto; }
   .wrap { max-width:760px; margin:0 auto; padding:0 20px 80px; }
+  .wrap.top { padding-bottom:8px; }
   header.hero { margin:0; padding:26px 20px 26px; background:#05070f url("assets/background-starfield.svg") center/cover no-repeat; border-bottom:1px solid #131c33; }
   header.hero img { max-width:460px; width:100%; height:auto; display:block; margin:0 auto; }
   h2 { font-family:"Space Grotesk",sans-serif; font-weight:700; font-size:20px; margin:34px 0 8px; }
@@ -33,9 +34,31 @@
   .cta a { font-family:"Space Grotesk",sans-serif; font-weight:600; font-size:15px; text-decoration:none; padding:12px 20px; border-radius:12px; }
   .cta .play { background:#5DCAA5; color:#05231b; }
   .cta .index { background:#16203a; color:#dbe4fb; border:1px solid #29365a; }
-  .callout { background:#0b1120; border:1px solid #1a2338; border-radius:16px; padding:16px 20px; margin:20px 0; }
-  .honest { border-color:#3a2a1a; background:#171008; }
   .foot { color:#5f6e92; font-size:13px; margin-top:40px; border-top:1px solid #131c33; padding-top:16px; }
+
+  /* ===== How It Works (design handoff — 4-step flow) ===== */
+  @keyframes trek { 0% { left:8%; } 100% { left:84%; } }
+  @keyframes drivebob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-2px); } }
+  .hiw { position:relative; overflow:hidden; background:#080b12; font-family:'Hanken Grotesk',sans-serif; padding:0 0 8px; border-top:1px solid #131c33; border-bottom:1px solid #131c33; }
+  .hiw-stars { position:absolute; inset:0; width:100%; height:100%; opacity:0.7; }
+  .hiw-inner { position:relative; max-width:1160px; margin:0 auto; padding:64px 28px 40px; }
+  .hiw-card { transition:transform .15s ease, border-color .15s ease; }
+  .hiw-card:hover { transform:translateY(-3px); border-color:rgba(127,178,255,0.22) !important; }
+  .hiw-toggle { display:flex; align-items:center; gap:6px; background:none; border:none; padding:0; cursor:pointer; font:600 12.5px 'Space Grotesk'; }
+  .hiw-detail[hidden] { display:none; }
+  .hiw-cta-primary { background:#74dfa6; color:#052015 !important; }
+  .hiw-cta-primary:hover { background:#8bead6; }
+  .hiw-cta-secondary { background:#141c2e; color:#e8ecf6 !important; border:1px solid rgba(127,178,255,0.22); }
+  .hiw-cta-secondary:hover { border-color:rgba(127,178,255,0.5); }
+  @media (prefers-reduced-motion: reduce) {
+    .hiw-truckster { animation:none !important; }
+    .hiw-truckster svg { animation:none !important; }
+  }
+  @media (max-width:720px) {
+    .hiw-steps-row { flex-direction:column; align-items:stretch !important; }
+    .hiw-trail, .hiw-truckster { display:none; }
+    .hiw h2.hiw-title { font-size:32px !important; }
+  }
 </style>
 </head>
 <body>
@@ -44,33 +67,186 @@
   <a href="game.html">Explore</a>
   <a href="rankings.html">Rankings</a>
   <a href="vet.html">Data Lab</a>
+  <a href="guide.html">Field Guide</a>
   <a href="scoreboard.html">Scoreboard</a>
 </nav>
 <header class="hero">
   <img src="assets/wordmark-horizontal.svg" alt="Life On Other Planets? — The Search">
 </header>
-<div class="wrap">
+<div class="wrap top">
   <p class="lede">A free online project where anyone can explore a map of the real stars near us, study real data from NASA's planet-hunting telescopes, and help decide which distant worlds are the best places to look for life. Built by the Griswold family as a for-fun, for-real science project.</p>
 
   <div class="cta">
     <a class="play" href="game.html">Start exploring →</a>
     <a class="index" href="rankings.html">See the habitability rankings</a>
   </div>
+</div>
 
-  <h2>How can a game help find life?</h2>
-  <p>Computers are fast, but people are better at spotting the unexpected. Planet-hunting telescopes produce enormous streams of data — mostly a simple measurement of how bright a star is, minute by minute. When a planet passes in front of its star, the star dims by a whisper. Software flags many of these dips automatically, but it misses real ones and trips over fakes. Human eyes catch what the software misses — volunteers on earlier projects have even helped discover real planets this way. When you play, you become a second set of eyes on real telescope data.</p>
+<!-- ===== How It Works: 4-step visual flow (design handoff) ===== -->
+<section class="hiw">
+  <svg id="hiw-stars" class="hiw-stars" viewBox="0 0 1400 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true"></svg>
+  <div class="hiw-inner">
 
-  <h2>What you actually do</h2>
-  <p>You explore star systems on a real map of the neighborhood, and in the <a href="vet.html">Data Lab</a> you judge whether a small repeating dip in a star's brightness is a real planet — or just noise, a glitch, or two stars eclipsing each other. It takes seconds, and no single person's answer decides anything: every piece of data is shown to many people, and the project trusts the agreement of the crowd, not any one click.</p>
+    <!-- header -->
+    <div style="text-align:center;max-width:760px;margin:0 auto;">
+      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(93,202,165,0.12);border:1px solid rgba(93,202,165,0.28);border-radius:999px;padding:7px 15px;margin-bottom:20px;">
+        <span style="width:7px;height:7px;border-radius:50%;background:#5DCAA5;box-shadow:0 0 8px #5DCAA5;"></span>
+        <span style="font-family:'Space Grotesk';font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#5DCAA5;">How it works</span>
+      </div>
+      <h2 class="hiw-title" style="font-family:'Space Grotesk';font-weight:700;font-size:44px;line-height:1.05;letter-spacing:-0.015em;color:#e8ecf6;margin:0 0 16px;">You're a second pair of eyes<br>on real telescope data</h2>
+      <p style="font-size:18px;line-height:1.55;color:#b9c2d6;margin:0;">Computers are fast, but people are better at spotting the unexpected. Four steps, a few seconds each — no account, no email.</p>
+    </div>
 
-  <h2>How we know it's working</h2>
-  <p>Mixed into the real data are cards where we already know the answer, so we can measure how accurate each player is. Because many people see the same data, we can measure how much they agree — and only strong agreement moves forward. We even hide artificial planet signals to check what fraction the crowd catches, and we publish those numbers so you can see it working.</p>
+    <!-- why chips -->
+    <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:26px 0 8px;">
+      <div style="display:flex;align-items:center;gap:9px;background:#0e1420;border:1px solid rgba(127,178,255,0.12);border-radius:12px;padding:10px 15px;">
+        <svg viewBox="0 0 24 24" style="width:20px;height:20px;flex:none;"><rect x="9" y="4" width="5" height="12" rx="2.5" fill="#7fb2ff" transform="rotate(30 11 10)"></rect><path d="M9 16 l-3 4 M13 18 l3 3" stroke="#c7d0e4" stroke-width="1.8" stroke-linecap="round"></path></svg>
+        <span style="font:600 13.5px 'Hanken Grotesk';color:#e8ecf6;">Real NASA data</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:9px;background:#0e1420;border:1px solid rgba(127,178,255,0.12);border-radius:12px;padding:10px 15px;">
+        <svg viewBox="0 0 24 24" style="width:20px;height:20px;flex:none;"><circle cx="12" cy="13" r="8" fill="none" stroke="#e0b451" stroke-width="2"></circle><path d="M12 13 V9 M12 13 l3 2" stroke="#e0b451" stroke-width="2" stroke-linecap="round"></path><path d="M9 3 h6" stroke="#e0b451" stroke-width="2" stroke-linecap="round"></path></svg>
+        <span style="font:600 13.5px 'Hanken Grotesk';color:#e8ecf6;">Seconds per task</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:9px;background:#0e1420;border:1px solid rgba(127,178,255,0.12);border-radius:12px;padding:10px 15px;">
+        <svg viewBox="0 0 24 24" style="width:20px;height:20px;flex:none;"><path d="M6 3 v18" stroke="#c7d0e4" stroke-width="2" stroke-linecap="round"></path><path d="M6 4 L18 7 L6 11 Z" fill="#f5c977"></path></svg>
+        <span style="font:600 13.5px 'Hanken Grotesk';color:#e8ecf6;">Your name on the map</span>
+      </div>
+    </div>
 
-  <div class="callout honest">
-    <h3>The honest part</h3>
-    <p>We will almost certainly not find aliens — nearly every promising signal in history has turned out to be interference or a natural quirk. We think that's worth saying plainly. What we <i>can</i> really do is valuable: help confirm new planets, rule stars in and out, sharpen the list of the best places to look, and maybe help co-discover a genuine new world.</p>
+    <!-- steps -->
+    <div style="position:relative;margin-top:44px;">
+      <!-- trail line -->
+      <div class="hiw-trail" style="position:absolute;top:38px;left:12%;right:12%;height:0;border-top:2px dashed rgba(127,178,255,0.30);z-index:1;"></div>
+      <!-- truckster on trail -->
+      <div class="hiw-truckster" style="position:absolute;top:14px;left:8%;z-index:3;animation:trek 9s ease-in-out infinite alternate;">
+        <svg viewBox="0 0 60 40" style="width:56px;height:38px;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.5));animation:drivebob 1.3s ease-in-out infinite;">
+          <rect x="22" y="16" width="14" height="7" rx="2" fill="#5DCAA5"></rect>
+          <path d="M18 30 l4 -11 h22 l6 7 v4 z" fill="#cfe9df"></path>
+          <rect x="24" y="23" width="8" height="5" rx="1" fill="#7fb2ff"></rect>
+          <rect x="34" y="23" width="8" height="5" rx="1" fill="#7fb2ff"></rect>
+          <rect x="16" y="28" width="38" height="5" rx="2.5" fill="#3f6b3f"></rect>
+          <circle cx="26" cy="34" r="3.6" fill="#0a0f1c" stroke="#e8ecf6" stroke-width="1.8"></circle>
+          <circle cx="46" cy="34" r="3.6" fill="#0a0f1c" stroke="#e8ecf6" stroke-width="1.8"></circle>
+        </svg>
+      </div>
+
+      <div class="hiw-steps-row" style="display:flex;gap:20px;align-items:flex-start;">
+
+        <!-- STEP 1 -->
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;">
+          <div style="position:relative;width:78px;height:78px;border-radius:50%;background:rgba(127,178,255,0.10);border:1.5px solid rgba(127,178,255,0.32);display:flex;align-items:center;justify-content:center;z-index:2;box-shadow:0 0 0 7px #080b12;">
+            <svg viewBox="0 0 64 64" style="width:46px;height:46px;">
+              <ellipse cx="32" cy="36" rx="25" ry="9" fill="none" stroke="#7fb2ff" stroke-width="2" opacity="0.5" transform="rotate(-16 32 36)"></ellipse>
+              <path d="M17 30 a15 15 0 0 1 30 0 v7 a4 4 0 0 1 -4 4 h-22 a4 4 0 0 1 -4 -4 z" fill="#e8ecf6"></path>
+              <path d="M22 30 a10 10 0 0 1 20 0 v4 h-20 z" fill="#7fb2ff"></path>
+              <ellipse cx="28" cy="26" rx="3.6" ry="4.8" fill="#dcecff" opacity="0.85"></ellipse>
+            </svg>
+            <span style="position:absolute;top:-6px;right:-6px;width:26px;height:26px;border-radius:50%;background:#7fb2ff;color:#08111f;font:700 14px/26px 'Space Grotesk';text-align:center;">1</span>
+          </div>
+          <div class="hiw-card" style="margin-top:18px;background:#0e1420;border:1px solid rgba(127,178,255,0.10);border-radius:18px;padding:20px 20px 16px;width:100%;">
+            <div style="font-family:'Space Grotesk';font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#7fb2ff;margin-bottom:8px;">Pick &amp; explore</div>
+            <div style="font-family:'Space Grotesk';font-weight:600;font-size:20px;line-height:1.15;color:#e8ecf6;margin-bottom:8px;">Grab an explorer, fly the map</div>
+            <div style="font-size:14.5px;line-height:1.5;color:#a7b1c6;">Choose an avatar and cruise a real map of the nearby stars. Nothing to sign up for.</div>
+            <button class="hiw-toggle" style="margin-top:14px;color:#7fb2ff;" aria-expanded="false" onclick="hiwToggle(this)">
+              <span>More details</span><span class="caret" style="font-size:10px;">▼</span>
+            </button>
+            <div class="hiw-detail" hidden style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(127,178,255,0.10);font-size:13.5px;line-height:1.55;color:#98a4bd;">You explore star systems on a real map of the neighborhood — the same confirmed worlds NASA has catalogued, colour-coded by how promising they look for life.</div>
+          </div>
+        </div>
+
+        <!-- STEP 2 -->
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;">
+          <div style="position:relative;width:78px;height:78px;border-radius:50%;background:rgba(224,180,81,0.10);border:1.5px solid rgba(224,180,81,0.34);display:flex;align-items:center;justify-content:center;z-index:2;box-shadow:0 0 0 7px #080b12;">
+            <svg viewBox="0 0 64 64" style="width:46px;height:46px;">
+              <circle cx="47" cy="18" r="4.5" fill="#f5c977"></circle>
+              <circle cx="18" cy="16" r="2" fill="#7fb2ff"></circle>
+              <path d="M10 30 H26 L30 44 L34 30 H54" fill="none" stroke="#e0b451" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+              <circle cx="30" cy="40" r="9" fill="none" stroke="#e8ecf6" stroke-width="2.6"></circle>
+              <path d="M36.5 46.5 l7 7" stroke="#e8ecf6" stroke-width="3" stroke-linecap="round"></path>
+            </svg>
+            <span style="position:absolute;top:-6px;right:-6px;width:26px;height:26px;border-radius:50%;background:#e0b451;color:#2a1e07;font:700 14px/26px 'Space Grotesk';text-align:center;">2</span>
+          </div>
+          <div class="hiw-card" style="margin-top:18px;background:#0e1420;border:1px solid rgba(127,178,255,0.10);border-radius:18px;padding:20px 20px 16px;width:100%;">
+            <div style="font-family:'Space Grotesk';font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#e0b451;margin-bottom:8px;">Judge a signal</div>
+            <div style="font-family:'Space Grotesk';font-weight:600;font-size:20px;line-height:1.15;color:#e8ecf6;margin-bottom:8px;">Real planet, or just noise?</div>
+            <div style="font-size:14.5px;line-height:1.5;color:#a7b1c6;">In the Data Lab, a star dips in brightness. You call it: real world, or a glitch. Seconds each.</div>
+            <button class="hiw-toggle" style="margin-top:14px;color:#e0b451;" aria-expanded="false" onclick="hiwToggle(this)">
+              <span>More details</span><span class="caret" style="font-size:10px;">▼</span>
+            </button>
+            <div class="hiw-detail" hidden style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(127,178,255,0.10);font-size:13.5px;line-height:1.55;color:#98a4bd;">When a planet passes in front of its star, the star dims by a whisper. Software flags many dips automatically — but misses real ones and trips over fakes. You judge whether a small repeating dip is a real planet, or just noise, a glitch, or two stars eclipsing each other.</div>
+          </div>
+        </div>
+
+        <!-- STEP 3 -->
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;">
+          <div style="position:relative;width:78px;height:78px;border-radius:50%;background:rgba(93,202,165,0.10);border:1.5px solid rgba(93,202,165,0.34);display:flex;align-items:center;justify-content:center;z-index:2;box-shadow:0 0 0 7px #080b12;">
+            <svg viewBox="0 0 64 64" style="width:46px;height:46px;">
+              <circle cx="22" cy="24" r="6.5" fill="#8fc98f"></circle><path d="M11 42 a11 11 0 0 1 22 0z" fill="#8fc98f"></path>
+              <circle cx="40" cy="24" r="6.5" fill="#5DCAA5"></circle><path d="M29 42 a11 11 0 0 1 22 0z" fill="#5DCAA5"></path>
+              <circle cx="47" cy="44" r="10" fill="#0e1420" stroke="#5DCAA5" stroke-width="2.4"></circle>
+              <path d="M42.5 44 l3.5 3.5 l6 -7" fill="none" stroke="#5DCAA5" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+            <span style="position:absolute;top:-6px;right:-6px;width:26px;height:26px;border-radius:50%;background:#5DCAA5;color:#062018;font:700 14px/26px 'Space Grotesk';text-align:center;">3</span>
+          </div>
+          <div class="hiw-card" style="margin-top:18px;background:#0e1420;border:1px solid rgba(127,178,255,0.10);border-radius:18px;padding:20px 20px 16px;width:100%;">
+            <div style="font-family:'Space Grotesk';font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#5DCAA5;margin-bottom:8px;">The crowd decides</div>
+            <div style="font-family:'Space Grotesk';font-weight:600;font-size:20px;line-height:1.15;color:#e8ecf6;margin-bottom:8px;">No single click matters</div>
+            <div style="font-size:14.5px;line-height:1.5;color:#a7b1c6;">Everyone sees the same cards. Only strong agreement moves forward — so the science stays honest.</div>
+            <button class="hiw-toggle" style="margin-top:14px;color:#5DCAA5;" aria-expanded="false" onclick="hiwToggle(this)">
+              <span>More details</span><span class="caret" style="font-size:10px;">▼</span>
+            </button>
+            <div class="hiw-detail" hidden style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(127,178,255,0.10);font-size:13.5px;line-height:1.55;color:#98a4bd;">Mixed into the real data are cards where we already know the answer, so we can measure how accurate each player is. We even hide artificial planet signals to check what fraction the crowd catches — and we publish those numbers so you can see it working.</div>
+          </div>
+        </div>
+
+        <!-- STEP 4 -->
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;">
+          <div style="position:relative;width:78px;height:78px;border-radius:50%;background:rgba(245,201,119,0.10);border:1.5px solid rgba(245,201,119,0.36);display:flex;align-items:center;justify-content:center;z-index:2;box-shadow:0 0 0 7px #080b12;">
+            <svg viewBox="0 0 64 64" style="width:46px;height:46px;">
+              <path d="M20 16 L20 50" stroke="#c7d0e4" stroke-width="2.6" stroke-linecap="round"></path>
+              <path d="M20 17 L40 22 L20 29 Z" fill="#f5c977"></path>
+              <g transform="translate(30 30) scale(0.9)">
+                <path d="M12 0.5 L14.1 9.9 L23.5 12 L14.1 14.1 L12 23.5 L9.9 14.1 L0.5 12 L9.9 9.9 Z" fill="#f5c977"></path>
+                <circle cx="12" cy="12" r="1.7" fill="#fffaf0"></circle>
+              </g>
+            </svg>
+            <span style="position:absolute;top:-6px;right:-6px;width:26px;height:26px;border-radius:50%;background:#f5c977;color:#2a1e07;font:700 14px/26px 'Space Grotesk';text-align:center;">4</span>
+          </div>
+          <div class="hiw-card" style="margin-top:18px;background:#0e1420;border:1px solid rgba(127,178,255,0.10);border-radius:18px;padding:20px 20px 16px;width:100%;">
+            <div style="font-family:'Space Grotesk';font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#f5c977;margin-bottom:8px;">Chart &amp; name</div>
+            <div style="font-family:'Space Grotesk';font-weight:600;font-size:20px;line-height:1.15;color:#e8ecf6;margin-bottom:8px;">Name the worlds you find</div>
+            <div style="font-size:14.5px;line-height:1.5;color:#a7b1c6;">Help confirm planets, rule stars in or out — and give a nickname to a world that sticks on the map.</div>
+            <button class="hiw-toggle" style="margin-top:14px;color:#f5c977;" aria-expanded="false" onclick="hiwToggle(this)">
+              <span>More details</span><span class="caret" style="font-size:10px;">▼</span>
+            </button>
+            <div class="hiw-detail" hidden style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(127,178,255,0.10);font-size:13.5px;line-height:1.55;color:#98a4bd;">Give an honorary nickname to a world you helped chart and it lives on our map as a thank-you. (That's a celebratory nickname, not an official name — official naming is handled by the International Astronomical Union.)</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- honest part -->
+    <div style="margin-top:40px;display:flex;gap:18px;align-items:flex-start;background:linear-gradient(180deg,#181206 0%,#120f08 100%);border:1px solid rgba(224,180,81,0.28);border-radius:20px;padding:24px 26px;">
+      <div style="width:52px;height:52px;flex:none;border-radius:14px;background:rgba(224,180,81,0.14);border:1px solid rgba(224,180,81,0.30);display:flex;align-items:center;justify-content:center;">
+        <svg viewBox="0 0 24 24" style="width:28px;height:28px;"><circle cx="12" cy="12" r="9" fill="none" stroke="#e0b451" stroke-width="2"></circle><path d="M12 7.5 v5.5" stroke="#e0b451" stroke-width="2.2" stroke-linecap="round"></path><circle cx="12" cy="16.5" r="1.4" fill="#e0b451"></circle></svg>
+      </div>
+      <div>
+        <div style="font-family:'Space Grotesk';font-weight:600;font-size:19px;color:#f0d9a4;margin-bottom:6px;">The honest part</div>
+        <div style="font-size:15px;line-height:1.6;color:#cdbf9f;">We probably <em>won't</em> find aliens — nearly every promising signal in history turned out to be interference or a natural quirk. But what we <strong style="color:#f0d9a4;">can</strong> do is real: help confirm new planets, rule stars in and out, sharpen the list of the best places to look — and maybe help co-discover a genuine new world.</div>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:34px;">
+      <a href="game.html" class="hiw-cta-primary" style="display:inline-flex;align-items:center;gap:8px;font:700 16px 'Space Grotesk';padding:15px 26px;border-radius:14px;text-decoration:none;">Start exploring <span>→</span></a>
+      <a href="rankings.html" class="hiw-cta-secondary" style="display:inline-flex;align-items:center;gap:8px;font:600 16px 'Space Grotesk';padding:15px 26px;border-radius:14px;text-decoration:none;">See the habitability rankings</a>
+    </div>
+
   </div>
+</section>
 
+<div class="wrap">
   <h2>Frequently asked questions</h2>
 
   <h3>Is this a game or real science?</h3>
@@ -94,5 +270,30 @@
 
   <p class="foot">An exploration by the Griswolds. Built on free, public data from the NASA Exoplanet Archive and the Breakthrough Listen initiative. A citizen-science project — welcoming to newcomers, honest about what it can and can't do. · <a href="scoreboard.html">Scoreboard</a> · <a href="privacy.html">Privacy &amp; Terms</a></p>
 </div>
+
+<script>
+  // Per-step accordion toggle (independent open/close)
+  function hiwToggle(btn){
+    var card = btn.closest('.hiw-card');
+    var detail = card.querySelector('.hiw-detail');
+    var caret = btn.querySelector('.caret');
+    var open = detail.hasAttribute('hidden');
+    if(open){ detail.removeAttribute('hidden'); caret.textContent='▲'; btn.setAttribute('aria-expanded','true'); }
+    else { detail.setAttribute('hidden',''); caret.textContent='▼'; btn.setAttribute('aria-expanded','false'); }
+  }
+  // Scattered starfield behind the section (same seed as the design)
+  (function(){
+    var svg = document.getElementById('hiw-stars');
+    if(!svg) return;
+    var s = 77123;
+    function rnd(){ s = (s*9301 + 49297) % 233280; return s/233280; }
+    var out = '';
+    for(var i=0;i<90;i++){
+      var cx=(rnd()*1400).toFixed(1), cy=(rnd()*900).toFixed(1), r=(rnd()*1.2+0.3).toFixed(2), o=(rnd()*0.6+0.12).toFixed(2);
+      out += '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="#e8ecf6" opacity="'+o+'"></circle>';
+    }
+    svg.innerHTML = out;
+  })();
+</script>
 </body>
 </html>

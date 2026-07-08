@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Field Guide — Life On Other Planets?</title>
+<link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+<meta name="description" content="How to read a light curve: tell a real planet from an eclipsing binary, a glitch, or noise. The field guide behind the Data Lab.">
+<meta property="og:title" content="Field Guide — Life On Other Planets?">
+<meta property="og:description" content="Learn the shapes: real planet vs. eclipsing binary vs. glitch vs. noise vs. the single-transit planets the computers miss.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://lifeonotherplanets.space/guide.html">
+<meta property="og:image" content="https://lifeonotherplanets.space/assets/app-icon.svg">
+<meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Space+Grotesk:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; background:#05070f; color:#e8ecf6; font-family:"Hanken Grotesk",-apple-system,sans-serif; line-height:1.65; }
+  .wrap { max-width:900px; margin:0 auto; padding:20px 18px 70px; }
+  h1 { font-family:"Fredoka",sans-serif; font-weight:600; font-size:26px; margin:6px 0 4px; }
+  .lede { color:#c3cee6; font-size:16px; max-width:680px; margin:0 0 8px; }
+  a{ color:#7fb2ff; }
+  .cards { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:22px; }
+  @media(max-width:720px){ .cards{ grid-template-columns:1fr; } }
+  .g { background:#0b1120; border:1px solid #1a2338; border-radius:18px; padding:16px; }
+  .g.verdict-planet { border-color:#2c6b56; }
+  .g.verdict-not { border-color:#7a3b2c; }
+  .g h3 { font-family:"Space Grotesk",sans-serif; font-size:17px; margin:0 0 2px; }
+  .tag { font-family:"Space Grotesk",sans-serif; font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:3px 9px; border-radius:999px; }
+  .tag.planet { color:#5DCAA5; background:rgba(93,202,165,.12); border:1px solid rgba(93,202,165,.3); }
+  .tag.not { color:#e0964a; background:rgba(224,150,74,.12); border:1px solid rgba(224,150,74,.3); }
+  canvas { width:100%; height:150px; display:block; background:#0a0f1c; border-radius:10px; margin:10px 0 8px; }
+  .g p { font-size:13.5px; color:#c9d3ea; margin:6px 0; }
+  .look { font-size:12.5px; color:#9fb0d0; font-family:"Space Grotesk",sans-serif; }
+  .look b{ color:#e8ecf6; }
+  nav { display:flex; gap:16px; align-items:center; max-width:900px; margin:0 auto; padding:12px 20px; font-family:'Space Grotesk',sans-serif; font-size:14px; flex-wrap:wrap; }
+  nav a{ text-decoration:none; color:#9aa6bf; } nav a.brand{ color:#e8ecf6; font-weight:600; margin-right:auto; }
+  .cta { display:inline-block; margin-top:24px; background:#5DCAA5; color:#05231b; font-family:"Space Grotesk"; font-weight:600; text-decoration:none; padding:12px 20px; border-radius:12px; }
+  .quickref { margin-top:26px; background:#0b1120; border:1px solid #1a2338; border-radius:16px; padding:16px 18px; }
+  .quickref table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  .quickref td{ padding:7px 8px; border-top:1px solid #16203a; vertical-align:top; }
+  .quickref td:first-child{ color:#e8ecf6; font-family:"Space Grotesk"; white-space:nowrap; }
+</style>
+</head>
+<body>
+<nav>
+  <a class="brand" href="index.html">Life On Other Planets?</a>
+  <a href="game.html">Explore</a>
+  <a href="rankings.html">Rankings</a>
+  <a href="vet.html">Data Lab</a>
+  <a href="guide.html" style="color:#e8ecf6;">Field Guide</a>
+  <a href="scoreboard.html">Scoreboard</a>
+</nav>
+<div class="wrap">
+  <h1>Field Guide: reading a light curve</h1>
+  <p class="lede">A <b>light curve</b> is just a star's brightness plotted over time. A planet crossing in front of its star makes a tiny, repeating dip. Your whole job in the <a href="vet.html">Data Lab</a> is telling real planets from the things that fake them. Here's the cheat sheet.</p>
+
+  <div class="cards">
+    <div class="g verdict-planet">
+      <div style="display:flex;justify-content:space-between;align-items:center;"><h3>Real planet transit</h3><span class="tag planet">Planet ✓</span></div>
+      <canvas data-kind="transit"></canvas>
+      <p>Shallow dips that are <b>evenly spaced</b> and <b>flat-bottomed</b> — the planet blocks the same sliver of starlight every orbit.</p>
+      <p class="look"><b>Look for:</b> a steady rhythm · same depth each time · a flat or U-shaped bottom.</p>
+    </div>
+
+    <div class="g verdict-not">
+      <div style="display:flex;justify-content:space-between;align-items:center;"><h3>Eclipsing binary</h3><span class="tag not">Not a planet</span></div>
+      <canvas data-kind="eb"></canvas>
+      <p>Two stars orbiting each other, taking turns blocking. The #1 impostor. Dips are <b>deep</b> and often <b>V-shaped</b>, with a <b>shallower second dip</b> halfway between.</p>
+      <p class="look"><b>Tell:</b> a secondary dip · alternating deep/shallow · V-shape · way too deep for a planet.</p>
+    </div>
+
+    <div class="g verdict-not">
+      <div style="display:flex;justify-content:space-between;align-items:center;"><h3>Glitch / systematic</h3><span class="tag not">Not a planet</span></div>
+      <canvas data-kind="glitch"></canvas>
+      <p>A single sharp spike or step that <b>doesn't repeat</b> — a cosmic ray, a thruster fire, or an instrument hiccup.</p>
+      <p class="look"><b>Tell:</b> one-off · sharp · never comes back on the same beat.</p>
+    </div>
+
+    <div class="g verdict-not">
+      <div style="display:flex;justify-content:space-between;align-items:center;"><h3>Just noise</h3><span class="tag not">Not a planet</span></div>
+      <canvas data-kind="noise"></canvas>
+      <p>The star's natural flicker and measurement scatter, with <b>no repeating dip</b> at all. Saying "no planet" here is a real, valuable answer.</p>
+      <p class="look"><b>Tell:</b> fuzzy but flat · no pattern · nothing that repeats.</p>
+    </div>
+
+    <div class="g verdict-planet">
+      <div style="display:flex;justify-content:space-between;align-items:center;"><h3>Single transit (the prize)</h3><span class="tag planet">Planet ✓</span></div>
+      <canvas data-kind="mono"></canvas>
+      <p>Just <b>one</b> clean dip in the whole record — a planet on a long orbit that only crossed once while TESS watched. Automated software often throws these away.</p>
+      <p class="look"><b>Why it matters:</b> humans catch these; computers miss them. Most citizen-science planet finds are single-transits like this.</p>
+    </div>
+
+    <div class="g">
+      <div style="display:flex;justify-content:space-between;align-items:center;"><h3>Star spots / variability</h3><span class="tag not">Usually not</span></div>
+      <canvas data-kind="spots"></canvas>
+      <p>Smooth, rolling ups and downs as a spotty star rotates. It's <b>wavy, not a sharp dip</b>, and it doesn't have a flat transit floor.</p>
+      <p class="look"><b>Tell:</b> gentle waves · no crisp dip · the curve drifts rather than drops.</p>
+    </div>
+  </div>
+
+  <div class="quickref">
+    <div style="font-family:'Space Grotesk';font-size:12px;letter-spacing:1.4px;text-transform:uppercase;color:#9aa6bf;margin-bottom:6px;">30-second cheat sheet</div>
+    <table>
+      <tr><td>Real planet</td><td>Small, repeating, evenly-spaced, flat-bottomed dips. Same depth every time.</td></tr>
+      <tr><td>Eclipsing binary</td><td>Deep + V-shaped + a secondary dip halfway between. Too deep to be a planet.</td></tr>
+      <tr><td>Glitch</td><td>One sharp spike that never repeats.</td></tr>
+      <tr><td>Noise</td><td>Fuzzy and flat — no pattern.</td></tr>
+      <tr><td>Single transit</td><td>One lone clean dip — could be a real long-period planet. Flag it!</td></tr>
+    </table>
+  </div>
+
+  <a class="cta" href="vet.html">Try it in the Data Lab →</a>
+</div>
+
+<script>
+function gauss(s){ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random(); return s*Math.sqrt(-2*Math.log(u))*Math.cos(6.2831853*v); }
+function make(kind){
+  const N=200, f=[];
+  for(let i=0;i<N;i++) f.push(1+gauss(0.0016));
+  if(kind==="transit"){ const P=44,t0=14,dur=4,d=0.016; for(let i=0;i<N;i++){ const ph=((i-t0)%P+P)%P; if(ph<dur||ph>P-dur) f[i]-=d; } }
+  else if(kind==="eb"){ const P=64,t0=16,dur=5,d1=0.13,d2=0.05; for(let i=0;i<N;i++){ let ph=((i-t0)%P+P)%P; if(ph<dur) f[i]-=d1*(1-ph/dur); else if(ph>P-dur) f[i]-=d1*(1-(P-ph)/dur); const s=Math.abs(ph-P/2); if(s<dur*0.8) f[i]-=d2*(1-s/(dur*0.8)); } }
+  else if(kind==="glitch"){ f[Math.floor(N*0.55)]+=0.05; f[Math.floor(N*0.55)+1]+=0.02; }
+  else if(kind==="noise"){ for(let i=0;i<N;i++) f[i]=1+gauss(0.004); }
+  else if(kind==="mono"){ const c=Math.floor(N*0.5); for(let i=0;i<N;i++){ if(Math.abs(i-c)<3) f[i]-=0.017; } }
+  else if(kind==="spots"){ for(let i=0;i<N;i++) f[i]=1+0.01*Math.sin(i/N*6.283*1.5)+gauss(0.0016); }
+  return f;
+}
+function draw(cv,f,accent){
+  const dpr=window.devicePixelRatio||1, W=cv.clientWidth, H=150;
+  cv.width=W*dpr; cv.height=H*dpr; const x=cv.getContext("2d"); x.setTransform(dpr,0,0,dpr,0,0);
+  const pad=14, fmin=Math.min.apply(null,f), fmax=Math.max.apply(null,f), span=(fmax-fmin)||1;
+  const X=i=>pad+(i/(f.length-1))*(W-2*pad), Y=v=>pad+(1-(v-fmin)/span)*(H-2*pad);
+  x.strokeStyle="#152036"; x.lineWidth=1;
+  for(let g=0;g<=3;g++){ const yy=pad+g/3*(H-2*pad); x.beginPath(); x.moveTo(pad,yy); x.lineTo(W-pad,yy); x.stroke(); }
+  x.fillStyle=accent;
+  for(let i=0;i<f.length;i++){ x.globalAlpha=.85; x.beginPath(); x.arc(X(i),Y(f[i]),1.4,0,6.2832); x.fill(); }
+  x.globalAlpha=1;
+}
+function renderAll(){
+  document.querySelectorAll("canvas[data-kind]").forEach(cv=>{
+    const kind=cv.dataset.kind;
+    const accent = (kind==="transit"||kind==="mono") ? "#5DCAA5" : "#7fb2ff";
+    if(!cv._f) cv._f=make(kind);
+    draw(cv,cv._f,accent);
+  });
+}
+window.addEventListener("resize",renderAll);
+renderAll();
+</script>
+</body>
+</html>

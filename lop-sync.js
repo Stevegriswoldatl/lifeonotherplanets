@@ -18,6 +18,21 @@
     catch (e) { console.warn("LOP sync: init failed", e); }
   }
 
+  // client-side courtesy throttle: stops accidental/casual floods of rows.
+  // (Server-side Supabase rate limits + RLS remain the real backstop.)
+  const _thr = {
+    classifications: { last: 0, count: 0, minGap: 700,  cap: 3000 },
+    claims:          { last: 0, count: 0, minGap: 1500, cap: 800  },
+    discoveries:     { last: 0, count: 0, minGap: 1500, cap: 400  }
+  };
+  function allow(kind) {
+    const t = _thr[kind], now = Date.now();
+    if (!t) return true;
+    if (t.count >= t.cap) { console.warn("LOP sync: session cap reached for " + kind); return false; }
+    if (now - t.last < t.minGap) return false;   // too fast — drop this one
+    t.last = now; t.count++; return true;
+  }
+
   function deviceKey() {
     let k = localStorage.getItem("lop_device_key");
     if (!k) {
@@ -51,16 +66,19 @@
     ensureExplorer,
     async logClassification(verdict, isCorrect) {
       if (!client) return;
+      if (!allow("classifications")) return;
       try { await client.from("classifications").insert({ explorer_id: explorerId, verdict: verdict, is_correct: isCorrect }); }
       catch (e) { console.warn("LOP sync: logClassification", e); }
     },
     async logClaim(systemName, color) {
       if (!client) return;
+      if (!allow("claims")) return;
       try { await client.from("claims").insert({ explorer_id: explorerId, system_name: systemName, avatar_color: color }); }
       catch (e) { console.warn("LOP sync: logClaim", e); }
     },
     async logDiscovery(nickname, planetName) {
       if (!client) return;
+      if (!allow("discoveries")) return;
       try { await client.from("discoveries").insert({ named_by: explorerId, nickname: nickname, planet_name: planetName, status: "candidate" }); }
       catch (e) { console.warn("LOP sync: logDiscovery", e); }
     },

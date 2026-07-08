@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Data Lab — Life On Other Planets?</title>
 <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
-<meta name="description" content="Vet real-style light curves to tell real planets from noise — the actual science task behind the game, scored against known answers.">
+<meta name="description" content="Vet REAL NASA TESS light curves to tell real planets from noise — the actual science task behind the game, scored against known answers.">
 <meta property="og:title" content="Data Lab — Life On Other Planets?">
-<meta property="og:description" content="Help tell real planet signals from false alarms in telescope data. Your accuracy is measured for real.">
+<meta property="og:description" content="Judge real telescope data from NASA's TESS mission. Real planet, or false alarm? Your accuracy is measured for real.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://lifeonotherplanets.space/vet.html">
 <meta property="og:image" content="https://lifeonotherplanets.space/assets/app-icon.svg">
@@ -21,32 +21,48 @@
 <style>
   * { box-sizing:border-box; }
   body { margin:0; background:#05070f; color:#e8ecf6; font-family:"Hanken Grotesk",-apple-system,sans-serif; }
-  .wrap { max-width:1020px; margin:0 auto; padding:24px 18px 60px; }
+  .wrap { max-width:1020px; margin:0 auto; padding:20px 18px 60px; }
   h1 { font-family:"Fredoka",sans-serif; font-weight:600; font-size:25px; margin:0 0 2px; }
   h1 .q { color:#f5c977; }
-  .sub { color:#9aa6bf; font-size:14px; margin:0 0 20px; max-width:680px; }
+  .sub { color:#9aa6bf; font-size:14px; margin:0 0 18px; max-width:700px; line-height:1.6; }
   .grid { display:grid; grid-template-columns:1.6fr 1fr; gap:16px; }
   @media(max-width:820px){ .grid{ grid-template-columns:1fr; } }
   .panel { background:#0b1120; border:1px solid #1a2338; border-radius:20px; padding:18px; }
   .eyebrow { font-family:"Space Grotesk",sans-serif; font-size:11px; letter-spacing:1.6px; text-transform:uppercase; color:#9aa6bf; }
-  canvas { width:100%; height:300px; display:block; background:#0a0f1c; border-radius:12px; margin:8px 0 4px; }
+  /* card badge: real vs practice */
+  .cardtag { display:inline-flex; align-items:center; gap:6px; font-family:"Space Grotesk",sans-serif; font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; padding:4px 10px; border-radius:999px; }
+  .cardtag.real { color:#5DCAA5; background:rgba(93,202,165,.12); border:1px solid rgba(93,202,165,.3); }
+  .cardtag.practice { color:#f5c977; background:rgba(245,201,119,.12); border:1px solid rgba(245,201,119,.32); }
+  canvas { width:100%; height:300px; display:block; background:#0a0f1c; border-radius:12px; margin:10px 0 4px; touch-action:pan-y; }
   .axhint { display:flex; justify-content:space-between; font-size:11px; color:#6f7ea3; font-family:"Space Grotesk",sans-serif; }
-  .q { font-size:16px; margin:14px 0 10px; font-weight:600; }
+  .q { font-size:16px; margin:14px 0 4px; font-weight:600; }
+  .swipehint { font-size:12px; color:#6f7ea3; margin:0 0 10px; font-family:"Space Grotesk",sans-serif; }
   .btns { display:flex; gap:10px; flex-wrap:wrap; }
-  button { font-family:"Space Grotesk",sans-serif; font-weight:600; font-size:14px; border-radius:12px; padding:11px 16px; cursor:pointer; border:1px solid #29365a; background:#16203a; color:#dbe4fb; }
+  button { font-family:"Space Grotesk",sans-serif; font-weight:600; font-size:14px; border-radius:12px; padding:12px 16px; cursor:pointer; border:1px solid #29365a; background:#16203a; color:#dbe4fb; flex:1 1 auto; min-width:120px; }
   button:hover { background:#1d2a4a; }
   button.yes { border-color:#2c6b56; } button.yes:hover{ background:#0f2a22; }
   button.no { border-color:#7a3b2c; } button.no:hover{ background:#2a140f; }
   button.maybe { border-color:#6b511f; } button.maybe:hover{ background:#2a220f; }
+  button:disabled{ opacity:.5; cursor:default; }
+  .hint { margin:8px 0 0; padding:10px 12px; border-radius:10px; background:#161029; border:1px solid #2c2350; color:#cdbff0; font-size:13px; display:none; }
+  .hint.show{ display:block; }
   .verdict { margin-top:14px; padding:14px 16px; border-radius:14px; border:1px solid #1a2338; display:none; }
   .verdict.show { display:block; }
   .verdict.correct { border-color:#2c6b56; background:#0d211b; }
   .verdict.wrong { border-color:#7a3b2c; background:#231110; }
   .verdict h3 { margin:0 0 6px; font-family:"Space Grotesk",sans-serif; font-size:15px; }
-  .verdict p { margin:6px 0; font-size:14px; color:#c9d3ea; }
-  .crowd { margin-top:10px; font-size:13px; color:#9aa6bf; font-family:"Space Grotesk",sans-serif; }
+  .verdict p { margin:6px 0; font-size:14px; color:#c9d3ea; line-height:1.55; }
+  /* the real-star card shown on reveal */
+  .starcard { margin-top:10px; display:flex; flex-wrap:wrap; gap:6px 18px; padding:10px 12px; border-radius:12px; background:#0a1120; border:1px solid #1a2338; }
+  .starcard .kv { font-family:"Space Grotesk",sans-serif; font-size:12px; }
+  .starcard .kv b { color:#e8ecf6; } .starcard .kv span{ color:#8fa0c4; }
+  .src { font-family:"Space Grotesk",sans-serif; font-size:11.5px; color:#5DCAA5; margin-top:8px; letter-spacing:.03em; }
+  .crowd { margin-top:12px; font-size:13px; color:#9aa6bf; font-family:"Space Grotesk",sans-serif; }
+  .crowd .demoflag { color:#e0b451; font-weight:600; }
   .crowdbar { height:8px; border-radius:6px; background:#16203a; overflow:hidden; margin-top:5px; display:flex; }
   .crowdbar i { display:block; height:100%; }
+  .celebrate { animation:pop .5s ease; }
+  @keyframes pop { 0%{ transform:scale(.96); } 50%{ transform:scale(1.015); } 100%{ transform:scale(1); } }
   .stat { font-family:"Space Grotesk",sans-serif; }
   .stat .k { font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:#9aa6bf; }
   .stat .v { font-size:22px; font-weight:700; }
@@ -58,31 +74,74 @@
   .badge { display:inline-flex; align-items:center; gap:8px; margin-top:12px; padding:8px 12px; border-radius:12px; border:1px solid #29365a; background:#0e1626; font-family:"Space Grotesk",sans-serif; font-size:13px; color:#9aa6bf; }
   .badge.on { color:#f5c977; border-color:#6b511f; }
   a{ color:#7fb2ff; }
+  .progresstrack { display:flex; gap:5px; margin:2px 0 0; }
+  .progresstrack i{ height:4px; flex:1; border-radius:3px; background:#1a2338; }
+  .progresstrack i.on{ background:#f5c977; }
+  /* onboarding intro overlay */
+  .overlay { position:fixed; inset:0; background:rgba(5,7,15,.86); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; padding:20px; z-index:50; }
+  .overlay.hide{ display:none; }
+  .modal { max-width:520px; background:#0b1120; border:1px solid #24304e; border-radius:20px; padding:26px; }
+  .modal h2 { font-family:"Fredoka",sans-serif; font-weight:600; font-size:23px; margin:0 0 6px; }
+  .modal p { color:#c3cee6; font-size:14.5px; line-height:1.6; margin:8px 0; }
+  .modal .steps{ margin:14px 0; padding:0; list-style:none; }
+  .modal .steps li{ padding:7px 0 7px 28px; position:relative; font-size:14px; color:#dbe4fb; }
+  .modal .steps li::before{ content:""; position:absolute; left:0; top:9px; width:16px; height:16px; border-radius:50%; background:rgba(93,202,165,.15); border:1px solid #5DCAA5; }
+  .modal .go { display:block; width:100%; margin-top:12px; background:#5DCAA5; color:#05231b; border:none; font-size:15px; padding:14px; }
+  .modal .go:hover{ background:#74dfa6; }
+  /* scan mission banner (unifies the game map with the Data Lab) */
+  .mission { margin:0 0 16px; padding:12px 16px; border-radius:14px; background:linear-gradient(180deg,#0e1a2e,#0b1424); border:1px solid #2a4066; font-family:"Space Grotesk",sans-serif; font-size:14px; color:#dbe4fb; }
+  .mission a { color:#7fb2ff; margin-left:8px; }
+  .mission.done { background:linear-gradient(180deg,#0d211b,#0a1a16); border-color:#2c6b56; }
 </style>
 </head>
 <body>
-<nav style="display:flex;gap:16px;align-items:center;max-width:1020px;margin:0 auto;padding:12px 20px;font-family:'Space Grotesk',sans-serif;font-size:14px;">
+<nav style="display:flex;gap:16px;align-items:center;max-width:1020px;margin:0 auto;padding:12px 20px;font-family:'Space Grotesk',sans-serif;font-size:14px;flex-wrap:wrap;">
 <a href="index.html" style="color:#e8ecf6;text-decoration:none;font-weight:600;margin-right:auto;">Life On Other Planets?</a>
 <a href="game.html" style="color:#9aa6bf;text-decoration:none;">Explore</a>
 <a href="rankings.html" style="color:#9aa6bf;text-decoration:none;">Rankings</a>
 <a href="vet.html" style="color:#e8ecf6;text-decoration:none;">Data Lab</a>
+<a href="guide.html" style="color:#9aa6bf;text-decoration:none;">Field Guide</a>
 <a href="scoreboard.html" style="color:#9aa6bf;text-decoration:none;">Scoreboard</a>
 </nav>
+
+<!-- onboarding intro -->
+<div class="overlay" id="intro">
+  <div class="modal">
+    <h2>Welcome to the Data Lab 🔭</h2>
+    <p>You're about to do the <b>real</b> job behind the search: telling real planets apart from false alarms in NASA telescope data.</p>
+    <ul class="steps">
+      <li><b>3 quick practice rounds</b> — we teach you the shapes to look for.</li>
+      <li>Then you're on <b>real TESS light curves</b> — actual stars, scored against known answers.</li>
+      <li>Takes seconds each. No account needed. New to this? Keep the <a href="guide.html" target="_blank">Field Guide</a> handy.</li>
+    </ul>
+    <button class="go" id="startbtn">Start with practice →</button>
+    <p style="font-size:12.5px;color:#8494b5;margin-top:10px;">A planet crossing its star makes a tiny, repeating dip in the star's brightness. Your eyes catch things the software misses.</p>
+  </div>
+</div>
+
 <div class="wrap">
-  <h1>The Search — Data Lab<span class="q"></span></h1>
-  <p class="sub">This is the real work behind the game. You're shown a <b>light curve</b> — a star's brightness measured over time by a planet-hunting telescope. A planet crossing its star makes a tiny, repeating dip. Your job: tell a real planet from noise, a glitch, or two stars eclipsing each other. Every card here has a known answer, so your accuracy is measured for real — that's how we prove the crowd is working.<span id="syncst" style="color:#5DCAA5;font-family:'Space Grotesk',sans-serif;font-size:13px;"></span></p>
+  <h1>The Search — Data Lab</h1>
+  <p class="sub">You're shown a <b>light curve</b> — a star's brightness measured over time by NASA's TESS planet-hunting telescope. A planet crossing its star makes a tiny, repeating dip. Your job: tell a real planet from noise, a glitch, or two stars eclipsing each other. Real cards use <b>real TESS data</b> and each has a known answer, so your accuracy is measured for real.<span id="syncst" style="color:#5DCAA5;font-family:'Space Grotesk',sans-serif;font-size:13px;"></span></p>
+
+  <div class="mission" id="mission" style="display:none;"></div>
 
   <div class="grid">
-    <div class="panel">
-      <div class="eyebrow" id="tasklabel">Light curve #1</div>
-      <canvas id="lc"></canvas>
-      <div class="axhint"><span>time (days) →</span><span>← brightness</span></div>
-      <div class="q">Is there a real planet transiting this star?</div>
-      <div class="btns">
-        <button class="yes" data-a="planet">Real planet</button>
-        <button class="no" data-a="not">Not a planet</button>
-        <button class="maybe" data-a="unsure">Unsure</button>
+    <div class="panel" id="cardpanel">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div class="eyebrow" id="tasklabel">Light curve #1</div>
+        <span class="cardtag practice" id="cardtag">Practice</span>
       </div>
+      <div class="progresstrack" id="practicetrack" style="margin-top:8px;"><i></i><i></i><i></i></div>
+      <canvas id="lc"></canvas>
+      <div class="axhint"><span>time →</span><span>← brightness</span></div>
+      <div class="q" id="question">Is there a real planet transiting this star?</div>
+      <div class="swipehint" id="swipehint">Tap a button — or on a phone, swipe → for planet, ← for not, ↑ for unsure.</div>
+      <div class="btns">
+        <button class="yes" data-a="planet">🪐 Real planet</button>
+        <button class="no" data-a="not">🚫 Not a planet</button>
+        <button class="maybe" data-a="unsure">🤔 Unsure</button>
+      </div>
+      <div class="hint" id="hint"></div>
       <div class="verdict" id="verdict"></div>
     </div>
 
@@ -103,129 +162,253 @@
         </div>
       </div>
       <div class="stat" style="margin-top:14px;"><div class="k">Current streak</div><div class="v" id="streak">0</div></div>
-      <div class="badge" id="sharpeye"><span>&#9733;</span> Sharp Eye — 85%+ over 10 cards</div>
+      <div class="badge" id="sharpeye"><span>&#9733;</span> Sharp Eye — 9/10 correct on real cards</div>
       <div class="note">
-        <b>Why this is real science:</b> no single answer decides anything. In the live project, each light curve is shown to many people; the crowd's <i>agreement</i> — checked against hidden known-answer cards like these — is what flags a candidate for a professional to follow up. We also hide faint synthetic planets in the data (an <i>injection–recovery</i> test) to measure exactly what fraction the crowd catches. That's how we know it works, in numbers.
+        <b>Why this is real science:</b> no single answer decides anything. In the live project, each light curve is shown to many people; the crowd's <i>agreement</i> — checked against hidden known-answer cards like these — is what flags a candidate for a professional to follow up. We also hide faint <i>injected</i> planets in real starlight (an injection–recovery test) to measure exactly what fraction the crowd catches. That's how we know it works, in numbers. <a href="guide.html">Open the Field Guide →</a>
+      </div>
+      <div class="note" style="margin-top:12px;">
+        <b>Report a problem:</b> <a href="mailto:hello@lifeonotherplanets.space?subject=Data%20Lab%20feedback">tell us about a bug or a bad card →</a>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-const R = { done:0, correct:0, planetsTotal:0, planetsCaught:0, fpTotal:0, fpAvoided:0, streak:0, last10:[] };
-let current = null, answered = false;
+/* ---- real TESS deck is fetched; synthetic generator powers practice + graceful fallback ---- */
+let REAL = [];
+const MISSION = (function(){ const p=new URLSearchParams(location.search); return { system:p.get('system'), ret:p.get('return'), target:3, count:0, done:false }; })();
+const R = { done:0, correct:0, planetsTotal:0, planetsCaught:0, fpTotal:0, fpAvoided:0, streak:0, last10Real:[] };
+let current = null, answered = false, phase = "practice", practiceIx = 0, realQueue = [], usingFallback = false;
 
 function explorerName(){ try{ return (JSON.parse(localStorage.getItem('loop_search_state_v2'))||{}).explorer || 'Explorer'; }catch(e){ return 'Explorer'; } }
-window.addEventListener('load', function(){
-  var el=document.getElementById('syncst');
-  if(window.LOPSync && LOPSync.enabled){ if(el) el.textContent=' · Cloud sync on'; LOPSync.ensureExplorer(explorerName(),'stargazer','#f5c977'); }
-  else if(el){ el.textContent=' · saving locally'; }
-});
+const onboarded = () => localStorage.getItem('lop_vet_onboarded') === '1';
 
+/* ---------- synthetic generator (practice cards + fallback) ---------- */
 function rand(a,b){ return a + Math.random()*(b-a); }
 function gauss(s){ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random(); return s*Math.sqrt(-2*Math.log(u))*Math.cos(6.2831853*v); }
+function baseCurve(noise){ const N=240,f=[]; for(let i=0;i<N;i++) f.push(1+gauss(noise)); return f; }
+function synthTransit(){ const f=baseCurve(rand(0.0016,0.004)), P=rand(34,54), t0=rand(6,P), dur=rand(4,7), d=rand(0.01,0.02);
+  for(let i=0;i<f.length;i++){ const ph=((i-t0)%P+P)%P; if(ph<dur||ph>P-dur) f[i]-=d; } return f; }
+function synthEB(){ const f=baseCurve(rand(0.0016,0.004)), P=rand(48,80), t0=rand(8,P), dur=rand(4,7), d1=rand(0.08,0.16), d2=d1*rand(0.3,0.5);
+  for(let i=0;i<f.length;i++){ let ph=((i-t0)%P+P)%P; if(ph<dur) f[i]-=d1*(1-ph/dur); else if(ph>P-dur) f[i]-=d1*(1-(P-ph)/dur);
+    const s=Math.abs(ph-P/2); if(s<dur*0.8) f[i]-=d2*(1-s/(dur*0.8)); } return f; }
+function synthNoise(){ return baseCurve(rand(0.002,0.005)); }
 
-// Generate a light curve with known ground truth.
-// kinds: transit (planet), injection (faint planet), noise (not), eb (not), glitch (not)
-function makeCurve(){
-  const N=320, t=[], f=[];
-  const noise = rand(0.0018, 0.0052);
-  const varyAmp = Math.random()<0.5 ? rand(0, 0.004) : 0;
-  const varyP = rand(3, 12);
-  for(let i=0;i<N;i++){ t.push(i/N*27); f.push(1 + varyAmp*Math.sin(t[i]/varyP*6.2831853 + 1) + gauss(noise)); }
-  const roll = Math.random();
-  let kind, truth, why;
-  if(roll < 0.34){ kind="transit"; truth="planet"; why="A clear, evenly-spaced set of shallow flat-bottomed dips — the signature of a planet crossing the star again and again."; addTransit(t,f, rand(0.008,0.02)); }
-  else if(roll < 0.52){ kind="injection"; truth="planet"; why="A faint but real transit we injected into the data on purpose. Catching these is how we measure the crowd's sensitivity to small, Earth-like planets."; addTransit(t,f, rand(0.0035,0.006)); }
-  else if(roll < 0.70){ kind="eb"; truth="not"; why="Look again: the dips alternate deep / shallow and are V-shaped, not flat-bottomed. That's two stars eclipsing each other — the single most common planet impostor."; addEB(t,f); }
-  else if(roll < 0.85){ kind="glitch"; truth="not"; why="That single sharp spike doesn't repeat. A one-off jump is almost always an instrument glitch or a cosmic ray, not a planet."; addGlitch(t,f); }
-  else { kind="noise"; truth="not"; why="Just the star's natural flicker and measurement noise — no repeating dip. Correctly saying 'no' here matters as much as finding a planet."; }
-  return {t,f,kind,truth,why,depth: kind==="injection"?"faint":kind==="transit"?"clear":null};
-}
-function addTransit(t,f,depth){
-  const P=rand(2.2,8), t0=rand(0.5,P), dur=rand(0.12,0.28);
-  for(let i=0;i<t.length;i++){ const ph=((t[i]-t0)%P+P)%P; if(ph<dur||ph>P-dur){ f[i]-=depth; } }
-}
-function addEB(t,f){
-  const P=rand(2.5,7), t0=rand(0.5,P), dur=rand(0.10,0.20), d1=rand(0.05,0.16), d2=d1*rand(0.25,0.5);
-  for(let i=0;i<t.length;i++){ let ph=((t[i]-t0)%P+P)%P;
-    // primary (V-shaped)
-    if(ph<dur){ f[i]-=d1*(1-ph/dur); } else if(ph>P-dur){ f[i]-=d1*(1-(P-ph)/dur); }
-    // secondary at half phase
-    const phs=Math.abs(ph-P/2); if(phs<dur*0.8){ f[i]-=d2*(1-phs/(dur*0.8)); }
-  }
-}
-function addGlitch(t,f){ const i=Math.floor(rand(0.2,0.8)*t.length); f[i]+=rand(0.02,0.05)*(Math.random()<0.5?-1:1); }
+const PRACTICE = [
+  { f:synthTransit(), truth:"planet", kind:"transit",
+    hint:"Look for the pattern: shallow dips that are evenly spaced and flat-bottomed. That regular rhythm is a planet passing in front of its star again and again.",
+    why:"Correct — those evenly-spaced, flat-bottomed dips are the classic signature of a planet transiting its star." },
+  { f:synthEB(), truth:"not", kind:"eb",
+    hint:"This one's a trap. See how the dips are deep and V-shaped, with a shallower dip halfway between the big ones? That's two stars eclipsing each other — the #1 planet impostor.",
+    why:"Right to be suspicious — deep, V-shaped dips with a secondary dip between them mean two stars eclipsing each other, not a planet." },
+  { f:synthNoise(), truth:"not", kind:"noise",
+    hint:"Sometimes there's simply nothing here — just the star's natural flicker and measurement noise, with no repeating dip. Saying 'no planet' is a real, valuable answer.",
+    why:"Exactly — no repeating dip, just noise. Correctly ruling a star OUT matters as much as finding a planet." }
+];
 
+/* ---------- drawing ---------- */
 const c=document.getElementById("lc");
-function draw(cur){
+function draw(f){
   const dpr=window.devicePixelRatio||1, W=c.clientWidth, H=300;
   c.width=W*dpr; c.height=H*dpr; const x=c.getContext("2d"); x.setTransform(dpr,0,0,dpr,0,0);
   x.clearRect(0,0,W,H);
-  const pad=26, fmin=Math.min.apply(null,cur.f), fmax=Math.max.apply(null,cur.f), span=(fmax-fmin)||1;
-  const X=i=>pad+(i/(cur.t.length-1))*(W-2*pad);
+  const pad=26, fmin=Math.min.apply(null,f), fmax=Math.max.apply(null,f), span=(fmax-fmin)||1;
+  const X=i=>pad+(i/(f.length-1))*(W-2*pad);
   const Y=v=>pad+(1-(v-fmin)/span)*(H-2*pad);
   x.strokeStyle="#152036"; x.lineWidth=1;
   for(let g=0;g<=4;g++){ const yy=pad+g/4*(H-2*pad); x.beginPath(); x.moveTo(pad,yy); x.lineTo(W-pad,yy); x.stroke(); }
   x.fillStyle="#7fb2ff";
-  for(let i=0;i<cur.f.length;i++){ x.globalAlpha=0.85; x.beginPath(); x.arc(X(i),Y(cur.f[i]),1.6,0,6.2832); x.fill(); }
+  for(let i=0;i<f.length;i++){ x.globalAlpha=0.85; x.beginPath(); x.arc(X(i),Y(f[i]),1.6,0,6.2832); x.fill(); }
   x.globalAlpha=1;
 }
 
-function next(){
-  answered=false; current=makeCurve(); draw(current);
-  document.getElementById("tasklabel").textContent="Light curve #"+(R.done+1);
-  const v=document.getElementById("verdict"); v.className="verdict"; v.innerHTML="";
-  document.querySelectorAll(".btns button").forEach(b=>b.disabled=false);
+/* ---------- card flow ---------- */
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function buildRealQueue(){
+  const easy=REAL.filter(c=>c.difficulty==="easy"), rest=shuffle(REAL.filter(c=>c.difficulty!=="easy"));
+  realQueue = shuffle(easy).concat(rest);   // confidence-building easy card first-ish, then mixed
 }
+
+function setTag(isPractice){
+  const tag=document.getElementById("cardtag");
+  tag.className = "cardtag " + (isPractice?"practice":"real");
+  tag.textContent = isPractice ? "Practice" : "Real TESS data";
+  document.getElementById("practicetrack").style.display = isPractice ? "flex" : "none";
+}
+
+function next(){
+  answered=false; current=null;
+  document.getElementById("verdict").className="verdict";
+  document.getElementById("verdict").innerHTML="";
+  document.getElementById("hint").className="hint";
+  document.querySelectorAll(".btns button").forEach(b=>b.disabled=false);
+
+  if(phase==="practice" && !onboarded()){
+    const p=PRACTICE[practiceIx];
+    current={ f:p.f, truth:p.truth, kind:p.kind, why:p.why, isReal:false, hint:p.hint };
+    document.getElementById("tasklabel").textContent="Practice "+(practiceIx+1)+" of 3";
+    setTag(true);
+    document.querySelectorAll("#practicetrack i").forEach((el,i)=>el.className = i<practiceIx?"on":"");
+    const h=document.getElementById("hint"); h.textContent="👀 "+p.hint; h.className="hint show";
+  } else {
+    phase="real";
+    if(!realQueue.length) buildRealQueue();
+    current=realQueue.shift();
+    current.isReal = !usingFallback;
+    document.getElementById("tasklabel").textContent = (usingFallback?"Training curve #":"Light curve #")+(R.done+1);
+    setTag(false);
+    if(usingFallback){ const t=document.getElementById("cardtag"); t.className="cardtag practice"; t.textContent="Training (offline)"; }
+  }
+  document.getElementById("question").textContent="Is there a real planet transiting this star?";
+  draw(current.f);
+}
+
+/* fallback: if real data can't load, synthesize a labeled training deck so the lab still works */
+function synthFallbackCard(){
+  const roll=Math.random();
+  if(roll<0.4) return { f:synthTransit(), truth:"planet", kind:"transit", why:"Evenly-spaced flat-bottomed dips — a transiting planet.", difficulty:"easy" };
+  if(roll<0.7) return { f:synthEB(), truth:"not", kind:"eb", why:"Deep V-shaped dips with a secondary — an eclipsing binary, not a planet.", difficulty:"medium" };
+  return { f:synthNoise(), truth:"not", kind:"noise", why:"Just noise — no repeating dip.", difficulty:"easy" };
+}
+
 function answer(a){
-  if(answered) return; answered=true;
+  if(answered||!current) return; answered=true;
   document.querySelectorAll(".btns button").forEach(b=>b.disabled=true);
-  const truth=current.truth;
-  const correct = (a===truth); // 'unsure' counts as not-correct but not a false alarm
-  R.done++;
-  if(truth==="planet"){ R.planetsTotal++; if(a==="planet") R.planetsCaught++; }
-  else { R.fpTotal++; if(a==="not") R.fpAvoided++; }
-  if(a!=="unsure"){ if(correct){ R.correct++; R.streak++; } else { R.streak=0; } }
-  R.last10.push(correct?1:0); if(R.last10.length>10) R.last10.shift();
+  document.getElementById("hint").className="hint";
+  const truth=current.truth, correct=(a===truth), scored = (phase==="real");
 
-  const isCorrectVal = (a==="unsure") ? null : correct;
-  if(window.LOPSync){ LOPSync.ensureExplorer(explorerName(),"stargazer","#f5c977").then(function(){ LOPSync.logClassification(a, isCorrectVal); }); }
+  if(scored){
+    R.done++;
+    if(truth==="planet"){ R.planetsTotal++; if(a==="planet") R.planetsCaught++; }
+    else { R.fpTotal++; if(a==="not") R.fpAvoided++; }
+    if(a!=="unsure"){ if(correct){ R.correct++; R.streak++; } else R.streak=0; }
+    R.last10Real.push(correct?1:0); if(R.last10Real.length>10) R.last10Real.shift();
+    const isCorrectVal=(a==="unsure")?null:correct;
+    if(window.LOPSync){ LOPSync.ensureExplorer(explorerName(),"stargazer","#f5c977").then(function(){ LOPSync.logClassification(a,isCorrectVal); }); }
+    updateStats();
+  }
 
-  // Simulated crowd (illustrative): other players ~86% accurate
-  let cp=0,cn=0,cu=0, sims=24;
-  for(let i=0;i<sims;i++){ const good=Math.random()<0.86; let vote = good ? (truth==="planet"?"planet":"not") : (truth==="planet"?"not":"planet"); if(Math.random()<0.06) vote="unsure"; if(vote==="planet")cp++; else if(vote==="not")cn++; else cu++; }
-  const tot=cp+cn+cu;
+  if(MISSION.system && scored && !MISSION.done){ MISSION.count++; if(MISSION.count>=MISSION.target){ completeMission(); } else { updateMission(); } }
 
   const v=document.getElementById("verdict");
-  v.className="verdict show "+(correct?"correct":"wrong");
-  const head = a==="unsure" ? "Fair call to flag it — here's the answer" : (correct?"Correct":"Not quite");
-  const truthLabel = truth==="planet" ? (current.depth==="faint"?"Real planet (faint injected transit)":"Real planet") : "Not a planet ("+current.kind+")";
-  v.innerHTML = `<h3>${head}</h3><p><b>Truth: ${truthLabel}.</b> ${current.why}</p>`+
-    `<div class="crowd">What 24 other vetters said — agreement is what advances a candidate:`+
-    `<div class="crowdbar"><i style="width:${cp/tot*100}%;background:#5DCAA5;"></i><i style="width:${cn/tot*100}%;background:#c96b4a;"></i><i style="width:${cu/tot*100}%;background:#6b7690;"></i></div>`+
-    `<div style="margin-top:5px;">Planet ${Math.round(cp/tot*100)}% · Not ${Math.round(cn/tot*100)}% · Unsure ${Math.round(cu/tot*100)}%</div></div>`+
-    `<div style="margin-top:12px;"><button id="nextbtn">Next light curve &rarr;</button></div>`;
-  document.getElementById("nextbtn").onclick=next;
-  updateStats();
+  v.className="verdict show "+(correct?"correct celebrate":"wrong");
+  const head = a==="unsure" ? "Fair call to flag it — here's the answer"
+             : (correct ? (truth==="planet" ? "🎉 Nice — that's a real one!" : "✓ Correct")
+                        : "Not quite — here's what it was");
+  let truthLabel;
+  if(current.isReal){
+    truthLabel = truth==="planet"
+      ? (current.kind==="injection" ? "Real planet (faint injected transit)" : "Real confirmed planet")
+      : (current.kind==="eb" ? "Not a planet — eclipsing binary" : "Not a planet — quiet star / noise");
+  } else {
+    truthLabel = truth==="planet" ? "A planet transit" : (current.kind==="eb"?"An eclipsing binary":"Just noise");
+  }
+  let html = "<h3>"+head+"</h3><p><b>"+truthLabel+".</b> "+current.why+"</p>";
+
+  // real-star card
+  if(current.isReal){
+    const kv=[];
+    kv.push('<div class="kv"><span>Star</span> <b>'+esc(current.name)+'</b></div>');
+    if(current.constellation) kv.push('<div class="kv"><span>Constellation</span> <b>'+esc(current.constellation)+'</b></div>');
+    if(current.distance_ly!=null) kv.push('<div class="kv"><span>Distance</span> <b>'+current.distance_ly+' ly</b></div>');
+    if(current.tic) kv.push('<div class="kv"><span>Catalog</span> <b>TIC '+esc(current.tic)+'</b></div>');
+    if(current.depth_ppm) kv.push('<div class="kv"><span>Dip depth</span> <b>'+current.depth_ppm.toLocaleString()+' ppm</b></div>');
+    html += '<div class="starcard">'+kv.join("")+'</div>';
+    html += '<div class="src">📡 '+esc(current.source)+'</div>';
+  }
+
+  // simulated crowd — HONESTLY labeled as demo until the community is live
+  if(current.isReal){
+    let cp=0,cn=0,cu=0,sims=24;
+    for(let i=0;i<sims;i++){ const good=Math.random()<0.86; let vote=good?(truth==="planet"?"planet":"not"):(truth==="planet"?"not":"planet"); if(Math.random()<0.06) vote="unsure"; if(vote==="planet")cp++; else if(vote==="not")cn++; else cu++; }
+    const tot=cp+cn+cu;
+    html += '<div class="crowd"><span class="demoflag">Simulated crowd (demo)</span> — real agreement turns on once explorers are live:'+
+      '<div class="crowdbar"><i style="width:'+(cp/tot*100)+'%;background:#5DCAA5;"></i><i style="width:'+(cn/tot*100)+'%;background:#c96b4a;"></i><i style="width:'+(cu/tot*100)+'%;background:#6b7690;"></i></div>'+
+      '<div style="margin-top:5px;">Planet '+Math.round(cp/tot*100)+'% · Not '+Math.round(cn/tot*100)+'% · Unsure '+Math.round(cu/tot*100)+'%</div></div>';
+  }
+
+  html += '<div style="margin-top:12px;"><button id="nextbtn" style="flex:0 0 auto;">Next light curve &rarr;</button></div>';
+  v.innerHTML=html;
+  document.getElementById("nextbtn").onclick=advance;
 }
+
+function advance(){
+  if(phase==="practice" && !onboarded()){
+    practiceIx++;
+    if(practiceIx>=PRACTICE.length){ localStorage.setItem('lop_vet_onboarded','1'); phase="real";
+      flash("✅ Practice complete — you're now on real NASA TESS data. Your accuracy counts from here."); }
+  }
+  next();
+}
+function flash(msg){
+  const v=document.getElementById("verdict");
+  v.className="verdict show correct"; v.innerHTML='<h3>'+msg+'</h3><div style="margin-top:10px;"><button id="nextbtn" style="flex:0 0 auto;">Show me a real star &rarr;</button></div>';
+  document.getElementById("nextbtn").onclick=next;
+}
+function updateMission(){
+  if(!MISSION.system) return;
+  const el=document.getElementById('mission'); if(!el) return; el.style.display='block';
+  if(MISSION.done){
+    el.className='mission done';
+    el.innerHTML='🎉 <b>'+esc(MISSION.system)+' charted!</b> You vetted '+MISSION.target+' real light curves to earn it. <a href="game.html">← Back to the map</a>';
+  } else {
+    el.className='mission';
+    el.innerHTML='🔭 <b>Charting mission: '+esc(MISSION.system)+'</b> — vet '+MISSION.target+' real light curves to chart it &nbsp;<span style="color:#f5c977;">('+MISSION.count+'/'+MISSION.target+')</span> <a href="game.html">← map</a>';
+  }
+}
+function completeMission(){
+  MISSION.done=true;
+  try{ const st=JSON.parse(localStorage.getItem('loop_search_state_v2')||'{}'); st.charted=st.charted||{}; st.charted[MISSION.system]=true; localStorage.setItem('loop_search_state_v2', JSON.stringify(st)); }catch(e){}
+  updateMission();
+}
+function esc(s){ return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
 function updateStats(){
   document.getElementById("done").textContent=R.done;
-  const answeredCount = R.done; // include unsure in denominator of accuracy-of-decisions? use decisive only
-  const decisive = R.correct + (R.done - R.correct); // simple
   document.getElementById("acc").textContent = R.done? Math.round(R.correct/R.done*100)+"%" : "—";
   document.getElementById("recall").textContent = R.planetsCaught+" / "+R.planetsTotal;
   document.getElementById("recallbar").style.width = R.planetsTotal? (R.planetsCaught/R.planetsTotal*100)+"%" : "0%";
   document.getElementById("fa").textContent = R.fpAvoided+" / "+R.fpTotal;
   document.getElementById("fabar").style.width = R.fpTotal? (R.fpAvoided/R.fpTotal*100)+"%" : "0%";
   document.getElementById("streak").textContent=R.streak;
-  const l10=R.last10.reduce((a,b)=>a+b,0);
-  const se=document.getElementById("sharpeye");
-  if(R.last10.length>=10 && l10>=9){ se.classList.add("on"); se.innerHTML="<span>&#9733;</span> Sharp Eye earned — "+l10+"/10 correct"; }
+  const l10=R.last10Real.reduce((a,b)=>a+b,0), se=document.getElementById("sharpeye");
+  if(R.last10Real.length>=10 && l10>=9){ se.classList.add("on"); se.innerHTML="<span>&#9733;</span> Sharp Eye earned — "+l10+"/10 on real cards"; }
 }
+
+/* ---------- input: buttons, swipe, keyboard ---------- */
 document.querySelectorAll(".btns button").forEach(b=>b.addEventListener("click",()=>answer(b.dataset.a)));
-window.addEventListener("resize",()=>{ if(current) draw(current); });
-next();
+window.addEventListener("resize",()=>{ if(current) draw(current.f); });
+window.addEventListener("keydown",e=>{
+  if(document.getElementById("intro").classList.contains("hide")===false) return;
+  if(!answered){ if(e.key==="ArrowRight") answer("planet"); else if(e.key==="ArrowLeft") answer("not"); else if(e.key==="ArrowUp"||e.key.toLowerCase()==="u") answer("unsure"); }
+  else if(e.key==="Enter"||e.key===" "){ const nb=document.getElementById("nextbtn"); if(nb){ e.preventDefault(); nb.click(); } }
+});
+// swipe on the canvas / card
+let sx=0,sy=0,swiping=false;
+const panel=document.getElementById("cardpanel");
+panel.addEventListener("touchstart",e=>{ if(answered)return; const t=e.changedTouches[0]; sx=t.clientX; sy=t.clientY; swiping=true; },{passive:true});
+panel.addEventListener("touchend",e=>{ if(!swiping||answered)return; swiping=false; const t=e.changedTouches[0], dx=t.clientX-sx, dy=t.clientY-sy;
+  if(Math.abs(dx)>44 && Math.abs(dx)>Math.abs(dy)){ answer(dx>0?"planet":"not"); }
+  else if(dy<-44 && Math.abs(dy)>Math.abs(dx)){ answer("unsure"); } },{passive:true});
+
+/* ---------- boot ---------- */
+function boot(){
+  var el=document.getElementById('syncst');
+  if(window.LOPSync && LOPSync.enabled){ if(el) el.textContent=' · Cloud sync on'; LOPSync.ensureExplorer(explorerName(),'stargazer','#f5c977'); }
+  else if(el){ el.textContent=' · saving locally'; }
+
+  fetch('real_curves.json',{cache:"no-store"}).then(r=>{ if(!r.ok) throw 0; return r.json(); })
+    .then(data=>{ REAL = Array.isArray(data)&&data.length ? data : null; if(!REAL) throw 0; buildRealQueue(); startFlow(); })
+    .catch(()=>{ usingFallback=true; REAL = Array.from({length:12}, synthFallbackCard); buildRealQueue(); startFlow(); });
+}
+function startFlow(){
+  const intro=document.getElementById("intro");
+  if(MISSION.system) updateMission();
+  document.getElementById("startbtn").onclick=()=>{ intro.classList.add("hide"); next(); };
+  if(onboarded()){ phase="real"; intro.classList.add("hide"); next(); }   // returning users skip practice
+  // else: overlay stays until they hit Start
+}
+boot();
 </script>
 </body>
 </html>

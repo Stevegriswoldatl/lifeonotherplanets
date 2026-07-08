@@ -81,6 +81,7 @@
 <a href="game.html" style="color:#e8ecf6;text-decoration:none;">Explore</a>
 <a href="rankings.html" style="color:#9aa6bf;text-decoration:none;">Rankings</a>
 <a href="vet.html" style="color:#9aa6bf;text-decoration:none;">Data Lab</a>
+<a href="guide.html" style="color:#9aa6bf;text-decoration:none;">Field Guide</a>
 <a href="scoreboard.html" style="color:#9aa6bf;text-decoration:none;">Scoreboard</a>
 </nav>
 <header class="hero">
@@ -133,7 +134,7 @@
     <div class="shelf" id="shelf"></div>
   </div>
 
-  <p class="foot">Solo/demo mode: progress is saved in this browser only. Shared multi-player exploration — everyone charting one sky, a global leaderboard, permanent discovery names — arrives with the Phase-3 backend. An exploration by the Griswolds · data: NASA Exoplanet Archive · art: Life On Other Planets asset kit.</p>
+  <p class="foot">Solo/demo mode: progress is saved in this browser only. Shared multi-player exploration — everyone charting one sky, a global leaderboard, permanent discovery names — arrives with the Phase-3 backend. An exploration by the Griswolds · data: NASA Exoplanet Archive · art: Life On Other Planets asset kit. · <a href="mailto:hello@lifeonotherplanets.space?subject=Life%20On%20Other%20Planets%20feedback" style="color:#7fb2ff;">Report a name or bug</a></p>
 </div>
 
 <div class="picker" id="picker"><div class="pickcard"><h3>Pick your explorer avatar</h3><p class="muted">Your avatar color flags the systems you claim.</p><div class="pickgrid" id="pickgrid"></div></div></div>
@@ -245,7 +246,7 @@ function showSystem(s){
   const charted=state.charted[s.host], claim=state.claims[s.host];
   let h=`<h3>${s.host}</h3><p class="muted">${s.dist!=null?Math.round(s.dist)+" light-years away":"distance unknown"} · ${s.planets.length} planet${s.planets.length>1?"s":""}${claim?` · claimed by <b>${claim}</b>`:""}</p>`;
   if(!charted){
-    h+=`<p class="muted">Uncharted. Survey it to reveal its worlds.</p><div class="btnrow"><button id="explore">Explore this system</button></div>`;
+    h+=`<p class="muted">Uncharted. You chart a system by <b>vetting real telescope data</b> for it in the Data Lab.</p><div class="btnrow"><button id="explore">🔭 Scan to chart</button></div>`;
   } else {
     s.planets.slice().sort((a,b)=>(b.habitability_score||0)-(a.habitability_score||0)).forEach(p=>{
       const nm=state.names[p.planet]; const atmo=p.atmosphere&&p.atmosphere!=="observed"?`<span class="pill ${p.atmosphere}">${p.atmosphere}</span>`:"";
@@ -255,7 +256,7 @@ function showSystem(s){
   }
   h+=`<h3 style="margin-top:18px;">Top explorers</h3><div class="lb" id="lb"></div>`;
   $("detail").innerHTML=h;
-  const ex=$("explore"); if(ex) ex.onclick=()=>warpThen(()=>{ state.charted[s.host]=true; save(); showSystem(s); refresh(); });
+  const ex=$("explore"); if(ex) ex.onclick=()=>warpThen(()=>{ save(); location.href='vet.html?system='+encodeURIComponent(s.host)+'&return=game'; });
   const cl=$("claim"); if(cl) cl.onclick=()=>{ const who=(state.explorer||"").trim(); if(!who){ alert("Enter your explorer name up top first."); return; } state.claims[s.host]=who; state.claimAvatars=state.claimAvatars||{}; state.claimAvatars[s.host]=state.avatar; save(); if(window.LOPSync){ const col=AVCOLOR[state.avatar]||"#7fb2ff"; LOPSync.ensureExplorer(who,state.avatar,col).then(function(){ LOPSync.logClaim(s.host,col); }); } showSystem(s); refresh(); };
   const nm=$("name"); if(nm) nm.onclick=()=>{ const who=(state.explorer||"").trim(); if(!who){ alert("Enter your explorer name up top first."); return; } const opts=s.planets.map(p=>p.planet); const which=opts.length===1?opts[0]:prompt("Which planet?\n"+opts.join("\n"),opts[0]); if(!which||!opts.includes(which)) return; const nn=prompt(`Name your discovery (${which}):`,state.names[which]||""); if(nn){ var nm2=nn.trim(); var chk=cleanName(nm2); if(!chk.ok){ alert(chk.reason); return; } state.names[which]=nm2; save(); if(window.LOPSync){ LOPSync.ensureExplorer(who,state.avatar,AVCOLOR[state.avatar]).then(function(){ LOPSync.logDiscovery(nm2, which); }); } showSystem(s); refresh(); } };
   renderLB();
