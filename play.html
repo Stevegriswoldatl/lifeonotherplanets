@@ -86,6 +86,7 @@
   .sheet.show{ transform:translateY(0); }
   .sheet .shine{ position:absolute; top:0; left:-60%; width:50%; height:100%; transform:skewX(-20deg); background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent); }
   .sheet.show .shine{ animation:shine 1.1s ease .25s 1; } @keyframes shine{ to{ left:120%; } }
+  .sheetclose{ position:absolute; top:14px; right:16px; width:34px; height:34px; border-radius:50%; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); display:flex; align-items:center; justify-content:center; font-size:15px; color:#c7d2ea; cursor:pointer; z-index:2; }
   .sheet .eb{ font-size:11px; font-weight:800; letter-spacing:.18em; text-transform:uppercase; color:#5DCAA5; }
   .sheet .worlds{ display:flex; gap:8px; justify-content:center; margin:8px 0 2px; flex-wrap:wrap; }
   .sheet .worlds canvas{ filter:drop-shadow(0 8px 22px rgba(93,202,165,.32)); }
@@ -205,6 +206,7 @@
   <!-- reward sheet -->
   <div class="sheet" id="sheet">
     <div class="shine"></div>
+    <div class="sheetclose" id="sheetClose">✕</div>
     <div class="eb" id="shEb">System charted</div>
     <div class="worlds" id="shWorlds"></div>
     <h2 id="shName">—</h2>
@@ -214,7 +216,7 @@
       <div class="stat"><div class="k">Worlds</div><div class="v" id="shCount">—</div></div>
       <div class="stat"><div class="k">Your accuracy</div><div class="v" id="shAcc">—</div></div>
     </div>
-    <div class="row"><button class="go" id="shGo">Add to my Atlas ✦</button><button class="name2" id="shName2">Name ✎</button></div>
+    <div class="row"><button class="go" id="shGo">Continue exploring →</button><button class="name2" id="shName2">Name ✎</button></div>
   </div>
 
   <!-- atlas -->
@@ -384,7 +386,7 @@
   function updateHUD(){ const c=chartedCount(); document.getElementById('n').textContent=c; document.getElementById('rn').textContent=c; document.getElementById('ringp').style.strokeDashoffset=62.8*(1-c/SYSTEMS.length); }
 
   // ---------- map interaction ----------
-  cv.addEventListener('pointerdown',e=>{ audio(); if(over)return; const r=cv.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
+  cv.addEventListener('pointerdown',e=>{ audio(); if(over){ if(document.getElementById('sheet').classList.contains('show')) closeReward(); return; } const r=cv.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
     let best=null,bd=1e9; SYSTEMS.forEach(s=>{ const dx=s.x-mx,dy=s.y-my,d=dx*dx+dy*dy; if(d<bd){bd=d;best=s;} });
     if(best&&bd<44*44){ if(state.charted[best.h]){ sel=best; showTip(best); openReward(best,true); } else { openScan(best); } document.getElementById('hint').style.opacity=0; }
   },{passive:true});
@@ -460,7 +462,8 @@
     setTimeout(()=>openReward(sys,false),520);
   }
   function openReward(sys,revisit){ over=true; curSys=sys;
-    document.getElementById('shEb').textContent=revisit?'In your Atlas':'System charted';
+    document.getElementById('shEb').textContent=revisit?'✦ In your Atlas':'✦ Charted & added to your Atlas';
+    document.getElementById('shGo').textContent=revisit?'Done':'Continue exploring →';
     const wrap=document.getElementById('shWorlds'); wrap.innerHTML='';
     sys.pl.slice(0,3).forEach((pl,i)=>{ const cc=document.createElement('canvas'); const sz= sys.pl.length>2?86:110; cc.width=sz; cc.height=sz; cc.style.width=(sz*0.66)+'px'; cc.style.height=(sz*0.66)+'px'; cc.getContext('2d').drawImage(planet(sz,pl.p,sys.seed+i*7),0,0); wrap.appendChild(cc); });
     const nm=state.names[sys.pl[0].n];
@@ -472,7 +475,7 @@
     document.getElementById('sheet').classList.add('show'); tone(523,.5,'triangle',.12);
   }
   function closeReward(){ document.getElementById('sheet').classList.remove('show'); over=false; renderAtlas(); if(chartedCount()>=SYSTEMS.length) setTimeout(()=>document.getElementById('win').classList.add('show'),450); }
-  document.getElementById('shGo').onclick=closeReward;
+  document.getElementById('shGo').onclick=closeReward; document.getElementById('sheetClose').onclick=closeReward;
   document.getElementById('shName2').onclick=()=>{ if(!curSys)return; const which=curSys.pl[0].n; const nn=prompt('Give '+which+' an honorary nickname:',state.names[which]||''); if(nn){ const c=cleanName(nn.trim()); if(!c.ok){ alert(c.reason); return; } state.names[which]=nn.trim(); save(); addXP(15); checkBadges(); if(window.LOPSync){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5').then(()=>LOPSync.logDiscovery(nn.trim(),which)); } openReward(curSys,true); } };
   function cleanName(s){ if(!s||s.length<2)return{ok:false,reason:'Name is too short.'}; if(s.length>28)return{ok:false,reason:'Name is too long.'}; if(/(fuck|shit|bitch|cunt|nazi|damn|ass\b|sex)/i.test(s))return{ok:false,reason:'Please choose a friendly name.'}; return{ok:true}; }
   function esc(s){ return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
