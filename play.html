@@ -306,7 +306,7 @@
     <div class="ah"><div class="glass close" id="galClose">✕</div><h2>Your <span>Galaxy</span></h2></div>
     <div class="galstatus" id="galStatus"></div>
     <div class="galgrid" id="galGrid"></div>
-    <div class="gallegend">Claim territory by vetting real data — each sector fills in <b>your colour</b> as you work it. New explorers start in the <b>🎓 Training</b> sector; prove yourself and you’re assigned your own home turf. Other explorers’ sectors appear here as they join.</div>
+    <div class="gallegend"><b>★</b> your home · <b>●</b> your sectors · <b>🤝</b> worked together · <b>◆</b> another explorer’s turf · <b>+</b> open to claim. Tap any sector to vet real data there — work a sector another explorer has touched and it becomes a <b>🤝 together</b> sector. New explorers start in <b>🎓 Training</b>.</div>
   </div>
 
   <!-- shareable explorer card -->
@@ -634,23 +634,39 @@
     if(changed){ save(); const g=document.getElementById('galaxy'); if(g&&g.classList.contains('show')) renderGalaxy(); } }
   function trainCredit(correct){ if(state.graduated)return; state.trainDone=(state.trainDone||0)+1; if(correct)state.trainCorrect=(state.trainCorrect||0)+1; save();
     if((state.trainCorrect||0)>=TRAIN_GOAL) graduate(); }
-  function openGalaxy(){ renderGalaxy(); document.getElementById('galaxy').classList.add('show'); }
+  let galaxyMap={}, myId=null;  // shared map (sector_id -> {work,explorers,home_explorer,home_color}); myId = my explorer uuid
+  function refreshGalaxyMap(){ if(!(window.LOPSync&&LOPSync.enabled))return Promise.resolve();
+    return LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer',myColor())
+      .then(function(id){ myId=id; return LOPSync.getSectorMap(); })
+      .then(function(rows){ galaxyMap={}; (rows||[]).forEach(function(r){ galaxyMap[r.sector_id]=r; });
+        const g=document.getElementById('galaxy'); if(g&&g.classList.contains('show')) renderGalaxy(); })
+      .catch(function(){}); }
+  function openGalaxy(){ renderGalaxy(); refreshGalaxyMap(); document.getElementById('galaxy').classList.add('show'); }
   function closeGalaxy(){ document.getElementById('galaxy').classList.remove('show'); }
   function enterSector(id){ if(!state.graduated){ if(id!==TRAIN_ID)return; } else { state.activeSector=id; save(); }
     closeGalaxy(); const h=document.getElementById('hint'); if(h){ h.style.opacity=1; h.textContent = state.graduated ? ('Working '+secName(id)+' — tap a star to scan') : 'Training — tap a glowing star to scan'; } }
-  function renderGalaxy(){ const grid=document.getElementById('galGrid'); if(!grid)return; const col=myColor(); let html='';
-    for(let id=0; id<GAL_N; id++){ const mine=isMine(id), fill=sectorFill(id), isTrain=(id===TRAIN_ID&&!state.graduated), isHome=(state.graduated&&id===state.homeSector), active=(currentSector()===id);
-      const bg = mine ? hex(col,.16+fill*.5) : (isTrain?'rgba(245,201,119,.14)':'rgba(255,255,255,.03)');
-      const bd = mine?col:(isTrain?'#f5c977':'rgba(255,255,255,.09)');
-      const badge = isHome?'★':(isTrain?'🎓':(mine?'●':(state.graduated?'+':'🔒')));
+  function renderGalaxy(){ const grid=document.getElementById('galGrid'); if(!grid)return; const col=myColor(); let html='', tog=0, others=0;
+    for(let id=0; id<GAL_N; id++){ const gm=galaxyMap[id], fill=sectorFill(id), active=(currentSector()===id);
+      const isTrain=(id===TRAIN_ID&&!state.graduated), myHome=(state.graduated&&id===state.homeSector), myWork=(myHome||sectorWork(id)>0);
+      const otherHome=(gm&&gm.home_explorer&&myId&&gm.home_explorer!==myId)?(gm.home_color||'#7fb2ff'):null;
+      const otherWork=(gm&&gm.work>0&&!myWork);
+      const together=(myWork&&gm&&gm.explorers>=2); if(together)tog++; if(otherHome)others++;
+      let bg,bd,badge,sub;
+      if(isTrain){ bg='rgba(245,201,119,.14)'; bd='#f5c977'; badge='🎓'; sub='Training'; }
+      else if(myWork){ bg=hex(col,.15+fill*.45); bd=col; badge=together?'🤝':(myHome?'★':'●'); sub=Math.round(fill*100)+'%'; }
+      else if(otherHome){ bg=hex(otherHome,.16); bd=otherHome; badge='◆'; sub='claimed'; }
+      else if(otherWork){ bg=hex(gm.home_color||'#7fb2ff',.07); bd='rgba(255,255,255,.14)'; badge='·'; sub='active'; }
+      else if(state.graduated){ bg='rgba(255,255,255,.03)'; bd='rgba(255,255,255,.09)'; badge='+'; sub=''; }
+      else { bg='rgba(255,255,255,.03)'; bd='rgba(255,255,255,.09)'; badge='🔒'; sub=''; }
       const tappable = state.graduated || isTrain;
       html+='<div class="gcell'+(active?' active':'')+'" data-id="'+id+'" style="background:'+bg+';border-color:'+bd+';'+(tappable?'':'opacity:.45;')+'">'
         +'<div class="gbadge">'+badge+'</div><div class="gname">'+secName(id)+'</div>'
-        +(mine?'<div class="gpct">'+Math.round(fill*100)+'%</div>':(isTrain?'<div class="gpct">Training</div>':''))+'</div>'; }
+        +(sub?'<div class="gpct">'+sub+'</div>':'')+'</div>'; }
     grid.innerHTML=html; grid.querySelectorAll('.gcell').forEach(c=>c.onclick=()=>enterSector(+c.dataset.id));
     const st=document.getElementById('galStatus');
     if(st){ st.innerHTML = state.graduated
-      ? ('Home: <b style="color:'+col+'">'+secName(state.homeSector)+'</b> · '+Object.keys(state.sectorWork||{}).filter(id=>sectorWork(id)>0).length+' sectors worked — tap an open sector to expand your territory.')
+      ? ('Home: <b style="color:'+col+'">'+secName(state.homeSector)+'</b> · '+Object.keys(state.sectorWork||{}).filter(id=>sectorWork(id)>0).length+' worked'
+         +(tog?' · 🤝 '+tog+' together':'')+(others?' · ◆ '+others+' other explorer'+(others>1?'s':''):'')+' — tap any sector to work it.')
       : ('🎓 <b>Training</b> — '+(state.trainCorrect||0)+'/'+TRAIN_GOAL+' good vets to earn your own territory. Tap a glowing star to scan real data.'); } }
   function gauss(s){ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random(); return s*Math.sqrt(-2*Math.log(u))*Math.cos(6.2831853*v); }
   function synthCard(){ const roll=Math.random(),N=200,f=[]; for(let i=0;i<N;i++)f.push(1+gauss(.006)); let truth,kind,why;
@@ -949,9 +965,10 @@
   const syncEl=document.getElementById('synced');
   if(window.LOPSync&&LOPSync.enabled){ syncEl.textContent='Cloud sync on · your discoveries are saved';
     LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer',myColor())
-      .then(function(){ return LOPSync.getMyClaims(); })
+      .then(function(id){ myId=id; return LOPSync.getMyClaims(); })
       .then(function(rows){ mergeClaims(rows);
-        if(state.graduated && !state.homeSynced && state.homeSector!=null){ LOPSync.claimHome(state.homeSector, myColor()); state.homeSynced=true; save(); } }); }
+        if(state.graduated && !state.homeSynced && state.homeSector!=null){ LOPSync.claimHome(state.homeSector, myColor()); state.homeSynced=true; save(); }
+        refreshGalaxyMap(); }); }
   else { syncEl.textContent='Saving to this device'; }
   // grandfather existing explorers (played before territories existed) straight past training
   if(!state.graduated && (chartedCount()>=1 || (state.bestStreak||0)>=TRAIN_GOAL)){ state.graduated=true; state.playerColor=myColor(); state.homeSector=pickHome(); state.activeSector=state.homeSector; save(); }
