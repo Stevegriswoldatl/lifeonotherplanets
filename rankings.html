@@ -14,7 +14,7 @@
 <meta name="twitter:card" content="summary">
 <style>
   * { box-sizing: border-box; }
-  body { margin:0; background:#070b16; color:#e8ecf6; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; line-height:1.6; }
+  body { margin:0; background:#070b16; color:#e8ecf6; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; line-height:1.6; overflow-x:hidden; }
   .wrap { max-width:1040px; margin:0 auto; padding:28px 20px 60px; }
   h1 { font-size:26px; font-weight:600; margin:0 0 4px; }
   .sub { color:#93a0bd; margin:0 0 24px; font-size:15px; }
@@ -27,7 +27,8 @@
   .row2 button:hover { background:#1d2a4a; }
   canvas { width:100%; height:340px; display:block; border-radius:10px; }
   .legend { font-size:12px; color:#8494b5; margin-top:8px; }
-  table { width:100%; border-collapse:collapse; font-size:14px; }
+  .tblwrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  table { width:100%; min-width:640px; border-collapse:collapse; font-size:14px; }
   th,td { text-align:left; padding:8px 10px; border-bottom:1px solid #182138; }
   th { color:#93a0bd; font-weight:500; cursor:pointer; position:sticky; top:0; background:#0e1424; }
   td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
@@ -73,6 +74,7 @@
   </div>
 
   <div class="panel" style="padding:6px 10px;">
+    <div class="tblwrap">
     <table id="tbl">
       <thead><tr>
         <th>#</th><th>Planet</th><th class="n" data-k="habitability_score">Score</th>
@@ -83,6 +85,7 @@
       </tr></thead>
       <tbody id="rows"></tbody>
     </table>
+    </div>
   </div>
 
   <p class="foot">Method: score = ESI, habitable-zone, and host-star components (each 0–1) combined by the weights above, plus a small bonus where a telescope has actually detected an atmosphere. Data: NASA Exoplanet Archive. An exploration by the Griswolds. Rankings are a transparent model, not a verdict — reasonable people weight these factors differently, which is the whole point.</p>
