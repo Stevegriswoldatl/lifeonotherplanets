@@ -307,6 +307,43 @@
     spriteCache[key]=c; return c;
   }
 
+  // ---------- spinning planet (map): a wrapping surface scrolls under FIXED spherical lighting ----------
+  const stripCache={}, shadeCache={};
+  function planetStrip(S,palKey,seed){   // flat, horizontally-tileable surface (no lighting)
+    const key=S+palKey+seed; if(stripCache[key])return stripCache[key];
+    const p=PALS[palKey]||PALS.rocky, c=document.createElement('canvas'); c.width=S;c.height=S; const x=c.getContext('2d');
+    const rnd=mulberry(seed+3), land=palKey==='ocean'?'#3f9a63':'#b5854a';
+    x.fillStyle=p.base; x.fillRect(0,0,S,S);
+    function wblob(bx,by,br,rot){ [bx-S,bx,bx+S].forEach(xx=>{ x.beginPath(); x.ellipse(xx,by,br,br*(.6+rnd()*.3),rot,0,6.283); x.fill(); }); } // wrapped for seamless scroll
+    if(palKey==='gas'){ for(let i=0;i<8;i++){ const yy=(i+.5)*(S/8); x.globalAlpha=.14+rnd()*.16; x.fillStyle=i%2?p.detail:p.hi; x.fillRect(0,yy-S*0.045,S,S*0.09+rnd()*S*0.05);} x.globalAlpha=1; }
+    else if(palKey==='ocean'||palKey==='verdant'){ x.globalAlpha=.9; x.fillStyle=land; for(let i=0;i<6;i++) wblob(rnd()*S,rnd()*S,S*(.09+rnd()*.14),rnd()*3);
+      x.globalAlpha=.45; x.fillStyle='#fff'; for(let i=0;i<4;i++) wblob(rnd()*S,rnd()*S,S*(.07+rnd()*.08),rnd()*3); x.globalAlpha=1; }
+    else { for(let i=0;i<10;i++){ x.globalAlpha=.12+rnd()*.18; x.fillStyle=rnd()<.5?p.detail:p.dark; wblob(rnd()*S,rnd()*S,S*(.07+rnd()*.13),rnd()*3);} x.globalAlpha=1; }
+    return stripCache[key]=c;
+  }
+  function planetShade(S,palKey,seed){   // fixed spherical lighting + caps + rim (transparent elsewhere)
+    const key=S+palKey+seed; if(shadeCache[key])return shadeCache[key];
+    const p=PALS[palKey]||PALS.rocky, c=document.createElement('canvas'); c.width=S;c.height=S; const x=c.getContext('2d');
+    const r=S/2, cx=S/2, cy=S/2, lx=cx-r*0.36, ly=cy-r*0.36;
+    x.save(); x.beginPath(); x.arc(cx,cy,r,0,6.283); x.clip();
+    if(palKey==='ice'){ x.globalAlpha=.9; x.fillStyle='rgba(255,255,255,.92)'; x.beginPath(); x.ellipse(cx,cy-r*0.92,r*0.7,r*0.32,0,0,6.283); x.fill(); x.beginPath(); x.ellipse(cx,cy+r*0.92,r*0.7,r*0.32,0,0,6.283); x.fill(); x.globalAlpha=1; }
+    let g=x.createRadialGradient(lx,ly,r*0.15,cx+r*0.35,cy+r*0.35,r*1.5); g.addColorStop(0,'rgba(2,3,12,0)'); g.addColorStop(.5,'rgba(2,3,12,0)'); g.addColorStop(1,'rgba(2,3,12,.8)'); x.fillStyle=g; x.fillRect(0,0,S,S);
+    g=x.createRadialGradient(lx,ly,0,lx,ly,r*0.55); g.addColorStop(0,'rgba(255,255,255,.7)'); g.addColorStop(1,'rgba(255,255,255,0)'); x.fillStyle=g; x.fillRect(0,0,S,S);
+    x.restore();
+    x.globalAlpha=.75; x.strokeStyle=p.rim; x.lineWidth=S*0.02; x.beginPath(); x.arc(cx,cy,r*0.97,Math.PI*0.85,Math.PI*1.72); x.stroke(); x.globalAlpha=1;
+    return shadeCache[key]=c;
+  }
+  function drawSpin(cx,cy,dr,palKey,seed,tt){
+    const RS=128, strip=planetStrip(RS,palKey,seed), shade=planetShade(RS,palKey,seed), p=PALS[palKey]||PALS.rocky;
+    let g=ctx.createRadialGradient(cx,cy,dr*0.7,cx,cy,dr*1.5); g.addColorStop(0,hex(p.glow,.45)); g.addColorStop(1,hex(p.glow,0)); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,dr*1.5,0,6.283); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.arc(cx,cy,dr,0,6.283); ctx.clip();
+    const D=dr*2, off=((tt*0.05)%1)*D;                 // ~20s per rotation — slow, calm
+    ctx.drawImage(strip,0,0,RS,RS,cx-dr+off,cy-dr,D,D);
+    ctx.drawImage(strip,0,0,RS,RS,cx-dr+off-D,cy-dr,D,D);
+    ctx.drawImage(shade,0,0,RS,RS,cx-dr,cy-dr,D,D);
+    ctx.restore();
+  }
+
   // ---------- real systems (curated) ----------
   const SYSTEMS=[
     {h:"Proxima Centauri",d:4.2,seed:11,pl:[{n:"Proxima Cen b",p:"rocky",t:"the nearest exoplanet to Earth"},{n:"Proxima Cen d",p:"rocky",t:"a small, hot inner world"}]},
@@ -554,7 +591,7 @@
     // links between charted
     ctx.lineWidth=1.6; SYSTEMS.forEach(s=>{ if(!state.charted[s.h])return; s._lk.forEach(j=>{ const o=SYSTEMS[j]; if(!state.charted[o.h])return; const g=ctx.createLinearGradient(s.x,s.y,o.x,o.y); g.addColorStop(0,'#5DCAA5'); g.addColorStop(1,'#7fb2ff'); ctx.strokeStyle=g; ctx.globalAlpha=.32; ctx.beginPath(); ctx.moveTo(s.x,s.y); ctx.lineTo(o.x,o.y); ctx.stroke(); }); }); ctx.globalAlpha=1;
     SYSTEMS.forEach(s=>{ const charted=state.charted[s.h];
-      if(charted){ let scv=1; if(s._grow>0){ s._grow=Math.min(1,s._grow+.05); scv=1-Math.pow(1-s._grow,3); } const sz=54*scv, bob=Math.sin(t*1.1+s.seed)*2.2; ctx.drawImage(planet(120,s.pl[0].p,s.seed),0,0,120,120,s.x-sz/2,s.y-sz/2+bob,sz,sz);
+      if(charted){ let scv=1; if(s._grow>0){ s._grow=Math.min(1,s._grow+.05); scv=1-Math.pow(1-s._grow,3); } const sz=54*scv, bob=Math.sin(t*1.1+s.seed)*2.2; drawSpin(s.x, s.y+bob, sz*0.32, s.pl[0].p, s.seed, t+s.seed);
         if(s.pl.length>1){ ctx.fillStyle='rgba(255,255,255,.85)'; ctx.font='700 9px "Space Grotesk"'; }
       } else { const pp=.5+.5*Math.sin(t*1.6+s.seed); ctx.fillStyle='#eaf2ff'; ctx.shadowBlur=10+pp*10; ctx.shadowColor='#9fc0ff'; ctx.beginPath(); ctx.arc(s.x,s.y,2.4+pp*1,0,6.28); ctx.fill(); ctx.shadowBlur=0;
         ctx.globalAlpha=.3+pp*.3; ctx.strokeStyle='#cfe0ff'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(s.x-7-pp*4,s.y); ctx.lineTo(s.x+7+pp*4,s.y); ctx.moveTo(s.x,s.y-7-pp*4); ctx.lineTo(s.x,s.y+7+pp*4); ctx.stroke(); ctx.globalAlpha=1; }
