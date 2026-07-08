@@ -13,5 +13,5 @@
 
 window.LOP_SUPABASE = {
   url: "https://fxzmzgkxvpqopswyrutc.supabase.co",
-  anonKey: ""   // <-- paste your anon public key here
+  anonKey: "sb_publishable_n09t39ceyykrDAbqijnkww_yJpoD0Dq"   // <-- paste your anon public key here
 };
