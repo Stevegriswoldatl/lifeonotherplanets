@@ -1,0 +1,27 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap');
+
+/* ===== Mission Control theme — shared across pages. Loaded last in <head> so it wins. ===== */
+:root{ --mc-cyan:#4fd8ff; --mc-cyan-soft:#9be7ff; }
+
+/* deep-space console backdrop */
+body{ background:radial-gradient(circle at 50% -8%, #0a1e3a 0%, #05070f 62%) fixed !important; }
+
+/* nav → console header bar */
+nav{ border-bottom:1px solid rgba(79,216,255,.18) !important; }
+nav a:hover{ color:var(--mc-cyan-soft) !important; }
+
+/* links */
+a{ color:#7fc7ff; }
+a:hover{ color:var(--mc-cyan-soft); }
+
+/* page title in Orbitron with a soft cyan glow */
+h1{ font-family:'Orbitron',sans-serif !important; letter-spacing:.04em; text-shadow:0 0 18px rgba(79,216,255,.22); }
+
+/* panels / cards → thin cyan outline + faint glow */
+.panel,.card,.hiw-card,.acard,.glass,.scancard{ border-color:rgba(79,216,255,.2) !important; box-shadow:0 0 22px rgba(31,110,165,.08); }
+
+/* form controls accent */
+input[type=range],input[type=checkbox]{ accent-color:var(--mc-cyan) !important; }
+
+/* subtle glow on interactive buttons */
+button:hover{ box-shadow:0 0 16px rgba(79,216,255,.2); }

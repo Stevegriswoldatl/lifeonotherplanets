@@ -21,7 +21,7 @@
   .panel { background:#0e1424; border:1px solid #1e2740; border-radius:14px; padding:18px 20px; margin-bottom:22px; }
   .controls { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:18px; }
   .ctrl label { display:flex; justify-content:space-between; font-size:13px; color:#aab6d4; margin-bottom:6px; }
-  .ctrl input[type=range] { width:100%; accent-color:#5DCAA5; }
+  .ctrl input[type=range] { width:100%; accent-color:#4fd8ff; }
   .row2 { display:flex; align-items:center; gap:10px; margin-top:14px; flex-wrap:wrap; font-size:13px; color:#aab6d4; }
   .row2 button { background:#16203a; color:#dbe4fb; border:1px solid #29365a; border-radius:8px; padding:7px 12px; cursor:pointer; font-size:13px; }
   .row2 button:hover { background:#1d2a4a; }
@@ -41,6 +41,7 @@
   .foot { color:#6f7ea3; font-size:12px; margin-top:28px; }
   a { color:#7fb2ff; }
 </style>
+<link rel="stylesheet" href="theme-mc.css">
 </head>
 <body>
 <nav style="display:flex;gap:16px;align-items:center;max-width:1040px;margin:0 auto;padding:12px 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;">
@@ -153,7 +154,7 @@ function draw(arr){
   arr.forEach(p=>{
     if(p.insolation_earth==null||p.radius_earth==null) return;
     const s=p.live;
-    const col = s>0.86 ? "#5DCAA5" : s>0.78 ? "#9ec96a" : s>0.7 ? "#e0b451" : "#c96b4a";
+    const col = s>0.86 ? "#4fd8ff" : s>0.78 ? "#9ec96a" : s>0.7 ? "#e0b451" : "#c96b4a";
     ctx.beginPath(); ctx.fillStyle=col; ctx.globalAlpha=0.85;
     ctx.arc(X(p.insolation_earth), Y(p.radius_earth), 3+s*7, 0, 6.2832); ctx.fill();
   });

@@ -41,6 +41,7 @@
   .foot { color:#5f6e92; font-size:13px; margin-top:34px; border-top:1px solid #131c33; padding-top:16px; }
   a { color:#7fb2ff; }
 </style>
+<link rel="stylesheet" href="theme-mc.css">
 </head>
 <body>
 <nav>
@@ -103,7 +104,7 @@
       if(window.Chart && labels.length){
         new Chart(document.getElementById("chart"), {
           type:"line",
-          data:{ labels, datasets:[{ data:vals, borderColor:"#5DCAA5", backgroundColor:"rgba(93,202,165,0.12)", fill:true, tension:0.3, pointRadius:2 }] },
+          data:{ labels, datasets:[{ data:vals, borderColor:"#4fd8ff", backgroundColor:"rgba(79,216,255,0.12)", fill:true, tension:0.3, pointRadius:2 }] },
           options:{ plugins:{legend:{display:false}}, scales:{ x:{ ticks:{color:"#7d8cae"}, grid:{color:"#182138"} }, y:{ ticks:{color:"#7d8cae"}, grid:{color:"#182138"}, beginAtZero:true } } }
         });
       }

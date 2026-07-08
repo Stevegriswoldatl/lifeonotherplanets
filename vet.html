@@ -31,7 +31,7 @@
   .eyebrow { font-family:"Space Grotesk",sans-serif; font-size:11px; letter-spacing:1.6px; text-transform:uppercase; color:#9aa6bf; }
   /* card badge: real vs practice */
   .cardtag { display:inline-flex; align-items:center; gap:6px; font-family:"Space Grotesk",sans-serif; font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; padding:4px 10px; border-radius:999px; }
-  .cardtag.real { color:#5DCAA5; background:rgba(93,202,165,.12); border:1px solid rgba(93,202,165,.3); }
+  .cardtag.real { color:#4fd8ff; background:rgba(79,216,255,.12); border:1px solid rgba(79,216,255,.3); }
   .cardtag.practice { color:#f5c977; background:rgba(245,201,119,.12); border:1px solid rgba(245,201,119,.32); }
   .cardtag.frontier { color:#b79cf6; background:rgba(150,120,246,.14); border:1px solid rgba(150,120,246,.36); }
   canvas { width:100%; height:300px; display:block; background:#0a0f1c; border-radius:12px; margin:10px 0 4px; touch-action:pan-y; }
@@ -57,7 +57,7 @@
   .starcard { margin-top:10px; display:flex; flex-wrap:wrap; gap:6px 18px; padding:10px 12px; border-radius:12px; background:#0a1120; border:1px solid #1a2338; }
   .starcard .kv { font-family:"Space Grotesk",sans-serif; font-size:12px; }
   .starcard .kv b { color:#e8ecf6; } .starcard .kv span{ color:#8fa0c4; }
-  .src { font-family:"Space Grotesk",sans-serif; font-size:11.5px; color:#5DCAA5; margin-top:8px; letter-spacing:.03em; }
+  .src { font-family:"Space Grotesk",sans-serif; font-size:11.5px; color:#4fd8ff; margin-top:8px; letter-spacing:.03em; }
   .crowd { margin-top:12px; font-size:13px; color:#9aa6bf; font-family:"Space Grotesk",sans-serif; }
   .crowd .demoflag { color:#e0b451; font-weight:600; }
   .crowdbar { height:8px; border-radius:6px; background:#16203a; overflow:hidden; margin-top:5px; display:flex; }
@@ -74,7 +74,7 @@
   .stat + .stat { margin-top:14px; }
   .mini { display:grid; grid-template-columns:1fr 1fr; gap:10px 16px; margin-top:6px; }
   .bar { height:7px; border-radius:6px; background:#16203a; overflow:hidden; margin-top:4px; }
-  .bar i { display:block; height:100%; background:#5DCAA5; }
+  .bar i { display:block; height:100%; background:#4fd8ff; }
   .note { font-size:12.5px; color:#8494b5; margin-top:16px; line-height:1.6; }
   .badge { display:inline-flex; align-items:center; gap:8px; margin-top:12px; padding:8px 12px; border-radius:12px; border:1px solid #29365a; background:#0e1626; font-family:"Space Grotesk",sans-serif; font-size:13px; color:#9aa6bf; }
   .badge.on { color:#f5c977; border-color:#6b511f; }
@@ -90,14 +90,15 @@
   .modal p { color:#c3cee6; font-size:14.5px; line-height:1.6; margin:8px 0; }
   .modal .steps{ margin:14px 0; padding:0; list-style:none; }
   .modal .steps li{ padding:7px 0 7px 28px; position:relative; font-size:14px; color:#dbe4fb; }
-  .modal .steps li::before{ content:""; position:absolute; left:0; top:9px; width:16px; height:16px; border-radius:50%; background:rgba(93,202,165,.15); border:1px solid #5DCAA5; }
-  .modal .go { display:block; width:100%; margin-top:12px; background:#5DCAA5; color:#05231b; border:none; font-size:15px; padding:14px; }
+  .modal .steps li::before{ content:""; position:absolute; left:0; top:9px; width:16px; height:16px; border-radius:50%; background:rgba(79,216,255,.15); border:1px solid #4fd8ff; }
+  .modal .go { display:block; width:100%; margin-top:12px; background:#4fd8ff; color:#05231b; border:none; font-size:15px; padding:14px; }
   .modal .go:hover{ background:#74dfa6; }
   /* scan mission banner (unifies the game map with the Data Lab) */
   .mission { margin:0 0 16px; padding:12px 16px; border-radius:14px; background:linear-gradient(180deg,#0e1a2e,#0b1424); border:1px solid #2a4066; font-family:"Space Grotesk",sans-serif; font-size:14px; color:#dbe4fb; }
   .mission a { color:#7fb2ff; margin-left:8px; }
   .mission.done { background:linear-gradient(180deg,#0d211b,#0a1a16); border-color:#2c6b56; }
 </style>
+<link rel="stylesheet" href="theme-mc.css">
 </head>
 <body>
 <nav style="display:flex;gap:16px;align-items:center;max-width:1020px;margin:0 auto;padding:12px 20px;font-family:'Space Grotesk',sans-serif;font-size:14px;flex-wrap:wrap;">
@@ -126,7 +127,7 @@
 
 <div class="wrap">
   <h1>The Search — Data Lab</h1>
-  <p class="sub">You're shown a <b>light curve</b> — a star's brightness measured over time by NASA's TESS planet-hunting telescope. A planet crossing its star makes a tiny, repeating dip. Your job: tell a real planet from noise, a glitch, or two stars eclipsing each other. Real cards use <b>real TESS data</b> and each has a known answer, so your accuracy is measured for real.<span id="syncst" style="color:#5DCAA5;font-family:'Space Grotesk',sans-serif;font-size:13px;"></span></p>
+  <p class="sub">You're shown a <b>light curve</b> — a star's brightness measured over time by NASA's TESS planet-hunting telescope. A planet crossing its star makes a tiny, repeating dip. Your job: tell a real planet from noise, a glitch, or two stars eclipsing each other. Real cards use <b>real TESS data</b> and each has a known answer, so your accuracy is measured for real.<span id="syncst" style="color:#4fd8ff;font-family:'Space Grotesk',sans-serif;font-size:13px;"></span></p>
 
   <div id="tessCountdown" style="text-align:center;margin:2px 0 14px;font-family:'Space Grotesk',sans-serif;font-size:12.5px;color:#7fb2ff;"></div>
   <div class="mission" id="mission" style="display:none;"></div>
@@ -249,7 +250,7 @@ function findDips(f){ const s=f.slice().sort((a,b)=>a-b), med=s[Math.floor(f.len
   return {regions,spikes}; }
 function annotate(){
   if(!current) return; cancelAnimationFrame(_annRAF);
-  const card=current, f=card.f, d=findDips(f), col=card.truth==="planet"?"#5DCAA5":"#e0b451";
+  const card=current, f=card.f, d=findDips(f), col=card.truth==="planet"?"#4fd8ff":"#e0b451";
   const pad=26, W=c.clientWidth, H=300, fmin=Math.min.apply(null,f), fmax=Math.max.apply(null,f), span=(fmax-fmin)||1;
   const X=i=>pad+(i/(f.length-1))*(W-2*pad), Y=v=>pad+(1-(v-fmin)/span)*(H-2*pad);
   const t0=performance.now();
@@ -282,7 +283,7 @@ function transitAnim(){
     x.fillStyle='#ffe08a'; x.beginPath(); x.arc(sx,sy,sr,0,6.283); x.fill();
     x.fillStyle='#141c2e'; x.beginPath(); x.arc(px,sy,7,0,6.283); x.fill();
     const my=bY(dimAt(px)); x.strokeStyle='rgba(255,255,255,.16)'; x.lineWidth=1; x.beginPath(); x.moveTo(px,sy+9); x.lineTo(px,my-6); x.stroke();
-    x.fillStyle='#5DCAA5'; x.beginPath(); x.arc(px,my,4,0,6.283); x.fill();
+    x.fillStyle='#4fd8ff'; x.beginPath(); x.arc(px,my,4,0,6.283); x.fill();
     _transRAF=requestAnimationFrame(loop); }
   _transRAF=requestAnimationFrame(loop);
 }
@@ -452,7 +453,7 @@ function answer(a){
       for(let i=0;i<sims;i++){ const good=Math.random()<0.86; let vote=good?(truth==="planet"?"planet":"not"):(truth==="planet"?"not":"planet"); if(Math.random()<0.06) vote="unsure"; if(vote==="planet")cp++; else if(vote==="not")cn++; else cu++; }
       const tot=cp+cn+cu;
       html += '<div class="crowd"><span class="demoflag">Simulated crowd (demo)</span> — turns real once cloud sync is on and others vet:'+
-        '<div class="crowdbar"><i style="width:'+(cp/tot*100)+'%;background:#5DCAA5;"></i><i style="width:'+(cn/tot*100)+'%;background:#c96b4a;"></i><i style="width:'+(cu/tot*100)+'%;background:#6b7690;"></i></div>'+
+        '<div class="crowdbar"><i style="width:'+(cp/tot*100)+'%;background:#4fd8ff;"></i><i style="width:'+(cn/tot*100)+'%;background:#c96b4a;"></i><i style="width:'+(cu/tot*100)+'%;background:#6b7690;"></i></div>'+
         '<div style="margin-top:5px;">Planet '+Math.round(cp/tot*100)+'% · Not '+Math.round(cn/tot*100)+'% · Unsure '+Math.round(cu/tot*100)+'%</div></div>';
     }
   }
@@ -468,9 +469,9 @@ function renderCrowd(c,myVote,truth){ const el=document.getElementById('crowd');
   const v=c.votes,p=c.planet_votes||0,n=c.not_votes||0,u=c.unsure_votes||0,voters=c.voters||v;
   const topIsPlanet=p>=n, reached=voters>=5 && Math.max(p,n)/v>=0.7;
   el.innerHTML=(reached?'🔒 <b>Consensus reached</b> — this candidate advances for review!':'👥 '+voters+' explorer'+(voters>1?'s':'')+' have vetted this — agreement advances a candidate:')+
-    '<div class="crowdbar"><i style="width:'+(p/v*100)+'%;background:#5DCAA5;"></i><i style="width:'+(n/v*100)+'%;background:#c96b4a;"></i><i style="width:'+(u/v*100)+'%;background:#6b7690;"></i></div>'+
+    '<div class="crowdbar"><i style="width:'+(p/v*100)+'%;background:#4fd8ff;"></i><i style="width:'+(n/v*100)+'%;background:#c96b4a;"></i><i style="width:'+(u/v*100)+'%;background:#6b7690;"></i></div>'+
     '<div style="margin-top:5px;">Planet '+Math.round(p/v*100)+'% · Not '+Math.round(n/v*100)+'% · Unsure '+Math.round(u/v*100)+'%</div>'+
-    (reached && ((topIsPlanet&&myVote==='planet')||(!topIsPlanet&&myVote==='not')) ? '<div style="margin-top:7px;color:#5DCAA5;font-weight:700;">🤝 You share co-discovery credit on this candidate.</div>' : '');
+    (reached && ((topIsPlanet&&myVote==='planet')||(!topIsPlanet&&myVote==='not')) ? '<div style="margin-top:7px;color:#4fd8ff;font-weight:700;">🤝 You share co-discovery credit on this candidate.</div>' : '');
 }
 
 function advance(){
