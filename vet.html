@@ -62,6 +62,10 @@
   .crowd .demoflag { color:#e0b451; font-weight:600; }
   .crowdbar { height:8px; border-radius:6px; background:#16203a; overflow:hidden; margin-top:5px; display:flex; }
   .crowdbar i { display:block; height:100%; }
+  .checks { margin-top:12px; font-size:13px; font-family:"Space Grotesk",sans-serif; }
+  .checkhead { color:#9aa6bf; margin-bottom:6px; }
+  .checkrow { padding:6px 10px; border-radius:8px; margin:4px 0; background:#0e1830; border:1px solid #1a2740; color:#9fd9c2; }
+  .checkrow.flagged { color:#f3a9a9; border-color:#5a2a2a; background:#1c1212; }
   .celebrate { animation:pop .5s ease; }
   @keyframes pop { 0%{ transform:scale(.96); } 50%{ transform:scale(1.015); } 100%{ transform:scale(1); } }
   .stat { font-family:"Space Grotesk",sans-serif; }
@@ -377,6 +381,13 @@ function answerFrontier(a){
   if(current.depth_ppm) kv.push('<div class="kv"><span>Dip depth</span> <b>'+Number(current.depth_ppm).toLocaleString()+' ppm</b></div>');
   html+='<div class="starcard">'+kv.join("")+'</div>';
   html+='<div class="src">📡 '+esc(current.source||"Real TESS data · open candidate")+'</div>';
+  // objective red-flag checks (Candidate check A) — run on the data, shown after your read
+  if(Array.isArray(current.checks) && current.checks.length){
+    const nf=current.checks.filter(c=>c.flag).length;
+    html+='<div class="checks"><div class="checkhead">🔬 Automated checks — run on the data, not a guess'+(nf?' · <b style="color:#f3a9a9;">'+nf+' red flag'+(nf>1?'s':'')+'</b>':' · <span style="color:#9fd9c2;">all clear</span>')+':</div>';
+    current.checks.forEach(function(ch){ html+='<div class="checkrow '+(ch.flag?'flagged':'')+'">'+(ch.flag?'⚠ ':'✓ ')+'<b>'+esc(ch.test)+'</b> — '+esc(ch.note)+'</div>'; });
+    html+='</div>';
+  }
   if(window.LOPSync && LOPSync.enabled && current.id){ html+='<div class="crowd" id="crowd">Checking the crowd…</div>'; }
   else { html+='<div class="crowd"><span class="demoflag">Saved locally</span> — turn on cloud sync to join the live community consensus on this candidate.</div>'; }
   html+='<div style="margin-top:12px;"><button id="nextbtn" style="flex:0 0 auto;">Next light curve &rarr;</button></div>';
