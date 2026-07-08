@@ -18,8 +18,19 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
 <script src="lop-sync.js"></script>
+<script src="icons.js"></script>
 <style>
   *{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none; }
+  /* custom icon set (icons.js) — inherits color + sizes to 1em */
+  .lopico{ width:1em; height:1em; vertical-align:-0.13em; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+  .lopico .f{ fill:currentColor; stroke:none; }
+  i.ico{ display:inline-flex; font-style:normal; line-height:0; }
+  .iconbtn i.ico{ font-size:20px; }
+  /* button-clarity: interactive controls look/act pressable; readouts do not */
+  .iconbtn, .todpill, .frontpill, .secchip{ cursor:pointer; transition:transform .1s ease, box-shadow .15s ease; }
+  .iconbtn:hover, .todpill:hover, .frontpill:hover, .secchip:hover{ box-shadow:0 0 16px rgba(79,216,255,.22); }
+  .iconbtn:active, .todpill:active, .frontpill:active, .secchip:active{ transform:scale(.93); }
+  .counter, .rankchip{ cursor:default; }
   html,body{ height:100%; background:#03040c; overflow:hidden; font-family:"Hanken Grotesk",-apple-system,system-ui,sans-serif; color:#fff; }
   #app{ position:fixed; inset:0; }
   canvas#sky{ position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; }
@@ -291,10 +302,10 @@
     <div class="glass rankchip"><span class="rlab sg" id="rankName">Cadet</span><span class="rbar"><i id="rankBar"></i></span></div>
     <div class="spacer"></div>
     <div class="glass counter"><div class="ring"><svg width="26" height="26"><circle cx="13" cy="13" r="10" stroke="rgba(255,255,255,.14)" stroke-width="3" fill="none"/><circle id="ringp" cx="13" cy="13" r="10" stroke="#4fd8ff" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="62.8" stroke-dashoffset="62.8"/></svg><b id="rn">0</b></div><div class="lab">charted<br><b><span id="n">0</span>/<span id="tot">0</span></b></div></div>
-    <div class="glass iconbtn" id="galaxyBtn" title="Your Galaxy">🌌</div>
-    <div class="glass iconbtn" id="constBtn" title="Constellations">✷</div>
-    <div class="glass iconbtn" id="atlasBtn" title="My Atlas">✦</div>
-    <div class="glass iconbtn" id="muteBtn" title="Sound">🔊</div>
+    <div class="glass iconbtn" id="galaxyBtn" title="Your Galaxy"><i class="ico" data-i="galaxy"></i></div>
+    <div class="glass iconbtn" id="constBtn" title="Constellations"><i class="ico" data-i="constellation"></i></div>
+    <div class="glass iconbtn" id="atlasBtn" title="My Atlas"><i class="ico" data-i="atlas"></i></div>
+    <div class="glass iconbtn" id="muteBtn" title="Sound"><i class="ico" data-i="sound"></i></div>
   </div>
 
   <div class="hint" id="hint">Tap a glowing star to scan it</div>
@@ -326,7 +337,7 @@
       <div class="axhint"><span>time →</span><span>← brightness</span></div>
       <div class="qz">Real planet, or a false alarm?</div>
       <div class="swipe" id="swipe">Tap — or swipe → planet · ← not · ↑ unsure</div>
-      <div class="vbtns"><button class="y" data-a="planet">🪐 Planet</button><button class="n" data-a="not">🚫 Not</button><button class="u" data-a="unsure">🤔 Unsure</button></div>
+      <div class="vbtns"><button class="y" data-a="planet"><i class="ico" data-i="planet"></i> Planet</button><button class="n" data-a="not"><i class="ico" data-i="notplanet"></i> Not</button><button class="u" data-a="unsure"><i class="ico" data-i="unsure"></i> Unsure</button></div>
       <div class="vfeed" id="vfeed"></div>
     </div>
   </div>
@@ -402,6 +413,8 @@
 <script>
 (function(){
   const cv=document.getElementById('sky'), ctx=cv.getContext('2d'); let W=0,H=0,DPR=1;
+  const ic=(n)=> (window.LOPIcon?LOPIcon(n):'');   // custom icon markup for dynamic strings
+  const dot=(c)=> '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+c+';vertical-align:-1px;margin-right:2px;"></span>';
   function resize(){ DPR=Math.min(window.devicePixelRatio||1,2); W=cv.clientWidth; H=cv.clientHeight; cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0); buildNebula(); layout(); }
   window.addEventListener('resize',resize);
   function mulberry(a){ return function(){ a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296; }; }
@@ -626,7 +639,7 @@
   function playSfx(n){ if(state&&state.muted)return; const a=SFX[n]; if(!a)return; try{ a.currentTime=0; const p=a.play(); if(p&&p.catch)p.catch(function(){}); }catch(e){} }
   function startAmbient(){ if(state&&state.muted)return; if(!ambient){ try{ ambient=new Audio('assets/sounds/ambient.mp3'); ambient.loop=true; ambient.volume=.26; }catch(e){} } if(ambient){ const p=ambient.play(); if(p&&p.catch)p.catch(function(){}); } }
   function stopAmbient(){ if(ambient){ try{ ambient.pause(); }catch(e){} } }
-  function updateMuteBtn(){ const b=document.getElementById('muteBtn'); if(b) b.textContent=state.muted?'🔇':'🔊'; }
+  function updateMuteBtn(){ const b=document.getElementById('muteBtn'); if(b) b.innerHTML=window.LOPIcon?LOPIcon(state.muted?'mute':'sound'):(state.muted?'🔇':'🔊'); }
   function toggleMute(){ state.muted=!state.muted; save(); updateMuteBtn(); if(state.muted) stopAmbient(); else startAmbient(); }
 
   const parts=[]; let t=0, shake=0, sel=null, over=false;
@@ -637,7 +650,7 @@
   // Target of the Day — a shared daily featured system, deterministic by date
   function todayNum(){ const d=new Date(); return d.getFullYear()*10000 + (d.getMonth()+1)*100 + d.getDate(); }
   function todaySys(){ return SYSTEMS[ todayNum() % SYSTEMS.length ]; }
-  function updateTod(){ const el=document.getElementById('todPill'); if(!el)return; const s=todaySys(); el.style.display='inline-flex'; el.innerHTML='🎯 <b>Target of the Day</b> · '+esc(s.h)+(state.charted[s.h]?' ✓':''); }
+  function updateTod(){ const el=document.getElementById('todPill'); if(!el)return; const s=todaySys(); el.style.display='inline-flex'; el.innerHTML=ic('target')+' <b>Target of the Day</b> · '+esc(s.h)+(state.charted[s.h]?' ✓':''); }
 
   // ---------- map interaction ----------
   cv.addEventListener('pointerdown',e=>{ audio(); const r=cv.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
@@ -657,9 +670,9 @@
   // the frontier pill doubles as the persistent TRAINING-vs-REAL status indicator on the map.
   function updateFrontPill(){ const el=document.getElementById('frontPill'); if(!el)return; if(constMode){ el.style.display='none'; return; }
     el.style.display='inline-flex';
-    if(!state.observerLicense){ el.classList.add('locked'); el.innerHTML='🔒 <b>Training</b> · earn your observer’s license →'; return; }
+    if(!state.observerLicense){ el.classList.add('locked'); el.innerHTML=ic('lock')+' <b>Training</b> · earn your observer’s license →'; return; }
     el.classList.remove('locked');
-    el.innerHTML = FRONTIER.length ? ('🟣 <b>Real data</b> · '+FRONTIER.length+' open — NASA needs this') : '🟣 <b>Real-data explorer</b> · next TESS batch soon'; }
+    el.innerHTML = dot('#b79cf6')+(FRONTIER.length ? ('<b>Real data</b> · '+FRONTIER.length+' open — NASA needs this') : '<b>Real-data explorer</b> · next TESS batch soon'); }
 
   // ---------- constellation creator (your personal sky) ----------
   let constMode=false, cDraft=[], cLastNode=null;
@@ -692,7 +705,7 @@
   function sectorOpensInDays(){ const nextAt=SEC_ANCHOR+(sectorNow()-SEC_BASE+1)*SEC_MS; return Math.max(0,Math.ceil((nextAt-Date.now())/86400000)); }
   let secRAF=0;
   function updateSecChip(){ const el=document.getElementById('secChip'); if(!el||constMode)return; const d=sectorOpensInDays(); el.classList.add('show'); el.classList.toggle('soon', d<=3);
-    el.innerHTML = d<=0 ? '🛰️ <b>New TESS data just dropped!</b> · fresh stars to explore' : '🛰️ <b>New TESS data in '+d+'d</b> · stars no one has explored'; }
+    el.innerHTML = ic('satellite')+' '+(d<=0 ? '<b>New TESS data just dropped!</b> · fresh stars to explore' : '<b>New TESS data in '+d+'d</b> · stars no one has explored'); }
   function openSector(cur){ cur=cur||sectorNow(); state.lastSeenSector=cur; save();
     const n=FRONTIER.length;
     document.getElementById('secBig').textContent='Sector '+cur;
