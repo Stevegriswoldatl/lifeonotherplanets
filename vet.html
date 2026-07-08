@@ -125,6 +125,11 @@
 
   <div class="mission" id="mission" style="display:none;"></div>
 
+  <div style="display:flex;justify-content:center;margin:0 0 12px;">
+    <button id="huntBtn" style="font-family:'Space Grotesk';font-weight:700;font-size:13px;border:1px solid #6b511f;background:#1c1608;color:#f5c977;border-radius:999px;padding:8px 16px;cursor:pointer;">🎯 Try the Mono-Transit Hunt</button>
+  </div>
+  <div class="mission" id="huntBanner" style="display:none;background:linear-gradient(180deg,#1c1608,#120f08);border-color:#6b511f;color:#f0d9a4;">🎯 <b>Mono-Transit Hunt</b> — hunt the planets that cross their star just <b>once</b>. Automated pipelines search for <i>repeating</i> dips, so they throw single transits away — but human eyes catch them, and they're the #1 thing citizen scientists find. Spot the lone dip, or call it noise. <span style="color:#9fb0d0;">(Training signals — practicing the catch that matters most.)</span> <a href="#" id="huntExit" style="color:#7fb2ff;">exit hunt</a></div>
+
   <div class="grid">
     <div class="panel" id="cardpanel">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -193,6 +198,14 @@ function synthEB(){ const f=baseCurve(rand(0.0016,0.004)), P=rand(48,80), t0=ran
   for(let i=0;i<f.length;i++){ let ph=((i-t0)%P+P)%P; if(ph<dur) f[i]-=d1*(1-ph/dur); else if(ph>P-dur) f[i]-=d1*(1-(P-ph)/dur);
     const s=Math.abs(ph-P/2); if(s<dur*0.8) f[i]-=d2*(1-s/(dur*0.8)); } return f; }
 function synthNoise(){ return baseCurve(rand(0.002,0.005)); }
+let huntMode=false;
+function synthMono(){ const N=300, f=[], noise=rand(0.0016,0.0044); for(let i=0;i<N;i++) f.push(1+gauss(noise));
+  if(Math.random()<0.55){ const c=Math.floor(rand(0.22,0.78)*N), hw=Math.floor(rand(3,6)), d=rand(0.006,0.016);
+    for(let i=c-hw;i<c+hw;i++){ if(i>=0&&i<N){ const e=1-Math.abs(i-c)/hw; f[i]-=d*(0.55+0.45*e); } }
+    return { f, truth:"planet", kind:"mono", why:"A single, clean dip that never repeats — a planet on a long orbit, caught crossing once. Automated pipelines hunt for repeating dips, so they throw these away. You caught what the software can't." };
+  }
+  return { f, truth:"not", kind:"noise", why:"Just noise this time — no single clean dip. Ruling a star out is half the hunt." };
+}
 
 const PRACTICE = [
   { f:synthTransit(), truth:"planet", kind:"transit",
@@ -242,6 +255,16 @@ function next(){
   document.getElementById("verdict").innerHTML="";
   document.getElementById("hint").className="hint";
   document.querySelectorAll(".btns button").forEach(b=>b.disabled=false);
+
+  if(huntMode){
+    const m=synthMono(); current={ f:m.f, truth:m.truth, kind:m.kind, why:m.why, isReal:false }; phase="real";
+    document.getElementById("tasklabel").textContent="Mono-transit hunt · #"+(R.done+1);
+    const tg=document.getElementById("cardtag"); tg.className="cardtag practice"; tg.textContent="🎯 Hunt · training";
+    document.getElementById("practicetrack").style.display="none";
+    document.getElementById("hint").className="hint";
+    document.getElementById("question").textContent="Is there a single transit hiding here?";
+    draw(current.f); return;
+  }
 
   if(phase==="practice" && !onboarded()){
     const p=PRACTICE[practiceIx];
@@ -301,7 +324,7 @@ function answer(a){
       ? (current.kind==="injection" ? "Real planet (faint injected transit)" : "Real confirmed planet")
       : (current.kind==="eb" ? "Not a planet — eclipsing binary" : "Not a planet — quiet star / noise");
   } else {
-    truthLabel = truth==="planet" ? "A planet transit" : (current.kind==="eb"?"An eclipsing binary":"Just noise");
+    truthLabel = truth==="planet" ? (current.kind==="mono"?"A single-transit planet — the kind automated pipelines miss! 🎯":"A planet transit") : (current.kind==="eb"?"An eclipsing binary":"Just noise");
   }
   let html = "<h3>"+head+"</h3><p><b>"+truthLabel+".</b> "+current.why+"</p>";
 
@@ -391,6 +414,10 @@ function updateStats(){
 
 /* ---------- input: buttons, swipe, keyboard ---------- */
 document.querySelectorAll(".btns button").forEach(b=>b.addEventListener("click",()=>answer(b.dataset.a)));
+(function(){ const hb=document.getElementById("huntBtn"), hx=document.getElementById("huntExit"), bn=document.getElementById("huntBanner");
+  if(hb) hb.onclick=function(){ huntMode=true; if(bn)bn.style.display="block"; hb.style.display="none"; next(); };
+  if(hx) hx.onclick=function(e){ e.preventDefault(); huntMode=false; if(bn)bn.style.display="none"; if(hb)hb.style.display=""; phase="real"; next(); };
+})();
 window.addEventListener("resize",()=>{ if(current) draw(current.f); });
 window.addEventListener("keydown",e=>{
   if(document.getElementById("intro").classList.contains("hide")===false) return;
