@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI Lab (beta) — Life On Other Planets?</title>
-<meta name="description" content="Donate your own AI: run a ready-made research prompt in your ChatGPT, Claude, or Gemini and help build cited dossiers on the most promising planets.">
+<meta name="description" content="Donate your own AI: run a ready-made research prompt in your ChatGPT, Claude, or Gemini, then let several AIs cross-check each other to build cited dossiers on the most promising planets.">
 <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,15 +26,38 @@
   button { border-radius:10px; padding:9px 14px; font-size:13px; font-weight:600; cursor:pointer; border:1px solid #29365a; background:#16203a; color:#dbe4fb; }
   button:hover { background:#1d2a4a; }
   button.primary { background:#5DCAA5; color:#05231b; border-color:#5DCAA5; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
   .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:10px; }
-  textarea { width:100%; min-height:150px; background:#0a0f1c; color:#e8ecf6; border:1px solid #26314f; border-radius:12px; padding:12px; font-size:13px; }
+  textarea { width:100%; min-height:130px; background:#0a0f1c; color:#e8ecf6; border:1px solid #26314f; border-radius:12px; padding:12px; font-size:13px; }
+  .modes { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  .modes button { border-radius:999px; }
+  .modes button.on { background:#16203a; border-color:#5DCAA5; color:#bff3e0; }
+  .aipick { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+  .aipick span.lab { color:#8494b5; font-size:12px; font-family:"Space Grotesk",sans-serif; letter-spacing:.4px; }
+  .aipick button { border-radius:999px; padding:6px 12px; font-size:12px; }
+  .aipick button.on { background:#1d2a4a; border-color:#7fb2ff; color:#dbe8ff; }
+  .subs { margin-top:12px; display:flex; flex-direction:column; gap:8px; }
+  .subrow { display:flex; align-items:center; gap:10px; background:#0a1020; border:1px solid #1a2338; border-radius:10px; padding:8px 12px; font-size:13px; }
+  .subrow .who { font-family:"Space Grotesk",sans-serif; font-weight:600; color:#bff3e0; }
+  .subrow .rm { margin-left:auto; color:#f39a9a; cursor:pointer; font-size:12px; background:none; border:none; }
   .dossier { margin-top:8px; }
-  .field { padding:8px 0; border-bottom:1px solid #172038; font-size:14px; }
-  .field .k { color:#9aa6bf; font-family:"Space Grotesk",sans-serif; font-size:12px; letter-spacing:.6px; text-transform:uppercase; }
+  .field { padding:10px 0; border-bottom:1px solid #172038; font-size:14px; }
+  .field .k { color:#9aa6bf; font-family:"Space Grotesk",sans-serif; font-size:12px; letter-spacing:.6px; text-transform:uppercase; margin-bottom:4px; }
   .pill { display:inline-block; font-size:12px; padding:2px 9px; border-radius:999px; border:1px solid #2b3a63; color:#9db4e6; }
+  .badge { display:inline-block; font-size:11px; padding:1px 8px; border-radius:999px; font-family:"Space Grotesk",sans-serif; margin-left:6px; vertical-align:middle; }
+  .b-ok { background:#0e2a20; color:#8fe3c4; border:1px solid #1f6b4f; }
+  .b-single { background:#221a2e; color:#c9b6e6; border:1px solid #4a3a63; }
+  .b-conflict { background:#2e1616; color:#f3a9a9; border:1px solid #6b2f2f; }
   .ok { color:#8fe3c4; } .warn { color:#f3c98a; }
+  .factli { margin:6px 0; }
+  .who-tag { color:#7d8cae; font-size:11px; font-family:"Space Grotesk",sans-serif; }
+  .conflictbox { background:#1c1010; border:1px solid #5a2a2a; border-radius:10px; padding:10px 12px; margin:6px 0; font-size:13px; color:#f3c0c0; }
+  table.recon { width:100%; border-collapse:collapse; font-size:13px; margin-top:6px; }
+  table.recon th, table.recon td { text-align:left; padding:7px 8px; border-bottom:1px solid #172038; vertical-align:top; }
+  table.recon th { color:#8494b5; font-family:"Space Grotesk",sans-serif; font-size:11px; letter-spacing:.5px; text-transform:uppercase; }
   .note { color:#8494b5; font-size:13px; margin-top:14px; line-height:1.6; }
   a { color:#7fb2ff; }
+  .hint { color:#7d8cae; font-size:12px; margin-top:6px; }
 </style>
 </head>
 <body>
@@ -49,7 +72,7 @@
 </nav>
 <div class="wrap">
   <h1>AI Lab <span class="beta">beta</span></h1>
-  <p class="sub">Donate your <i>own</i> AI. Pick a promising planet, copy the ready-made research prompt, run it in your own ChatGPT, Claude, or Gemini, and paste the answer back. You're helping build cited, structured "dossiers" on the best candidate worlds — work that scales far past what humans can read alone. We never use your account or your tokens.</p>
+  <p class="sub">Donate your <i>own</i> AI. Pick a promising planet, copy the ready-made research prompt, run it in your own ChatGPT, Claude, or Gemini, and paste the answer back. Run it in <b>several</b> AIs and the Lab cross-checks them — only facts they <b>agree</b> on advance. You're helping build cited, structured "dossiers" on the best candidate worlds. We never use your account or your tokens.</p>
 
   <div class="step">Step 1 — Pick a target</div>
   <div class="panel">
@@ -57,25 +80,49 @@
     <div class="note" id="pmeta"></div>
   </div>
 
-  <div class="step">Step 2 — Copy this prompt into your AI</div>
+  <div class="step">Step 2 — Choose a task, then copy its prompt into your AI</div>
   <div class="panel">
-    <div class="prompt" id="prompt"></div>
+    <div class="modes" id="modes"></div>
+    <div class="hint" id="modedesc"></div>
+    <div class="prompt" id="prompt" style="margin-top:10px;"></div>
     <div class="row">
       <button class="primary" id="copy">Copy prompt</button>
       <span id="copied" class="ok" style="font-size:13px;"></span>
     </div>
   </div>
 
-  <div class="step">Step 3 — Paste your AI's answer back</div>
+  <div class="step">Step 3 — Paste an AI's answer back (add as many AIs as you like)</div>
   <div class="panel">
     <textarea id="answer" placeholder="Paste the JSON your AI returned here…"></textarea>
-    <div class="row"><button class="primary" id="submit">Submit dossier</button><span id="err" class="warn" style="font-size:13px;"></span></div>
+    <div class="aipick" id="aipick"><span class="lab">Which AI produced this?</span></div>
+    <div class="row"><button class="primary" id="add">Add this answer</button><span id="err" class="warn" style="font-size:13px;"></span></div>
+    <div class="subs" id="subs"></div>
+  </div>
+
+  <div class="step">Step 4 — Build the cross-checked consensus</div>
+  <div class="panel">
+    <div class="row"><button class="primary" id="build" disabled>Build consensus</button>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#9aa6bf;"><input type="checkbox" id="incComm" checked> include the community's answers</label>
+      <span id="buildhint" class="hint" style="margin-top:0;"></span></div>
     <div class="dossier" id="dossier"></div>
   </div>
 
-  <p class="note"><b>How this stays honest:</b> your dossier is one input, not the final word. In the live version every target is researched by <b>several people using different AIs</b>, and we only trust facts they <b>agree</b> on. We also mix in <b>known-answer targets</b> to score how reliable each contributor's AI pipeline is, and every fact must carry a <b>source</b> we can check. AI <i>proposes</i>; humans and the professional record <i>dispose</i>. <a href="index.html">About the project</a></p>
+  <div class="step">Step 5 — The community wall <span id="syncpill" class="pill" style="margin-left:6px;"></span></div>
+  <div class="panel">
+    <p class="hint" id="wallintro" style="margin-top:0;">Answers shared here are pooled across every explorer. Add yours, then validate others' — only what the community trusts advances toward the professional record.</p>
+    <div class="row">
+      <button class="primary" id="share" disabled>Add my answers to the wall</button>
+      <span id="sharemsg" class="ok" style="font-size:13px;"></span>
+    </div>
+    <div id="wall" class="subs" style="margin-top:14px;"></div>
+  </div>
+
+  <p class="note"><b>How this stays honest:</b> a single AI's answer is never the final word. The Lab only marks a fact <b class="ok">corroborated</b> when <b>independent AIs agree</b>; anything just one AI says stays <b>single-source</b>, and disagreements are flagged as <b class="warn">conflicts</b> for a human. Every fact must carry a <b>source</b> we can check, and in the live project we also mix in <b>known-answer targets</b> to score each AI pipeline. AI <i>proposes</i>; humans and the professional record <i>dispose</i>. <a href="index.html">About the project</a></p>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script src="lop-sync.js"></script>
 <script>
 const PLANETS = [
   {n:"TOI-700 d", r:1.07, s:0.85, t:3459, d:101, note:"Earth-sized, temperate, quiet M dwarf — a flagship habitable-zone world."},
@@ -87,12 +134,12 @@ const PLANETS = [
   {n:"Teegarden's Star b", r:1.05, s:1.08, t:3034, d:12, note:"Very high Earth-similarity; nearby ultracool dwarf."},
   {n:"LP 890-9 c", r:1.37, s:0.91, t:2850, d:106, note:"Temperate super-Earth, strong JWST follow-up target."}
 ];
-const $ = id => document.getElementById(id);
-const sel = $("planet");
-PLANETS.forEach((p,i)=>{ const o=document.createElement("option"); o.value=i; o.textContent=p.n; sel.appendChild(o); });
 
-function promptFor(p){
-  return `You are assisting a citizen-science project that assesses exoplanets for their promise for life.
+const MODES = {
+  dossier: {
+    label: "Literature dossier",
+    desc: "Read what's published about this world and extract structured, cited facts.",
+    prompt: p => `You are assisting a citizen-science project that assesses exoplanets for their promise for life.
 Target planet: ${p.n} (radius ~${p.r} Earth, insolation ~${p.s}x Earth, host star ~${p.t} K, ~${p.d} light-years away).
 
 Using only well-established, publicly documented knowledge, return ONE JSON object and nothing else, with these fields:
@@ -105,43 +152,372 @@ Using only well-established, publicly documented knowledge, return ONE JSON obje
   "confidence": 0.0,
   "sources": ["Author Year — brief description (do NOT invent sources; use 'unknown' if unsure)"]
 }
-Rules: be accurate, flag anything uncertain, and never fabricate citations. Return valid JSON only.`;
+Rules: be accurate, flag anything uncertain, and never fabricate citations. Return valid JSON only.`
+  },
+  crosscheck: {
+    label: "Catalog cross-check",
+    desc: "Reconcile the measured numbers across catalogs and flag where sources disagree — the check a professional wants before submission.",
+    prompt: p => `You are assisting a citizen-science project preparing a candidate exoplanet for professional review.
+Target planet: ${p.n} (radius ~${p.r} Earth, insolation ~${p.s}x Earth, host star ~${p.t} K, ~${p.d} light-years away).
+
+Compare how this planet's key measured parameters are reported across the major public catalogs and literature you know (e.g. the NASA Exoplanet Archive, the TESS/TOI catalog, discovery and follow-up papers). Return ONE JSON object and nothing else:
+{
+  "planet": "${p.n}",
+  "parameters": [
+    {"name": "radius", "value": "1.07", "unit": "R_earth", "source": "Author Year or catalog", "agrees_across_sources": true}
+  ],
+  "conflicts": ["plain-language notes on any parameter where sources disagree, WITH the numbers"],
+  "confidence": 0.0,
+  "sources": ["Author Year — brief (never invent; use 'unknown' if unsure)"]
+}
+Rules: only report values you are confident are documented, never fabricate numbers or citations, and explicitly flag disagreements in "conflicts". Return valid JSON only.`
+  }
+};
+
+const AIS = ["ChatGPT","Claude","Gemini","Local model","Other"];
+
+// ---------- pure helpers (also unit-tested headless) ----------
+const STOP = new Set(("the a an is are was were be been has have had its it it's this that these those of to in on at by for with about around roughly approximately approx some very much many more most and or but as from into over under out up down not no than then also which whose while planet planets star world worlds").split(" "));
+function normTokens(s){
+  return String(s||"").toLowerCase().replace(/[^a-z0-9\s.]/g," ").split(/\s+/).filter(w=>w.length>2 && !STOP.has(w));
+}
+function jaccard(a,b){
+  const A=new Set(a), B=new Set(b);
+  if(!A.size || !B.size) return 0;
+  let inter=0; A.forEach(x=>{ if(B.has(x)) inter++; });
+  return inter / (A.size + B.size - inter);
+}
+// group free-text facts across AIs; returns [{text, whos:[ai...]}]
+function groupFacts(items){ // items: [{text, who}]
+  const groups=[];
+  items.forEach(it=>{
+    const toks=normTokens(it.text);
+    let hit=null, best=0;
+    groups.forEach(g=>{
+      const sim=jaccard(toks, g.toks);
+      if(sim>=0.5 && sim>best){ best=sim; hit=g; }
+    });
+    if(hit){ if(!hit.whos.includes(it.who)) hit.whos.push(it.who); if(it.text.length>hit.text.length) hit.text=it.text; }
+    else groups.push({text:it.text, toks, whos:[it.who]});
+  });
+  // corroborated (more AIs) first
+  return groups.sort((a,b)=>b.whos.length-a.whos.length).map(g=>({text:g.text, whos:g.whos}));
+}
+function numOf(v){ const m=String(v).match(/-?\d+(\.\d+)?/); return m?parseFloat(m[0]):null; }
+function valuesAgree(vals){ // vals: array of raw value strings
+  const nums=vals.map(numOf).filter(n=>n!=null);
+  if(nums.length===vals.length && nums.length>1){
+    const mn=Math.min(...nums), mx=Math.max(...nums);
+    if(mn===0) return mx===0;
+    return (mx-mn)/Math.abs(mn) <= 0.10; // within 10%
+  }
+  // fall back to normalized string match
+  const norm=vals.map(v=>String(v).trim().toLowerCase());
+  return norm.every(v=>v===norm[0]);
+}
+// ---------- end pure helpers ----------
+
+const $ = id => document.getElementById(id);
+const sel = $("planet");
+PLANETS.forEach((p,i)=>{ const o=document.createElement("option"); o.value=i; o.textContent=p.n; sel.appendChild(o); });
+
+let mode = "dossier";
+let curAI = "ChatGPT";
+let subs = []; // {who, mode, data}
+let wallCache = []; // community dossiers for the current planet+mode
+
+function syncOn(){ return !!(window.LOPSync && window.LOPSync.enabled); }
+function modelsSummary(list){
+  const c={}; list.forEach(s=>{ c[s.who]=(c[s.who]||0)+1; });
+  return Object.keys(c).map(k=> c[k]>1?`${k} ×${c[k]}`:k).join(", ") || "—";
+}
+function combinedList(){
+  let list = subs.slice();
+  if(document.getElementById("incComm").checked && wallCache.length){
+    const comm = wallCache.slice(0,40).map(r=>({ who:(r.payload&&r.payload.model)||r.model||"AI", mode, data:r.payload||{} }));
+    list = list.concat(comm);
+  }
+  return list;
+}
+
+// build mode buttons
+Object.keys(MODES).forEach(k=>{
+  const b=document.createElement("button");
+  b.textContent=MODES[k].label; b.dataset.mode=k;
+  if(k===mode) b.classList.add("on");
+  b.addEventListener("click", ()=>{ setMode(k); });
+  $("modes").appendChild(b);
+});
+// build AI picker buttons
+AIS.forEach(a=>{
+  const b=document.createElement("button"); b.textContent=a; b.dataset.ai=a;
+  if(a===curAI) b.classList.add("on");
+  b.addEventListener("click", ()=>{ curAI=a; document.querySelectorAll("#aipick button").forEach(x=>x.classList.toggle("on", x.dataset.ai===a)); });
+  $("aipick").appendChild(b);
+});
+
+function setMode(k){
+  if(k===mode) return;
+  if(subs.length){
+    if(!confirm("Switching tasks clears the answers you've added for this target. Continue?")) return;
+  }
+  mode=k; subs=[];
+  document.querySelectorAll("#modes button").forEach(b=>b.classList.toggle("on", b.dataset.mode===k));
+  refresh();
 }
 
 function refresh(){
   const p = PLANETS[+sel.value];
   $("pmeta").textContent = p.note + `  ·  ~${p.d} light-years`;
-  $("prompt").textContent = promptFor(p);
-  $("dossier").innerHTML = ""; $("answer").value=""; $("err").textContent=""; $("copied").textContent="";
+  $("modedesc").textContent = MODES[mode].desc;
+  $("prompt").textContent = MODES[mode].prompt(p);
+  $("answer").value=""; $("err").textContent=""; $("copied").textContent=""; $("sharemsg").textContent="";
+  renderSubs(); renderBuildState();
+  $("dossier").innerHTML="";
+  loadWall();
 }
-sel.addEventListener("change", refresh);
+sel.addEventListener("change", ()=>{ subs=[]; refresh(); });
 
 $("copy").addEventListener("click", ()=>{
   const t = $("prompt").textContent;
   navigator.clipboard.writeText(t).then(()=>{ $("copied").textContent="Copied — paste it into your AI."; }, ()=>{ $("copied").textContent="Select the text above and copy it."; });
 });
 
-function field(k, v){ return `<div class="field"><div class="k">${k}</div><div>${v}</div></div>`; }
-$("submit").addEventListener("click", ()=>{
-  $("err").textContent=""; $("dossier").innerHTML="";
-  let raw = $("answer").value.trim();
-  const m = raw.match(/\{[\s\S]*\}/);
-  if(!m){ $("err").textContent="Couldn't find JSON. Ask your AI to return valid JSON only, then paste it here."; return; }
-  let d; try { d = JSON.parse(m[0]); } catch(e){ $("err").textContent="That isn't valid JSON yet — check for stray text and try again."; return; }
-  const atmo = (d.atmosphere_status||"unknown");
-  const pillClass = atmo==="detected"?"ok":atmo==="tentative"?"warn":"";
-  let html = `<div style="font-family:'Space Grotesk';font-weight:700;margin:6px 0 4px;">Dossier — ${d.planet||PLANETS[+sel.value].n}</div>`;
-  html += field("Atmosphere", `<span class="pill ${pillClass}">${atmo}</span>`);
-  if(Array.isArray(d.key_facts)) html += field("Key facts", "<ul style='margin:6px 0 0;padding-left:18px;'>"+d.key_facts.map(f=>`<li>${String(f)}</li>`).join("")+"</ul>");
-  if(d.follow_up_status) html += field("Follow-up", String(d.follow_up_status));
-  if(Array.isArray(d.notable_claims) && d.notable_claims.length) html += field("Notable / debated claims", "<ul style='margin:6px 0 0;padding-left:18px;'>"+d.notable_claims.map(f=>`<li>${String(f)}</li>`).join("")+"</ul>");
-  if(d.confidence!=null) html += field("AI confidence", (Math.round(d.confidence*100))+"%");
-  if(Array.isArray(d.sources)) html += field("Sources (to be verified)", "<ul style='margin:6px 0 0;padding-left:18px;'>"+d.sources.map(f=>`<li>${String(f)}</li>`).join("")+"</ul>");
-  html += `<div class="note" style="margin-top:12px;">Thanks — dossier received. In the live project this would be cross-checked against other contributors' AIs, scored against known-answer targets, and its sources verified before anything is trusted.</div>`;
-  $("dossier").innerHTML = html;
+function parseAnswer(raw){
+  const m = String(raw).match(/\{[\s\S]*\}/);
+  if(!m) return {err:"Couldn't find JSON. Ask your AI to return valid JSON only, then paste it here."};
+  try { return {data: JSON.parse(m[0])}; } catch(e){ return {err:"That isn't valid JSON yet — check for stray text and try again."}; }
+}
+
+$("add").addEventListener("click", ()=>{
+  $("err").textContent="";
+  const raw=$("answer").value.trim();
+  if(!raw){ $("err").textContent="Paste your AI's answer first."; return; }
+  const res=parseAnswer(raw);
+  if(res.err){ $("err").textContent=res.err; return; }
+  if(subs.some(s=>s.who===curAI)){
+    if(!confirm(`You already added a ${curAI} answer for this target. Replace it?`)) return;
+    subs=subs.filter(s=>s.who!==curAI);
+  }
+  subs.push({who:curAI, mode, data:res.data});
+  $("answer").value="";
+  renderSubs(); renderBuildState();
 });
 
+function renderSubs(){
+  const wrap=$("subs"); wrap.innerHTML="";
+  subs.forEach((s,i)=>{
+    const row=document.createElement("div"); row.className="subrow";
+    row.innerHTML=`<span class="who">${s.who}</span><span style="color:#7d8cae;font-size:12px;">answer added</span>`;
+    const rm=document.createElement("button"); rm.className="rm"; rm.textContent="remove";
+    rm.addEventListener("click", ()=>{ subs.splice(i,1); renderSubs(); renderBuildState(); });
+    row.appendChild(rm); wrap.appendChild(row);
+  });
+}
+function renderBuildState(){
+  const inc = $("incComm").checked ? wallCache.length : 0;
+  const total = subs.length + inc;
+  $("build").disabled = total<1;
+  $("buildhint").textContent = total===0 ? "Add at least one AI's answer."
+    : (subs.length && inc) ? `${subs.length} of yours + ${inc} community — ready to cross-check.`
+    : (subs.length===1 && !inc) ? "1 AI added — add a second AI (or include the community) for a real cross-check."
+    : `${total} answer${total>1?"s":""} — ready to cross-check.`;
+  updateShareState();
+}
+function updateShareState(){
+  $("share").disabled = !(syncOn() && subs.length);
+}
+
+$("build").addEventListener("click", ()=>{
+  const list = combinedList();
+  if(!list.length) return;
+  $("dossier").innerHTML = mode==="dossier" ? buildDossierConsensus(list) : buildCrosscheckConsensus(list);
+});
+$("incComm").addEventListener("change", renderBuildState);
+
+// ---------- community wall ----------
+async function loadWall(){
+  const wrap=$("wall");
+  if(!syncOn()){ wallCache=[]; wrap.innerHTML=""; renderBuildState(); return; }
+  wrap.innerHTML = `<div class="hint">Loading community answers…</div>`;
+  try { wallCache = await window.LOPSync.getDossiers(PLANETS[+sel.value].n, mode) || []; }
+  catch(e){ wallCache=[]; }
+  renderWall(); renderBuildState();
+}
+function factPreview(d){
+  const facts = Array.isArray(d.key_facts) ? d.key_facts
+    : Array.isArray(d.parameters) ? d.parameters.map(x=>`${x.name}: ${x.value}${x.unit?" "+x.unit:""}`) : [];
+  return facts.slice(0,2).map(f=>`<div class="factli" style="color:#c9d3ea;">• ${String(f)}</div>`).join("");
+}
+function renderWall(){
+  const wrap=$("wall"); wrap.innerHTML="";
+  if(!syncOn()) return;
+  if(!wallCache.length){ wrap.innerHTML=`<div class="hint">No community answers for this target yet — be the first to add one.</div>`; return; }
+  wallCache.forEach(row=>{
+    const d=row.payload||{};
+    const el=document.createElement("div"); el.className="subrow"; el.style.flexDirection="column"; el.style.alignItems="stretch";
+    el.innerHTML =
+      `<div style="display:flex;align-items:center;gap:10px;"><span class="who">${d.model||row.model||"AI"}</span>`+
+      `<span style="color:#7d8cae;font-size:12px;">shared dossier</span>`+
+      `<span class="tally" style="margin-left:auto;color:#7d8cae;font-size:12px;">…</span></div>`+
+      `<div style="margin:6px 0;">${factPreview(d)||'<span class="hint">(no preview)</span>'}</div>`+
+      `<div class="row" style="margin-top:2px;"><button class="v-trust">Trust</button><button class="v-dispute">Dispute</button></div>`;
+    wrap.appendChild(el);
+    el.querySelector(".v-trust").addEventListener("click", ()=>voteRow(row.id, "trust", el));
+    el.querySelector(".v-dispute").addEventListener("click", ()=>voteRow(row.id, "dispute", el));
+    refreshTally(row.id, el);
+  });
+}
+async function refreshTally(id, el){
+  const t=el.querySelector(".tally"); if(!t) return;
+  const c = await window.LOPSync.getDossierConsensus(id);
+  t.textContent = c ? `${c.trust_votes||0} trust · ${c.dispute_votes||0} dispute` : "no votes yet";
+}
+async function voteRow(id, verdict, el){
+  el.querySelectorAll("button").forEach(b=>b.disabled=true);
+  try { await window.LOPSync.voteDossier(id, verdict); await refreshTally(id, el); } catch(e){}
+  setTimeout(()=>el.querySelectorAll("button").forEach(b=>b.disabled=false), 700);
+}
+$("share").addEventListener("click", async ()=>{
+  if(!subs.length || !syncOn()) return;
+  $("share").disabled=true; $("sharemsg").textContent="Sharing…";
+  const p=PLANETS[+sel.value].n; let n=0;
+  for(const s of subs){ const id=await window.LOPSync.saveDossier(p, mode, s.who, s.data); if(id) n++; }
+  $("sharemsg").textContent = n ? `Shared ${n} answer${n>1?"s":""} — thank you!` : "Couldn't share right now, try again.";
+  await loadWall();
+});
+async function initSync(){
+  const pill=$("syncpill");
+  if(syncOn()){
+    pill.textContent="cloud sync on"; pill.classList.add("ok");
+    try { await window.LOPSync.ensureExplorer(); } catch(e){}
+  } else {
+    pill.textContent="saving locally";
+    $("wallintro").textContent="Cloud sync is off, so the community wall isn't available in this browser — your answers still work locally in the consensus above.";
+  }
+  updateShareState();
+}
+
+function badgeFor(count, total){
+  if(count>=2) return `<span class="badge b-ok">✓ corroborated · ${count} AIs</span>`;
+  return `<span class="badge b-single">single-source</span>`;
+}
+
+function buildDossierConsensus(list){
+  const total=list.length;
+  const distinct = new Set(list.map(s=>s.who)).size;
+  const pname = (list[0].data && list[0].data.planet) || PLANETS[+sel.value].n;
+  let html = `<div style="font-family:'Space Grotesk';font-weight:700;margin:6px 0 4px;">Consensus dossier — ${pname}</div>`;
+  html += `<div class="hint" style="margin-top:0;">Cross-checked across ${total} answer${total>1?"s":""} from ${modelsSummary(list)}.</div>`;
+
+  // Atmosphere status — the headline, citation-sensitive
+  const atmos = list.map(s=>({who:s.who, v:String((s.data&&s.data.atmosphere_status)||"unknown").toLowerCase().trim()}));
+  const uniq = [...new Set(atmos.map(a=>a.v))];
+  let atmoHtml;
+  if(uniq.length===1){
+    const v=uniq[0]; const cls = v==="detected"?"ok":v==="tentative"?"warn":"";
+    atmoHtml = `<span class="pill ${cls?'':''}">${v}</span> ${distinct>1?`<span class="badge b-ok">✓ ${distinct} AIs agree</span>`:`<span class="badge b-single">single-source</span>`}`;
+  } else {
+    atmoHtml = `<span class="badge b-conflict">⚠ conflict — needs a human</span><div class="conflictbox">`+
+      atmos.map(a=>`<b>${a.who}:</b> ${a.v}`).join(" &nbsp;·&nbsp; ")+`</div>`;
+  }
+  html += `<div class="field"><div class="k">Atmosphere</div><div>${atmoHtml}</div></div>`;
+
+  // Confidence — avg + range
+  const confs = list.map(s=>numOf(s.data&&s.data.confidence)).filter(n=>n!=null);
+  if(confs.length){
+    const avg=Math.round(confs.reduce((a,b)=>a+b,0)/confs.length*100);
+    const lo=Math.round(Math.min(...confs)*100), hi=Math.round(Math.max(...confs)*100);
+    html += `<div class="field"><div class="k">AI confidence</div><div>${avg}% average${confs.length>1?` <span class="who-tag">(range ${lo}–${hi}%)</span>`:""}</div></div>`;
+  }
+
+  // Key facts — pooled + grouped by agreement
+  const facts=[]; list.forEach(s=>{ (Array.isArray(s.data&&s.data.key_facts)?s.data.key_facts:[]).forEach(f=>facts.push({text:String(f), who:s.who})); });
+  const grouped=groupFacts(facts);
+  if(grouped.length){
+    html += `<div class="field"><div class="k">Key facts</div><div>`+
+      grouped.map(g=>`<div class="factli">• ${g.text} ${badgeFor(g.whos.length,total)} <span class="who-tag">${g.whos.join(", ")}</span></div>`).join("")+`</div></div>`;
+  }
+
+  // Notable / debated claims — always flagged
+  const claims=[]; list.forEach(s=>{ (Array.isArray(s.data&&s.data.notable_claims)?s.data.notable_claims:[]).forEach(f=>claims.push({text:String(f), who:s.who})); });
+  const gc=groupFacts(claims);
+  if(gc.length){
+    html += `<div class="field"><div class="k">Notable / debated claims</div><div>`+
+      gc.map(g=>`<div class="factli">• ${g.text} <span class="badge b-single">debated</span> <span class="who-tag">${g.whos.join(", ")}</span></div>`).join("")+`</div></div>`;
+  }
+
+  // Follow-up — list each AI's (short)
+  const fu=list.map(s=>({who:s.who, v:s.data&&s.data.follow_up_status})).filter(x=>x.v);
+  if(fu.length){
+    html += `<div class="field"><div class="k">Follow-up status</div><div>`+
+      fu.map(x=>`<div class="factli">• ${String(x.v)} <span class="who-tag">${x.who}</span></div>`).join("")+`</div></div>`;
+  }
+
+  // Sources — pooled, grouped, count = how many AIs cited it
+  const srcs=[]; list.forEach(s=>{ (Array.isArray(s.data&&s.data.sources)?s.data.sources:[]).forEach(f=>srcs.push({text:String(f), who:s.who})); });
+  const gs=groupFacts(srcs);
+  if(gs.length){
+    html += `<div class="field"><div class="k">Sources (to be verified)</div><div>`+
+      gs.map(g=>`<div class="factli">• ${g.text} ${g.whos.length>=2?`<span class="badge b-ok">✓ ${g.whos.length} AIs cite this</span>`:`<span class="badge b-single">1 AI</span>`}</div>`).join("")+`</div></div>`;
+  }
+
+  html += `<div class="note" style="margin-top:12px;">In the live project this consensus is pooled with other explorers' AI runs, scored against known-answer targets, and its sources verified before anything advances toward the professional record.</div>`;
+  return html;
+}
+
+function buildCrosscheckConsensus(list){
+  const total=list.length;
+  const pname = (list[0].data && list[0].data.planet) || PLANETS[+sel.value].n;
+  let html = `<div style="font-family:'Space Grotesk';font-weight:700;margin:6px 0 4px;">Catalog cross-check — ${pname}</div>`;
+  html += `<div class="hint" style="margin-top:0;">Reconciled across ${total} answer${total>1?"s":""} from ${modelsSummary(list)}.</div>`;
+
+  // collect parameters keyed by lowercased name
+  const params={};
+  list.forEach(s=>{
+    (Array.isArray(s.data&&s.data.parameters)?s.data.parameters:[]).forEach(pm=>{
+      const name=String(pm&&pm.name||"").trim(); if(!name) return;
+      const key=name.toLowerCase();
+      (params[key]=params[key]||{name, rows:[]}).rows.push({who:s.who, value:pm.value, unit:pm.unit||"", source:pm.source||"unknown"});
+    });
+  });
+  const keys=Object.keys(params);
+  if(keys.length){
+    html += `<table class="recon"><tr><th>Parameter</th><th>Reported values</th><th>Agreement</th></tr>`;
+    keys.forEach(k=>{
+      const pm=params[k];
+      const vals=pm.rows.map(r=>`${r.value}${r.unit?" "+r.unit:""}`);
+      const agree = pm.rows.length>1 ? valuesAgree(pm.rows.map(r=>r.value)) : null;
+      const cell = pm.rows.map(r=>`<div class="factli">${r.value}${r.unit?" "+r.unit:""} <span class="who-tag">${r.who} · ${r.source}</span></div>`).join("");
+      const agHtml = agree===null ? `<span class="badge b-single">1 AI</span>`
+                    : agree ? `<span class="badge b-ok">✓ agree</span>`
+                    : `<span class="badge b-conflict">⚠ conflict</span>`;
+      html += `<tr><td><b>${pm.name}</b></td><td>${cell}</td><td>${agHtml}</td></tr>`;
+    });
+    html += `</table>`;
+  }
+
+  // conflicts flagged by the AIs themselves
+  const conflicts=[]; list.forEach(s=>{ (Array.isArray(s.data&&s.data.conflicts)?s.data.conflicts:[]).forEach(c=>conflicts.push({text:String(c), who:s.who})); });
+  const gcf=groupFacts(conflicts);
+  if(gcf.length){
+    html += `<div class="field" style="margin-top:10px;"><div class="k">Flagged disagreements</div><div>`+
+      gcf.map(g=>`<div class="conflictbox">${g.text} <span class="who-tag">${g.whos.join(", ")}</span></div>`).join("")+`</div></div>`;
+  }
+
+  const srcs=[]; list.forEach(s=>{ (Array.isArray(s.data&&s.data.sources)?s.data.sources:[]).forEach(f=>srcs.push({text:String(f), who:s.who})); });
+  const gs=groupFacts(srcs);
+  if(gs.length){
+    html += `<div class="field"><div class="k">Sources (to be verified)</div><div>`+
+      gs.map(g=>`<div class="factli">• ${g.text} ${g.whos.length>=2?`<span class="badge b-ok">✓ ${g.whos.length} AIs</span>`:`<span class="badge b-single">1 AI</span>`}</div>`).join("")+`</div></div>`;
+  }
+
+  html += `<div class="note" style="margin-top:12px;">Parameters where independent AIs agree strengthen a submission; flagged conflicts are exactly what a professional co-author needs to resolve before a candidate is recorded.</div>`;
+  return html;
+}
+
 refresh();
+initSync();
 </script>
 </body>
 </html>

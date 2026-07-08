@@ -24,7 +24,9 @@
     classifications: { last: 0, count: 0, minGap: 700,  cap: 3000 },
     claims:          { last: 0, count: 0, minGap: 1500, cap: 800  },
     discoveries:     { last: 0, count: 0, minGap: 1500, cap: 400  },
-    votes:           { last: 0, count: 0, minGap: 500,  cap: 4000 }
+    votes:           { last: 0, count: 0, minGap: 500,  cap: 4000 },
+    dossiers:        { last: 0, count: 0, minGap: 1500, cap: 300  },
+    dvotes:          { last: 0, count: 0, minGap: 500,  cap: 2000 }
   };
   function allow(kind) {
     const t = _thr[kind], now = Date.now();
@@ -98,6 +100,37 @@
     async getConsensus(cardId) {
       if (!client || !cardId) return null;
       try { const r = await client.from("card_consensus").select("*").eq("card_id", String(cardId)).limit(1); return (r.data && r.data[0]) || null; }
+      catch (e) { return null; }
+    },
+    // ---- AI Lab community wall: shared dossiers + validation ----
+    async saveDossier(planet, mode, model, payload) {
+      if (!client || !planet) return null;
+      if (!allow("dossiers")) return null;
+      try {
+        const r = await client.from("ai_dossiers")
+          .insert({ planet: String(planet), mode: String(mode), model: String(model), payload: payload, explorer_id: explorerId })
+          .select("id").limit(1);
+        return (r.data && r.data[0] && r.data[0].id) || null;
+      } catch (e) { console.warn("LOP sync: saveDossier", e); return null; }
+    },
+    async getDossiers(planet, mode) {
+      if (!client || !planet) return [];
+      try {
+        const r = await client.from("ai_dossiers").select("id,model,payload,created_at")
+          .eq("planet", String(planet)).eq("mode", String(mode))
+          .order("created_at", { ascending: false }).limit(50);
+        return r.data || [];
+      } catch (e) { return []; }
+    },
+    async voteDossier(dossierId, verdict) {
+      if (!client || !dossierId) return;
+      if (!allow("dvotes")) return;
+      try { await client.from("ai_dossier_votes").insert({ dossier_id: dossierId, explorer_id: explorerId, verdict: verdict }); }
+      catch (e) { console.warn("LOP sync: voteDossier", e); }
+    },
+    async getDossierConsensus(dossierId) {
+      if (!client || !dossierId) return null;
+      try { const r = await client.from("ai_dossier_consensus").select("*").eq("dossier_id", dossierId).limit(1); return (r.data && r.data[0]) || null; }
       catch (e) { return null; }
     }
   };
