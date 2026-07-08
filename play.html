@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>Play · The Search — Life On Other Planets?</title>
+<link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+<meta name="description" content="Explore a real map of nearby stars, scan real NASA telescope data, and discover real worlds. The premium way to hunt for life beyond Earth.">
+<meta property="og:title" content="Play · The Search — Life On Other Planets?">
+<meta property="og:description" content="Explore real stars, scan real NASA data, discover real worlds. A game where the science is real.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://lifeonotherplanets.space/play.html">
+<meta property="og:image" content="https://lifeonotherplanets.space/assets/app-icon.svg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Space+Grotesk:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script src="lop-sync.js"></script>
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none; }
+  html,body{ height:100%; background:#03040c; overflow:hidden; font-family:"Hanken Grotesk",-apple-system,system-ui,sans-serif; color:#fff; }
+  #app{ position:fixed; inset:0; touch-action:none; }
+  canvas#sky{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+  .sg{ font-family:"Space Grotesk",sans-serif; }
+  .glass{ background:rgba(20,28,46,.55); backdrop-filter:blur(18px) saturate(1.4); -webkit-backdrop-filter:blur(18px) saturate(1.4);
+          border:1px solid rgba(255,255,255,.12); box-shadow:0 8px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.14); }
+
+  /* HUD */
+  .hud{ position:absolute; top:0; left:0; right:0; z-index:3; display:flex; align-items:center; gap:10px;
+        padding:calc(env(safe-area-inset-top) + 12px) 14px 0; }
+  .brand{ border-radius:16px; padding:9px 13px; font-weight:800; font-size:14.5px; letter-spacing:-.01em; display:flex; align-items:center; gap:8px; text-decoration:none; color:#fff; }
+  .brand .lg{ width:15px; height:15px; border-radius:50%; background:radial-gradient(circle at 32% 30%,#bff0d8,#5DCAA5 55%,#12604a); box-shadow:0 0 12px #5DCAA5; }
+  .brand .q{ color:#f5c977; }
+  .spacer{ margin-left:auto; }
+  .counter{ border-radius:16px; padding:8px 13px; display:flex; align-items:center; gap:9px; }
+  .ring{ position:relative; width:26px; height:26px; }
+  .ring svg{ transform:rotate(-90deg); } .ring b{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800; }
+  .counter .lab{ font-size:11px; color:#c7d2ea; font-weight:700; line-height:1.15; } .counter .lab b{ color:#fff; font-size:13px; }
+  .iconbtn{ border-radius:14px; width:42px; height:42px; display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer; }
+
+  .hint{ position:absolute; left:0; right:0; bottom:96px; text-align:center; font-size:14.5px; color:#aeb9d6; z-index:2; pointer-events:none;
+         text-shadow:0 2px 10px rgba(0,0,0,.6); transition:opacity .5s; padding:0 30px; font-weight:600; }
+  .synced{ position:absolute; left:0; right:0; bottom:70px; text-align:center; font-size:11px; color:#5f6e92; z-index:2; pointer-events:none; }
+
+  /* selected-system tooltip pill */
+  .seltip{ position:absolute; z-index:3; transform:translate(-50%,-140%); pointer-events:none; opacity:0; transition:opacity .2s; white-space:nowrap;
+           border-radius:12px; padding:7px 12px; font-size:12.5px; font-weight:700; }
+  .seltip.show{ opacity:1; }
+  .seltip .d{ color:#9fb0d0; font-weight:600; font-size:11px; }
+
+  /* SCAN overlay */
+  .scan{ position:absolute; inset:0; z-index:6; display:none; flex-direction:column; background:rgba(3,4,12,.78); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+         padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 14px); }
+  .scan.show{ display:flex; animation:fade .3s ease; }
+  @keyframes fade{ from{opacity:0} to{opacity:1} }
+  .scan .top{ display:flex; align-items:center; gap:10px; }
+  .scan .close{ border-radius:12px; width:38px; height:38px; display:flex; align-items:center; justify-content:center; font-size:16px; cursor:pointer; }
+  .scan .title{ font-weight:800; font-size:16px; } .scan .title small{ display:block; color:#9fb0d0; font-weight:600; font-size:12px; }
+  .scan .prog{ margin-left:auto; text-align:right; font-size:12px; color:#c7d2ea; font-weight:700; }
+  .scan .dots{ display:flex; gap:5px; margin-top:4px; justify-content:flex-end; }
+  .scan .dots i{ width:18px; height:5px; border-radius:3px; background:rgba(255,255,255,.16); } .scan .dots i.on{ background:#5DCAA5; }
+  .scancard{ margin:auto; width:100%; max-width:440px; border-radius:24px; padding:18px; }
+  .tag{ display:inline-flex; align-items:center; gap:6px; font-size:10.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:#5DCAA5; background:rgba(93,202,165,.12); border:1px solid rgba(93,202,165,.3); border-radius:999px; padding:4px 10px; }
+  canvas#lc{ width:100%; height:170px; display:block; border-radius:16px; background:linear-gradient(180deg,#0a1120,#070c17); margin:12px 0 4px; border:1px solid rgba(255,255,255,.06); }
+  .axhint{ display:flex; justify-content:space-between; font-size:10.5px; color:#5f6e92; }
+  .qz{ font-size:16.5px; font-weight:800; margin:12px 0 3px; letter-spacing:-.01em; }
+  .swipe{ font-size:12px; color:#6f7ea3; margin-bottom:10px; }
+  .vbtns{ display:flex; gap:9px; }
+  .vbtns button{ flex:1; font:800 15px "Space Grotesk"; padding:15px 6px; border-radius:16px; border:none; color:#fff; cursor:pointer; box-shadow:inset 0 1px 0 rgba(255,255,255,.14); transition:transform .1s; }
+  .vbtns button:active{ transform:scale(.96); }
+  .vbtns .y{ background:linear-gradient(180deg,#2f8f6d,#1c6b50); } .vbtns .n{ background:linear-gradient(180deg,#a35540,#7a3b2c); } .vbtns .u{ background:linear-gradient(180deg,#8a6a2a,#6b511f); }
+  .vfeed{ min-height:52px; margin-top:12px; border-radius:14px; padding:0; overflow:hidden; }
+  .vfeed.show{ padding:11px 13px; } .vfeed.ok{ background:rgba(93,202,165,.12); border:1px solid rgba(93,202,165,.32); } .vfeed.no{ background:rgba(201,107,74,.12); border:1px solid rgba(201,107,74,.3); }
+  .vfeed .h{ font-weight:800; font-size:14px; } .vfeed .p{ font-size:12.5px; color:#c7d2ea; margin-top:3px; line-height:1.5; }
+  .vfeed .src{ font-size:10.5px; color:#5DCAA5; margin-top:6px; font-weight:700; }
+  .nextb{ margin-top:11px; width:100%; padding:14px; border:none; border-radius:15px; font:800 15px "Space Grotesk"; color:#05231b; cursor:pointer; background:linear-gradient(180deg,#7fe6bd,#5DCAA5); box-shadow:0 8px 24px rgba(93,202,165,.34); }
+  .nextb:active{ transform:scale(.98); }
+
+  /* reward sheet */
+  .sheet{ position:absolute; left:12px; right:12px; bottom:0; z-index:7; transform:translateY(135%); transition:transform .55s cubic-bezier(.16,1,.3,1);
+          margin-bottom:calc(env(safe-area-inset-bottom) + 14px); padding:20px; border-radius:28px; text-align:center; overflow:hidden;
+          background:linear-gradient(180deg,rgba(30,40,66,.85),rgba(12,18,34,.92)); backdrop-filter:blur(26px) saturate(1.5); -webkit-backdrop-filter:blur(26px) saturate(1.5);
+          border:1px solid rgba(255,255,255,.16); box-shadow:0 -10px 60px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.2); }
+  .sheet.show{ transform:translateY(0); }
+  .sheet .shine{ position:absolute; top:0; left:-60%; width:50%; height:100%; transform:skewX(-20deg); background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent); }
+  .sheet.show .shine{ animation:shine 1.1s ease .25s 1; } @keyframes shine{ to{ left:120%; } }
+  .sheet .eb{ font-size:11px; font-weight:800; letter-spacing:.18em; text-transform:uppercase; color:#5DCAA5; }
+  .sheet .worlds{ display:flex; gap:8px; justify-content:center; margin:8px 0 2px; flex-wrap:wrap; }
+  .sheet .worlds canvas{ filter:drop-shadow(0 8px 22px rgba(93,202,165,.32)); }
+  .sheet h2{ font-size:22px; font-weight:800; letter-spacing:-.02em; margin-top:2px; }
+  .sheet .type{ font-size:13px; color:#c7d2ea; margin-top:2px; font-weight:600; }
+  .sheet .stats{ display:flex; gap:8px; margin:15px 0 2px; }
+  .sheet .stat{ flex:1; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.09); border-radius:14px; padding:9px 6px; }
+  .sheet .stat .k{ font-size:9px; letter-spacing:.05em; text-transform:uppercase; color:#8fa0c4; font-weight:800; }
+  .sheet .stat .v{ font-size:14px; font-weight:800; margin-top:2px; }
+  .sheet .row{ display:flex; gap:9px; margin-top:16px; }
+  .sheet .go{ flex:1; padding:15px; border:none; border-radius:16px; font:800 15px "Space Grotesk"; color:#05231b; cursor:pointer; background:linear-gradient(180deg,#7fe6bd,#5DCAA5); box-shadow:0 8px 24px rgba(93,202,165,.4), inset 0 1px 0 rgba(255,255,255,.5); }
+  .sheet .name2{ flex:none; padding:15px 16px; border:none; border-radius:16px; font:800 15px "Space Grotesk"; color:#fff; cursor:pointer; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); }
+  .sheet .go:active,.sheet .name2:active{ transform:scale(.97); }
+
+  /* atlas panel */
+  .atlas{ position:absolute; inset:0; z-index:8; display:none; flex-direction:column; background:rgba(3,4,12,.86); backdrop-filter:blur(12px);
+          padding:calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px); }
+  .atlas.show{ display:flex; animation:fade .3s ease; }
+  .atlas .ah{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  .atlas h2{ font-family:"Fredoka"; font-weight:600; font-size:22px; } .atlas h2 span{ color:#5DCAA5; }
+  .atlas .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(94px,1fr)); gap:12px; overflow-y:auto; padding-bottom:20px; }
+  .acard{ background:rgba(20,28,46,.5); border:1px solid rgba(255,255,255,.1); border-radius:18px; padding:10px; text-align:center; }
+  .acard canvas{ width:70px; height:70px; }
+  .acard .an{ font-size:11.5px; font-weight:700; margin-top:4px; line-height:1.2; }
+  .acard .ad{ font-size:10px; color:#8fa0c4; margin-top:1px; }
+  .acard.empty{ display:flex; align-items:center; justify-content:center; color:#5f6e92; font-size:11px; border-style:dashed; min-height:104px; }
+  .atlas .empty-msg{ color:#9fb0d0; text-align:center; margin-top:40px; font-size:15px; line-height:1.6; }
+
+  .win{ position:absolute; inset:0; z-index:9; display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px; background:rgba(3,4,12,.72); backdrop-filter:blur(6px); }
+  .win.show{ display:flex; } .win h1{ font-family:"Fredoka"; font-size:30px; font-weight:600; } .win p{ color:#c7d2ea; margin-top:10px; max-width:320px; line-height:1.55; }
+  .win button{ margin-top:22px; padding:15px 30px; border:none; border-radius:16px; font:800 16px "Space Grotesk"; color:#05231b; background:linear-gradient(180deg,#7fe6bd,#5DCAA5); cursor:pointer; }
+  a.textlink{ color:#7fb2ff; text-decoration:none; }
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="sky"></canvas>
+
+  <div class="hud">
+    <a class="glass brand" href="index.html"><span class="lg"></span>The Search<span class="q">?</span></a>
+    <div class="spacer"></div>
+    <div class="glass counter"><div class="ring"><svg width="26" height="26"><circle cx="13" cy="13" r="10" stroke="rgba(255,255,255,.14)" stroke-width="3" fill="none"/><circle id="ringp" cx="13" cy="13" r="10" stroke="#5DCAA5" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="62.8" stroke-dashoffset="62.8"/></svg><b id="rn">0</b></div><div class="lab">charted<br><b><span id="n">0</span>/<span id="tot">0</span></b></div></div>
+    <div class="glass iconbtn" id="atlasBtn" title="My Atlas">✦</div>
+  </div>
+
+  <div class="hint" id="hint">Tap a glowing star to scan it</div>
+  <div class="synced" id="synced"></div>
+  <div class="glass seltip" id="seltip"></div>
+
+  <!-- SCAN -->
+  <div class="scan" id="scan">
+    <div class="top">
+      <div class="glass close" id="scanClose">✕</div>
+      <div class="title sg" id="scanTitle">Scanning…<small id="scanSub">real NASA telescope data</small></div>
+      <div class="prog"><span id="scanProg">0 / 3</span><div class="dots" id="scanDots"><i></i><i></i><i></i></div></div>
+    </div>
+    <div class="glass scancard">
+      <span class="tag" id="lcTag">● Real TESS data</span>
+      <canvas id="lc"></canvas>
+      <div class="axhint"><span>time →</span><span>← brightness</span></div>
+      <div class="qz">Real planet, or a false alarm?</div>
+      <div class="swipe" id="swipe">Tap — or swipe → planet · ← not · ↑ unsure</div>
+      <div class="vbtns"><button class="y" data-a="planet">🪐 Planet</button><button class="n" data-a="not">🚫 Not</button><button class="u" data-a="unsure">🤔 Unsure</button></div>
+      <div class="vfeed" id="vfeed"></div>
+    </div>
+  </div>
+
+  <!-- reward sheet -->
+  <div class="sheet" id="sheet">
+    <div class="shine"></div>
+    <div class="eb" id="shEb">System charted</div>
+    <div class="worlds" id="shWorlds"></div>
+    <h2 id="shName">—</h2>
+    <div class="type" id="shType">—</div>
+    <div class="stats">
+      <div class="stat"><div class="k">Distance</div><div class="v" id="shDist">—</div></div>
+      <div class="stat"><div class="k">Worlds</div><div class="v" id="shCount">—</div></div>
+      <div class="stat"><div class="k">Your accuracy</div><div class="v" id="shAcc">—</div></div>
+    </div>
+    <div class="row"><button class="go" id="shGo">Add to my Atlas ✦</button><button class="name2" id="shName2">Name ✎</button></div>
+  </div>
+
+  <!-- atlas -->
+  <div class="atlas" id="atlas">
+    <div class="ah"><div class="glass close" id="atlasClose">✕</div><h2>My <span>Atlas</span></h2><div class="spacer sg" style="color:#9fb0d0;font-size:13px;font-weight:700;" id="atlasCount"></div></div>
+    <div class="grid" id="atlasGrid"></div>
+    <div class="empty-msg" id="atlasEmpty" style="display:none;">Your Atlas is empty.<br>Scan a star to discover your first world ✦</div>
+  </div>
+
+  <div class="win" id="win"><h1>🌌 The Neighborhood is charted</h1><p>You explored every nearby system and lit up your whole constellation — by doing real science on real NASA data. This is Season 1 complete.</p><button id="again">Keep exploring</button></div>
+</div>
+
+<script>
+(function(){
+  const cv=document.getElementById('sky'), ctx=cv.getContext('2d'); let W=0,H=0,DPR=1;
+  function resize(){ DPR=Math.min(window.devicePixelRatio||1,2); W=cv.clientWidth; H=cv.clientHeight; cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0); buildNebula(); layout(); }
+  window.addEventListener('resize',resize);
+  function mulberry(a){ return function(){ a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296; }; }
+  function hex(h,a){ const n=parseInt(h.slice(1),16); return 'rgba('+(n>>16&255)+','+(n>>8&255)+','+(n&255)+','+a+')'; }
+
+  // ---------- palettes + illustrated planet sprites ----------
+  const PALS={
+    ocean:{hi:'#cdefff',base:'#3aa0d6',dark:'#0c3556',glow:'#5fd0ff',rim:'#e6f7ff',detail:'#2a7fb0',label:'Ocean world'},
+    verdant:{hi:'#e3ffcf',base:'#4fbb84',dark:'#123f2c',glow:'#7fe6b0',rim:'#e9fff2',detail:'#2f8f63',label:'Temperate'},
+    rocky:{hi:'#ffe6bf',base:'#c98a4a',dark:'#5a3016',glow:'#f5b877',rim:'#ffeccf',detail:'#9c6533',label:'Rocky'},
+    ice:{hi:'#ffffff',base:'#bcd6e6',dark:'#54788f',glow:'#d4ecff',rim:'#ffffff',detail:'#9fc0d4',label:'Ice world'},
+    gas:{hi:'#ffeccb',base:'#e0a95a',dark:'#7a481d',glow:'#ffcf8a',rim:'#fff2d6',detail:'#bd7a2e',label:'Gas giant'},
+    violet:{hi:'#efdcff',base:'#a06ad0',dark:'#3a1c5a',glow:'#c79bff',rim:'#f3e6ff',detail:'#7a4aa0',label:'Exotic'}
+  };
+  const spriteCache={};
+  function planet(size,palKey,seed){
+    const key=size+palKey+seed; if(spriteCache[key])return spriteCache[key];
+    const p=PALS[palKey]||PALS.rocky, c=document.createElement('canvas'); c.width=size;c.height=size; const x=c.getContext('2d');
+    const cx=size/2,cy=size/2,r=size*0.34,rnd=mulberry(seed);
+    let g=x.createRadialGradient(cx,cy,r*0.7,cx,cy,r*1.6); g.addColorStop(0,hex(p.glow,.5)); g.addColorStop(1,hex(p.glow,0)); x.fillStyle=g; x.beginPath(); x.arc(cx,cy,r*1.6,0,6.283); x.fill();
+    const lx=cx-r*0.34,ly=cy-r*0.34;
+    g=x.createRadialGradient(lx,ly,r*0.08,cx,cy,r*1.08); g.addColorStop(0,p.hi); g.addColorStop(.45,p.base); g.addColorStop(1,p.dark); x.fillStyle=g; x.beginPath(); x.arc(cx,cy,r,0,6.283); x.fill();
+    x.save(); x.beginPath(); x.arc(cx,cy,r,0,6.283); x.clip();
+    if(palKey==='gas'){ for(let i=0;i<7;i++){ const yy=cy-r+(i+.5)*(2*r/7); x.globalAlpha=.10+rnd()*.14; x.fillStyle=i%2?p.detail:p.hi; x.fillRect(cx-r,yy-r*0.08,2*r,r*0.16+rnd()*r*0.1);} }
+    else { for(let i=0;i<9;i++){ x.globalAlpha=.10+rnd()*.16; x.fillStyle=rnd()<.5?p.detail:p.dark; const bx=cx+(rnd()*2-1)*r*.7,by=cy+(rnd()*2-1)*r*.7,br=r*(.14+rnd()*.32); x.beginPath(); x.ellipse(bx,by,br,br*(.5+rnd()*.5),rnd()*3,0,6.283); x.fill(); } }
+    x.globalAlpha=1;
+    g=x.createRadialGradient(cx+r*0.55,cy+r*0.55,r*0.15,cx+r*0.15,cy+r*0.2,r*1.35); g.addColorStop(0,'rgba(2,3,12,0)'); g.addColorStop(1,'rgba(2,3,12,.72)'); x.fillStyle=g; x.fillRect(cx-r,cy-r,2*r,2*r);
+    x.restore();
+    x.globalAlpha=.75; x.strokeStyle=p.rim; x.lineWidth=size*0.014; x.beginPath(); x.arc(cx,cy,r*0.985,Math.PI*0.86,Math.PI*1.72); x.stroke();
+    x.globalAlpha=.5; g=x.createRadialGradient(lx,ly,0,lx,ly,r*0.5); g.addColorStop(0,'rgba(255,255,255,.85)'); g.addColorStop(1,'rgba(255,255,255,0)'); x.fillStyle=g; x.beginPath(); x.arc(lx,ly,r*0.5,0,6.283); x.fill(); x.globalAlpha=1;
+    spriteCache[key]=c; return c;
+  }
+
+  // ---------- real systems (curated) ----------
+  const SYSTEMS=[
+    {h:"Proxima Centauri",d:4.2,seed:11,pl:[{n:"Proxima Cen b",p:"rocky",t:"the nearest exoplanet to Earth"},{n:"Proxima Cen d",p:"rocky",t:"a small, hot inner world"}]},
+    {h:"Barnard's Star",d:6.0,seed:12,pl:[{n:"Barnard b",p:"rocky",t:"a sub-Earth on a 3-day orbit"}]},
+    {h:"Ross 128",d:11.0,seed:13,pl:[{n:"Ross 128 b",p:"rocky",t:"a temperate world at a quiet star"}]},
+    {h:"Teegarden's Star",d:12.5,seed:14,pl:[{n:"Teegarden b",p:"ocean",t:"among the most Earth-like known"},{n:"Teegarden c",p:"ice",t:"a cooler outer sibling"}]},
+    {h:"GJ 1002",d:15.8,seed:15,pl:[{n:"GJ 1002 b",p:"verdant",t:"a temperate rocky planet"},{n:"GJ 1002 c",p:"ice",t:"just past the habitable edge"}]},
+    {h:"GJ 667 C",d:23.6,seed:16,pl:[{n:"GJ 667 C c",p:"verdant",t:"a strong habitable-zone super-Earth"},{n:"GJ 667 C f",p:"ice",t:"a cooler companion"}]},
+    {h:"Wolf 1069",d:31.2,seed:17,pl:[{n:"Wolf 1069 b",p:"verdant",t:"an Earth-mass temperate world"}]},
+    {h:"Gliese 12",d:39.7,seed:18,pl:[{n:"Gliese 12 b",p:"rocky",t:"Earth-size and temperate"}]},
+    {h:"TRAPPIST-1",d:40.5,seed:19,pl:[{n:"TRAPPIST-1 e",p:"verdant",t:"the jewel of the seven-planet system"},{n:"TRAPPIST-1 f",p:"ice",t:"a water-world candidate"},{n:"TRAPPIST-1 d",p:"rocky",t:"a warm inner world"}]},
+    {h:"LHS 1140",d:48.9,seed:20,pl:[{n:"LHS 1140 b",p:"ocean",t:"a top JWST atmosphere target"}]},
+    {h:"Pi Mensae",d:59.6,seed:21,pl:[{n:"Pi Mensae c",p:"gas",t:"TESS's very first discovery"}]},
+    {h:"TOI-700",d:101.5,seed:22,pl:[{n:"TOI-700 d",p:"verdant",t:"habitable-zone Earth-size world"},{n:"TOI-700 e",p:"rocky",t:"a rocky inner neighbor"}]},
+    {h:"LP 890-9",d:105.0,seed:23,pl:[{n:"LP 890-9 c",p:"verdant",t:"a temperate super-Earth"}]},
+    {h:"K2-18",d:124.0,seed:24,pl:[{n:"K2-18 b",p:"ocean",t:"a possible Hycean ocean world"}]},
+    {h:"Kepler-442",d:1206.0,seed:25,pl:[{n:"Kepler-442 b",p:"ice",t:"one of the most promising super-Earths"}]}
+  ];
+  document.getElementById('tot').textContent=SYSTEMS.length;
+
+  // ---------- state (compatible with game.html / vet.html) ----------
+  const KEY="loop_search_state_v2";
+  function load(){ try{ return Object.assign({explorer:"",avatar:"astronaut",charted:{},claims:{},names:{}}, JSON.parse(localStorage.getItem(KEY))||{}); }catch(e){ return {explorer:"",avatar:"astronaut",charted:{},claims:{},names:{}}; } }
+  function save(){ localStorage.setItem(KEY,JSON.stringify(state)); }
+  let state=load(); state.charted=state.charted||{}; state.names=state.names||{};
+  const R={done:0,correct:0}; // session accuracy
+
+  // ---------- layout systems by distance ----------
+  const rndPos=mulberry(4242);
+  function layout(){ const cx=W/2, cy=H*0.5, rmin=Math.min(W,H); const lmin=Math.log(4), lmax=Math.log(1250);
+    SYSTEMS.forEach((s,i)=>{ const ang=(i/SYSTEMS.length)*6.283 + (s._a||(s._a=rndPos()*0.9)); const rn=0.12+0.34*((Math.log(s.d)-lmin)/(lmax-lmin));
+      s.x=cx+Math.cos(ang)*rn*rmin*0.92; s.y=cy+Math.sin(ang)*rn*rmin*0.86; });
+    SYSTEMS.forEach((s,i)=>{ if(s._lk)return; s._lk=SYSTEMS.map((o,j)=>({j,dd:(o.x-s.x)**2+(o.y-s.y)**2})).filter(o=>o.j!==i).sort((a,b)=>a.dd-b.dd).slice(0,2).map(o=>o.j); });
+  }
+
+  // ---------- nebula ----------
+  let neb=document.createElement('canvas'); const bgStars=[];
+  function buildNebula(){ neb.width=W*DPR; neb.height=H*DPR; const x=neb.getContext('2d'); x.setTransform(DPR,0,0,DPR,0,0);
+    x.fillStyle='#03040c'; x.fillRect(0,0,W,H);
+    [['rgba(93,202,165,.15)',.28,.30,.6],['rgba(127,178,255,.14)',.72,.60,.62],['rgba(160,106,208,.11)',.4,.8,.5],['rgba(245,201,119,.05)',.85,.2,.4]]
+      .forEach(c=>{ const g=x.createRadialGradient(c[1]*W,c[2]*H,0,c[1]*W,c[2]*H,Math.max(W,H)*c[3]); g.addColorStop(0,c[0]); g.addColorStop(1,'rgba(0,0,0,0)'); x.fillStyle=g; x.fillRect(0,0,W,H); });
+    bgStars.length=0; const r2=mulberry(999);
+    for(let i=0;i<220;i++){ const bx=r2()*W,by=r2()*H,br=r2()*1.4+.2,a=r2()*.7+.15; x.globalAlpha=a; x.fillStyle=r2()<.15?'#bfe9ff':'#fff'; x.beginPath(); x.arc(bx,by,br,0,6.28); x.fill(); if(r2()<.12)bgStars.push({x:bx,y:by,r:br+.3,t:r2()*6.28,s:.5+r2()}); }
+    x.globalAlpha=1;
+  }
+  resize();
+
+  // ---------- audio ----------
+  let AC=null; function audio(){ if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}} if(AC&&AC.state==='suspended')AC.resume(); return AC; }
+  function tone(f,d,ty,v,slide){ const a=audio(); if(!a)return; const o=a.createOscillator(),g=a.createGain(); o.type=ty||'sine'; o.frequency.value=f; if(slide)o.frequency.exponentialRampToValueAtTime(slide,a.currentTime+d); g.gain.value=0; g.gain.linearRampToValueAtTime(v||.12,a.currentTime+.02); g.gain.exponentialRampToValueAtTime(.001,a.currentTime+d); o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime+d+.02); }
+  function chord(b){ [0,4,7,12,16].forEach((s,i)=>setTimeout(()=>tone(b*Math.pow(2,s/12),.6,'triangle',.10),i*60)); }
+
+  const parts=[]; let t=0, shake=0, sel=null, over=false;
+  function burst(x,y,color,n,glow){ for(let i=0;i<n;i++){ const a=Math.random()*6.28,sp=1+Math.random()*4.5; parts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,color,size:1.2+Math.random()*2.6,glow}); } }
+  function chartedCount(){ return SYSTEMS.filter(s=>state.charted[s.h]).length; }
+  function updateHUD(){ const c=chartedCount(); document.getElementById('n').textContent=c; document.getElementById('rn').textContent=c; document.getElementById('ringp').style.strokeDashoffset=62.8*(1-c/SYSTEMS.length); }
+
+  // ---------- map interaction ----------
+  cv.addEventListener('pointerdown',e=>{ audio(); if(over)return; const r=cv.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
+    let best=null,bd=1e9; SYSTEMS.forEach(s=>{ const dx=s.x-mx,dy=s.y-my,d=dx*dx+dy*dy; if(d<bd){bd=d;best=s;} });
+    if(best&&bd<44*44){ if(state.charted[best.h]){ sel=best; showTip(best); openReward(best,true); } else { openScan(best); } document.getElementById('hint').style.opacity=0; }
+  },{passive:true});
+  function showTip(s){ const tip=document.getElementById('seltip'); tip.innerHTML=s.h+' <span class="d">· '+Math.round(s.d)+' ly</span>'; tip.style.left=s.x+'px'; tip.style.top=s.y+'px'; tip.classList.add('show'); setTimeout(()=>tip.classList.remove('show'),1600); }
+
+  // ---------- scan / vet flow ----------
+  let DECK=[], usingFallback=false, curSys=null, curCard=null, scanN=0, answered=false;
+  function gauss(s){ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random(); return s*Math.sqrt(-2*Math.log(u))*Math.cos(6.2831853*v); }
+  function synthCard(){ const roll=Math.random(),N=200,f=[]; for(let i=0;i<N;i++)f.push(1+gauss(.006)); let truth,kind,why;
+    if(roll<.45){truth='planet';kind='transit';why='Evenly-spaced, flat-bottomed dips — the signature of a transiting planet.'; const P=40+Math.random()*20,t0=Math.random()*P,d=.012+Math.random()*.01; for(let i=0;i<N;i++){const ph=((i-t0)%P+P)%P; if(ph<4||ph>P-4)f[i]-=d;}}
+    else if(roll<.72){truth='not';kind='eb';why='Deep V-shaped dips with a secondary — two stars eclipsing, not a planet.'; const P=64,t0=12,d1=.12,d2=.05; for(let i=0;i<N;i++){let ph=((i-t0)%P+P)%P; if(ph<5)f[i]-=d1*(1-ph/5); else if(ph>P-5)f[i]-=d1*(1-(P-ph)/5); const s=Math.abs(ph-P/2); if(s<4)f[i]-=d2*(1-s/4);}}
+    else {truth='not';kind='noise';why='Just the star’s natural flicker — no repeating dip.'; for(let i=0;i<N;i++)f[i]=1+gauss(.011);}
+    return {name:"training star",truth,kind,why,source:"Training curve",f}; }
+  function loadDeck(){ return fetch('real_curves.json',{cache:'no-store'}).then(r=>{ if(!r.ok)throw 0; return r.json(); })
+      .then(d=>{ DECK=Array.isArray(d)&&d.length?d.slice():null; if(!DECK)throw 0; }).catch(()=>{ usingFallback=true; DECK=Array.from({length:12},synthCard); }); }
+  function pickCard(){ if(!DECK||!DECK.length){ return usingFallback?synthCard():synthCard(); } return DECK[Math.floor(Math.random()*DECK.length)]; }
+
+  function openScan(sys){ curSys=sys; scanN=0; over=true;
+    document.getElementById('scanTitle').firstChild.textContent="Scanning "+sys.h;
+    document.getElementById('scanSub').textContent=Math.round(sys.d)+" light-years away · real telescope data";
+    const p=(DECK.length?Promise.resolve():loadDeck()); p.then(()=>{ document.getElementById('scan').classList.add('show'); nextCard(); });
+  }
+  function closeScan(){ document.getElementById('scan').classList.remove('show'); over=false; curSys=null; }
+  document.getElementById('scanClose').onclick=closeScan;
+  function nextCard(){ answered=false; curCard=pickCard();
+    document.getElementById('scanProg').textContent=scanN+" / 3";
+    document.querySelectorAll('#scanDots i').forEach((el,i)=>el.className=i<scanN?'on':'');
+    document.getElementById('lcTag').innerHTML = curCard.source&&curCard.source.indexOf('Real')===0 ? '● Real TESS data' : '● Training curve';
+    const vf=document.getElementById('vfeed'); vf.className='vfeed'; vf.innerHTML='';
+    document.querySelectorAll('.vbtns button').forEach(b=>b.disabled=false);
+    drawLC(curCard.f);
+  }
+  const lc=document.getElementById('lc'), lctx=lc.getContext('2d');
+  function drawLC(f){ const dpr=Math.min(window.devicePixelRatio||1,2), Wc=lc.clientWidth, Hc=170; lc.width=Wc*dpr; lc.height=Hc*dpr; lctx.setTransform(dpr,0,0,dpr,0,0); lctx.clearRect(0,0,Wc,Hc);
+    const pad=16, mn=Math.min.apply(null,f), mx=Math.max.apply(null,f), sp=(mx-mn)||1;
+    lctx.strokeStyle='rgba(127,178,255,.08)'; lctx.lineWidth=1; for(let g=0;g<=4;g++){ const y=pad+g/4*(Hc-2*pad); lctx.beginPath(); lctx.moveTo(pad,y); lctx.lineTo(Wc-pad,y); lctx.stroke(); }
+    lctx.fillStyle='#8fd0ff'; lctx.shadowBlur=6; lctx.shadowColor='#5fd0ff';
+    for(let i=0;i<f.length;i++){ const x=pad+i/(f.length-1)*(Wc-2*pad), y=pad+(1-(f[i]-mn)/sp)*(Hc-2*pad); lctx.beginPath(); lctx.arc(x,y,1.5,0,6.28); lctx.fill(); } lctx.shadowBlur=0; }
+  function answer(a){ if(answered||!curCard)return; answered=true; audio(); document.querySelectorAll('.vbtns button').forEach(b=>b.disabled=true);
+    const truth=curCard.truth, correct=(a===truth); R.done++; if(a!=='unsure'&&correct)R.correct++;
+    const isCorrect=(a==='unsure')?null:correct;
+    if(window.LOPSync){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5').then(()=>LOPSync.logClassification(a,isCorrect)); }
+    if(correct){ tone(660,.18,'sine',.13,990); } else if(a==='unsure'){ tone(440,.15,'sine',.1); } else { tone(200,.2,'sawtooth',.09); }
+    const vf=document.getElementById('vfeed'); vf.className='vfeed show '+(correct?'ok':'no');
+    const head=a==='unsure'?'Fair call to flag it':(correct?(truth==='planet'?'🎉 Real one!':'✓ Correct'):'Not quite');
+    const isReal=curCard.source&&curCard.source.indexOf('Real')===0;
+    let tl = truth==='planet' ? (curCard.kind==='injection'?'Real planet (faint injected transit)':(isReal?'Real confirmed planet':'A planet transit')) : (curCard.kind==='eb'?'Not a planet — eclipsing binary':'Not a planet — quiet star');
+    vf.innerHTML='<div class="h">'+head+'</div><div class="p"><b>'+tl+'.</b> '+curCard.why+'</div>'+(isReal?'<div class="src">📡 '+curCard.source+(curCard.name?' · '+curCard.name:'')+'</div>':'')+'<button class="nextb" id="nb">'+(scanN>=2?'Chart '+curSys.h+' →':'Next curve →')+'</button>';
+    document.getElementById('nb').onclick=()=>{ scanN++; if(scanN>=3){ const sysDone=curSys; closeScan(); chartSystem(sysDone); } else { nextCard(); } };
+  }
+  document.querySelectorAll('.vbtns button').forEach(b=>b.addEventListener('click',()=>answer(b.dataset.a)));
+  // swipe on scan card
+  let sx=0,sy=0,sw=false; const sc=document.querySelector('.scancard');
+  if(sc){ sc.addEventListener('touchstart',e=>{ if(answered)return; const t0=e.changedTouches[0]; sx=t0.clientX; sy=t0.clientY; sw=true; },{passive:true});
+    sc.addEventListener('touchend',e=>{ if(!sw||answered)return; sw=false; const t0=e.changedTouches[0],dx=t0.clientX-sx,dy=t0.clientY-sy; if(Math.abs(dx)>44&&Math.abs(dx)>Math.abs(dy))answer(dx>0?'planet':'not'); else if(dy<-44)answer('unsure'); },{passive:true}); }
+
+  // ---------- chart + reward ----------
+  function chartSystem(sys){ if(!state.charted[sys.h]){ state.charted[sys.h]=true; save(); if(window.LOPSync){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5').then(()=>LOPSync.logClaim(sys.h,'#5DCAA5')); } }
+    sys._grow=.0001; shake=8; burst(sys.x,sys.y,'#5DCAA5',40,true); chord(392); updateHUD();
+    setTimeout(()=>openReward(sys,false),520);
+  }
+  function openReward(sys,revisit){ over=true; curSys=sys;
+    document.getElementById('shEb').textContent=revisit?'In your Atlas':'System charted';
+    const wrap=document.getElementById('shWorlds'); wrap.innerHTML='';
+    sys.pl.slice(0,3).forEach((pl,i)=>{ const cc=document.createElement('canvas'); const sz= sys.pl.length>2?86:110; cc.width=sz; cc.height=sz; cc.style.width=(sz*0.66)+'px'; cc.style.height=(sz*0.66)+'px'; cc.getContext('2d').drawImage(planet(sz,pl.p,sys.seed+i*7),0,0); wrap.appendChild(cc); });
+    const nm=state.names[sys.pl[0].n];
+    document.getElementById('shName').innerHTML = sys.pl[0].n + (nm?' <span style="color:#f5c977">“'+esc(nm)+'”</span>':'');
+    document.getElementById('shType').textContent=sys.pl[0].t;
+    document.getElementById('shDist').textContent=Math.round(sys.d)+' ly';
+    document.getElementById('shCount').textContent=sys.pl.length;
+    document.getElementById('shAcc').textContent=R.done?Math.round(R.correct/R.done*100)+'%':'—';
+    document.getElementById('sheet').classList.add('show'); tone(523,.5,'triangle',.12);
+  }
+  function closeReward(){ document.getElementById('sheet').classList.remove('show'); over=false; renderAtlas(); if(chartedCount()>=SYSTEMS.length) setTimeout(()=>document.getElementById('win').classList.add('show'),450); }
+  document.getElementById('shGo').onclick=closeReward;
+  document.getElementById('shName2').onclick=()=>{ if(!curSys)return; const which=curSys.pl[0].n; const nn=prompt('Give '+which+' an honorary nickname:',state.names[which]||''); if(nn){ const c=cleanName(nn.trim()); if(!c.ok){ alert(c.reason); return; } state.names[which]=nn.trim(); save(); if(window.LOPSync){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5').then(()=>LOPSync.logDiscovery(nn.trim(),which)); } openReward(curSys,true); } };
+  function cleanName(s){ if(!s||s.length<2)return{ok:false,reason:'Name is too short.'}; if(s.length>28)return{ok:false,reason:'Name is too long.'}; if(/(fuck|shit|bitch|cunt|nazi|damn|ass\b|sex)/i.test(s))return{ok:false,reason:'Please choose a friendly name.'}; return{ok:true}; }
+  function esc(s){ return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+  document.getElementById('again').onclick=()=>document.getElementById('win').classList.remove('show');
+
+  // ---------- atlas ----------
+  const atlasBtn=document.getElementById('atlasBtn');
+  atlasBtn.onclick=()=>{ renderAtlas(); document.getElementById('atlas').classList.add('show'); };
+  document.getElementById('atlasClose').onclick=()=>document.getElementById('atlas').classList.remove('show');
+  function renderAtlas(){ const grid=document.getElementById('atlasGrid'), charted=SYSTEMS.filter(s=>state.charted[s.h]); const worlds=[];
+    charted.forEach(s=>s.pl.forEach((pl,i)=>worlds.push({pl,s,i})));
+    document.getElementById('atlasCount').textContent=worlds.length+' world'+(worlds.length!==1?'s':'');
+    document.getElementById('atlasEmpty').style.display=worlds.length?'none':'block';
+    grid.innerHTML=worlds.map(w=>{ const nm=state.names[w.pl.n]; return '<div class="acard"><canvas width="140" height="140" data-p="'+w.pl.p+'" data-s="'+(w.s.seed+w.i*7)+'"></canvas><div class="an">'+esc(w.pl.n)+'</div><div class="ad">'+(nm?'“'+esc(nm)+'”':Math.round(w.s.d)+' ly')+'</div></div>'; }).join('');
+    grid.querySelectorAll('canvas').forEach(c=>c.getContext('2d').drawImage(planet(140,c.dataset.p,+c.dataset.s),0,0));
+  }
+
+  // ---------- render loop ----------
+  function frame(){ t+=1/60; ctx.setTransform(DPR,0,0,DPR,0,0); let sxx=0,syy=0; if(shake>0){ sxx=(Math.random()-.5)*shake; syy=(Math.random()-.5)*shake; shake*=.85; if(shake<.4)shake=0; }
+    ctx.clearRect(0,0,W,H); ctx.drawImage(neb,0,0,W,H); ctx.save(); ctx.translate(sxx,syy);
+    bgStars.forEach(b=>{ const a=.4+.6*Math.sin(t*b.s+b.t); ctx.globalAlpha=a; ctx.fillStyle='#fff'; ctx.shadowBlur=6; ctx.shadowColor='#cfe0ff'; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,6.28); ctx.fill(); }); ctx.shadowBlur=0; ctx.globalAlpha=1;
+    // links between charted
+    ctx.lineWidth=1.6; SYSTEMS.forEach(s=>{ if(!state.charted[s.h])return; s._lk.forEach(j=>{ const o=SYSTEMS[j]; if(!state.charted[o.h])return; const g=ctx.createLinearGradient(s.x,s.y,o.x,o.y); g.addColorStop(0,'#5DCAA5'); g.addColorStop(1,'#7fb2ff'); ctx.strokeStyle=g; ctx.globalAlpha=.32; ctx.beginPath(); ctx.moveTo(s.x,s.y); ctx.lineTo(o.x,o.y); ctx.stroke(); }); }); ctx.globalAlpha=1;
+    SYSTEMS.forEach(s=>{ const charted=state.charted[s.h];
+      if(charted){ let scv=1; if(s._grow>0){ s._grow=Math.min(1,s._grow+.05); scv=1-Math.pow(1-s._grow,3); } const sz=54*scv; ctx.drawImage(planet(120,s.pl[0].p,s.seed),0,0,120,120,s.x-sz/2,s.y-sz/2,sz,sz);
+        if(s.pl.length>1){ ctx.fillStyle='rgba(255,255,255,.85)'; ctx.font='700 9px "Space Grotesk"'; }
+      } else { const pp=.5+.5*Math.sin(t*1.6+s.seed); ctx.fillStyle='#eaf2ff'; ctx.shadowBlur=10+pp*10; ctx.shadowColor='#9fc0ff'; ctx.beginPath(); ctx.arc(s.x,s.y,2.4+pp*1,0,6.28); ctx.fill(); ctx.shadowBlur=0;
+        ctx.globalAlpha=.3+pp*.3; ctx.strokeStyle='#cfe0ff'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(s.x-7-pp*4,s.y); ctx.lineTo(s.x+7+pp*4,s.y); ctx.moveTo(s.x,s.y-7-pp*4); ctx.lineTo(s.x,s.y+7+pp*4); ctx.stroke(); ctx.globalAlpha=1; }
+    });
+    for(let i=parts.length-1;i>=0;i--){ const p=parts[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=.03; p.vx*=.98; p.life-=.018; if(p.life<=0){parts.splice(i,1);continue;} ctx.globalAlpha=p.life; ctx.fillStyle=p.color; if(p.glow){ctx.shadowBlur=10;ctx.shadowColor=p.color;} ctx.beginPath(); ctx.arc(p.x,p.y,p.size*p.life,0,6.28); ctx.fill(); ctx.shadowBlur=0; }
+    ctx.globalAlpha=1; ctx.restore(); requestAnimationFrame(frame);
+  }
+
+  // ---------- boot ----------
+  const syncEl=document.getElementById('synced');
+  if(window.LOPSync&&LOPSync.enabled){ syncEl.textContent='Cloud sync on · your discoveries are saved'; LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5'); }
+  else { syncEl.textContent='Saving to this device'; }
+  updateHUD(); renderAtlas(); loadDeck(); frame();
+})();
+</script>
+</body>
+</html>
