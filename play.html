@@ -51,9 +51,11 @@
   .seltip .d{ color:#9fb0d0; font-weight:600; font-size:11px; }
 
   /* SCAN overlay */
-  .scan{ position:absolute; inset:0; z-index:6; display:none; flex-direction:column; background:rgba(3,4,12,.78); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
-         padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 14px); }
-  .scan.show{ display:flex; animation:fade .3s ease; }
+  .scan{ position:absolute; inset:0; z-index:6; display:flex; flex-direction:column; background:rgba(3,4,12,.78); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+         padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 14px); opacity:0; visibility:hidden; pointer-events:none; transition:opacity .28s ease, visibility .28s; }
+  .scan.show{ opacity:1; visibility:visible; pointer-events:auto; }
+  .scan .scancard{ transition:transform .42s cubic-bezier(.16,1,.3,1), opacity .3s ease; transform:translateY(20px); opacity:0; }
+  .scan.show .scancard{ transform:none; opacity:1; }
   @keyframes fade{ from{opacity:0} to{opacity:1} }
   .scan .top{ display:flex; align-items:center; gap:10px; }
   .scan .close{ border-radius:12px; width:38px; height:38px; display:flex; align-items:center; justify-content:center; font-size:16px; cursor:pointer; }
@@ -102,9 +104,11 @@
   .sheet .go:active,.sheet .name2:active{ transform:scale(.97); }
 
   /* atlas panel */
-  .atlas{ position:absolute; inset:0; z-index:8; display:none; flex-direction:column; background:rgba(3,4,12,.86); backdrop-filter:blur(12px);
-          padding:calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px); }
-  .atlas.show{ display:flex; animation:fade .3s ease; }
+  .atlas{ position:absolute; inset:0; z-index:8; display:flex; flex-direction:column; background:rgba(3,4,12,.86); backdrop-filter:blur(12px);
+          padding:calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px); opacity:0; visibility:hidden; pointer-events:none; transition:opacity .28s ease, visibility .28s; }
+  .atlas.show{ opacity:1; visibility:visible; pointer-events:auto; }
+  .atlas .atlas-scroll{ transition:transform .42s cubic-bezier(.16,1,.3,1), opacity .3s ease; transform:translateY(18px); opacity:0; }
+  .atlas.show .atlas-scroll{ transform:none; opacity:1; }
   .atlas .ah{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
   .atlas h2{ font-family:"Fredoka"; font-weight:600; font-size:22px; } .atlas h2 span{ color:#5DCAA5; }
   .atlas .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(94px,1fr)); gap:12px; overflow-y:auto; padding-bottom:20px; }
@@ -115,8 +119,8 @@
   .acard.empty{ display:flex; align-items:center; justify-content:center; color:#5f6e92; font-size:11px; border-style:dashed; min-height:104px; }
   .atlas .empty-msg{ color:#9fb0d0; text-align:center; margin-top:40px; font-size:15px; line-height:1.6; }
 
-  .win{ position:absolute; inset:0; z-index:9; display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px; background:rgba(3,4,12,.72); backdrop-filter:blur(6px); }
-  .win.show{ display:flex; } .win h1{ font-family:"Fredoka"; font-size:30px; font-weight:600; } .win p{ color:#c7d2ea; margin-top:10px; max-width:320px; line-height:1.55; }
+  .win{ position:absolute; inset:0; z-index:9; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px; background:rgba(3,4,12,.72); backdrop-filter:blur(6px); opacity:0; visibility:hidden; pointer-events:none; transition:opacity .35s ease, visibility .35s; }
+  .win.show{ opacity:1; visibility:visible; pointer-events:auto; } .win h1{ font-family:"Fredoka"; font-size:30px; font-weight:600; } .win p{ color:#c7d2ea; margin-top:10px; max-width:320px; line-height:1.55; }
   .win button{ margin-top:22px; padding:15px 30px; border:none; border-radius:16px; font:800 16px "Space Grotesk"; color:#05231b; background:linear-gradient(180deg,#7fe6bd,#5DCAA5); cursor:pointer; }
   a.textlink{ color:#7fb2ff; text-decoration:none; }
 
@@ -158,9 +162,11 @@
   .cons .ccredit{ margin-top:8px; font-size:12.5px; font-weight:800; color:#5DCAA5; background:rgba(93,202,165,.1); border:1px solid rgba(93,202,165,.3); border-radius:10px; padding:8px 11px; }
   /* shareable explorer card */
   .sharebtn{ padding:8px 12px; border-radius:12px; font-size:13px; font-weight:800; color:#5DCAA5; cursor:pointer; }
-  .cardmodal{ position:absolute; inset:0; z-index:15; display:none; align-items:center; justify-content:center; flex-direction:column; background:rgba(3,4,12,.9); backdrop-filter:blur(8px); padding:20px; }
-  .cardmodal.show{ display:flex; }
-  .cardmodal img{ max-width:min(92vw,400px); max-height:68vh; border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,.6); }
+  .cardmodal{ position:absolute; inset:0; z-index:15; display:flex; align-items:center; justify-content:center; flex-direction:column; background:rgba(3,4,12,.9); backdrop-filter:blur(8px); padding:20px; opacity:0; visibility:hidden; pointer-events:none; transition:opacity .28s ease, visibility .28s; }
+  .cardmodal.show{ opacity:1; visibility:visible; pointer-events:auto; }
+  .cardmodal img{ max-width:min(92vw,400px); max-height:68vh; border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,.6); transition:transform .42s cubic-bezier(.16,1,.3,1), opacity .3s ease; transform:scale(.9); opacity:0; }
+  .cardmodal.show img{ transform:none; opacity:1; }
+  @media (prefers-reduced-motion: reduce){ .scan,.atlas,.win,.cardmodal,.scan .scancard,.atlas .atlas-scroll,.cardmodal img,.sheet{ transition-duration:.01ms !important; } }
   .cardbtns{ display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; justify-content:center; }
   .cbtn{ font:800 15px "Space Grotesk"; padding:13px 20px; border-radius:14px; border:none; cursor:pointer; }
   .cbtn.save{ background:#141c2e; color:#fff; border:1px solid rgba(255,255,255,.16); }
@@ -548,7 +554,7 @@
     // links between charted
     ctx.lineWidth=1.6; SYSTEMS.forEach(s=>{ if(!state.charted[s.h])return; s._lk.forEach(j=>{ const o=SYSTEMS[j]; if(!state.charted[o.h])return; const g=ctx.createLinearGradient(s.x,s.y,o.x,o.y); g.addColorStop(0,'#5DCAA5'); g.addColorStop(1,'#7fb2ff'); ctx.strokeStyle=g; ctx.globalAlpha=.32; ctx.beginPath(); ctx.moveTo(s.x,s.y); ctx.lineTo(o.x,o.y); ctx.stroke(); }); }); ctx.globalAlpha=1;
     SYSTEMS.forEach(s=>{ const charted=state.charted[s.h];
-      if(charted){ let scv=1; if(s._grow>0){ s._grow=Math.min(1,s._grow+.05); scv=1-Math.pow(1-s._grow,3); } const sz=54*scv; ctx.drawImage(planet(120,s.pl[0].p,s.seed),0,0,120,120,s.x-sz/2,s.y-sz/2,sz,sz);
+      if(charted){ let scv=1; if(s._grow>0){ s._grow=Math.min(1,s._grow+.05); scv=1-Math.pow(1-s._grow,3); } const sz=54*scv, bob=Math.sin(t*1.1+s.seed)*2.2; ctx.drawImage(planet(120,s.pl[0].p,s.seed),0,0,120,120,s.x-sz/2,s.y-sz/2+bob,sz,sz);
         if(s.pl.length>1){ ctx.fillStyle='rgba(255,255,255,.85)'; ctx.font='700 9px "Space Grotesk"'; }
       } else { const pp=.5+.5*Math.sin(t*1.6+s.seed); ctx.fillStyle='#eaf2ff'; ctx.shadowBlur=10+pp*10; ctx.shadowColor='#9fc0ff'; ctx.beginPath(); ctx.arc(s.x,s.y,2.4+pp*1,0,6.28); ctx.fill(); ctx.shadowBlur=0;
         ctx.globalAlpha=.3+pp*.3; ctx.strokeStyle='#cfe0ff'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(s.x-7-pp*4,s.y); ctx.lineTo(s.x+7+pp*4,s.y); ctx.moveTo(s.x,s.y-7-pp*4); ctx.lineTo(s.x,s.y+7+pp*4); ctx.stroke(); ctx.globalAlpha=1; }
