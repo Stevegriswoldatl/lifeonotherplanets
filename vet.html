@@ -234,6 +234,26 @@ function draw(f){
   for(let i=0;i<f.length;i++){ x.globalAlpha=0.85; x.beginPath(); x.arc(X(i),Y(f[i]),1.6,0,6.2832); x.fill(); }
   x.globalAlpha=1;
 }
+/* ---------- "show me why": circle the dips / X the glitches, animated ---------- */
+let _annRAF=0;
+function findDips(f){ const s=f.slice().sort((a,b)=>a-b), med=s[Math.floor(f.length/2)]; let sd=0; for(let i=0;i<f.length;i++) sd+=(f[i]-med)*(f[i]-med); sd=Math.sqrt(sd/f.length)||1e-6;
+  const thr=med-2.2*sd, hi=med+3.4*sd, regions=[], spikes=[]; let i=0;
+  while(i<f.length){ if(f[i]<thr){ let j=i,lo=i; while(j<f.length&&f[j]<thr){ if(f[j]<f[lo])lo=j; j++; } regions.push({a:i,b:j,low:lo}); i=j; } else { if(f[i]>hi) spikes.push(i); i++; } }
+  return {regions,spikes}; }
+function annotate(){
+  if(!current) return; cancelAnimationFrame(_annRAF);
+  const card=current, f=card.f, d=findDips(f), col=card.truth==="planet"?"#5DCAA5":"#e0b451";
+  const pad=26, W=c.clientWidth, H=300, fmin=Math.min.apply(null,f), fmax=Math.max.apply(null,f), span=(fmax-fmin)||1;
+  const X=i=>pad+(i/(f.length-1))*(W-2*pad), Y=v=>pad+(1-(v-fmin)/span)*(H-2*pad);
+  const t0=performance.now();
+  function step(now){ if(current!==card) return; const pr=Math.min(1,(now-t0)/520); draw(f); const x=c.getContext("2d");
+    x.globalAlpha=pr; x.lineWidth=2.4; x.strokeStyle=col;
+    d.regions.forEach(reg=>{ const r=(13+(reg.b-reg.a)*0.9)*(0.55+0.45*pr); x.beginPath(); x.arc(X(reg.low),Y(f[reg.low]),r,0,6.283); x.stroke(); });
+    x.strokeStyle="#c96b4a"; d.spikes.forEach(si=>{ const px=X(si),py=Y(f[si]),r=9; x.beginPath(); x.moveTo(px-r,py-r); x.lineTo(px+r,py+r); x.moveTo(px+r,py-r); x.lineTo(px-r,py+r); x.stroke(); });
+    x.globalAlpha=1;
+    if(pr<1) _annRAF=requestAnimationFrame(step); }
+  _annRAF=requestAnimationFrame(step);
+}
 
 /* ---------- card flow ---------- */
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
@@ -358,6 +378,7 @@ function answer(a){
   v.innerHTML=html;
   document.getElementById("nextbtn").onclick=advance;
   if(current.isReal && window.LOPSync && LOPSync.enabled && current.id){ const key=current.id, mv=a, tr=truth; LOPSync.ensureExplorer(explorerName(),"stargazer","#f5c977").then(function(){ return LOPSync.logVote(key,mv); }).then(function(){ return LOPSync.getConsensus(key); }).then(function(c){ renderCrowd(c,mv,tr); }); }
+  annotate();
 }
 function renderCrowd(c,myVote,truth){ const el=document.getElementById('crowd'); if(!el) return;
   if(!c||!c.votes){ el.innerHTML='🛰️ You’re among the first to vet this star — the crowd builds as more explorers join.'; return; }
