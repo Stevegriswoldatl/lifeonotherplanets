@@ -336,7 +336,7 @@
       <canvas id="lc"></canvas>
       <div class="axhint"><span>time →</span><span>← brightness</span></div>
       <div class="qz">Real planet, or a false alarm?</div>
-      <div class="swipe" id="swipe">Tap — or swipe → planet · ← not · ↑ unsure</div>
+      <div class="swipe" id="swipe">Tap a button — or swipe → planet · ← not</div>
       <div class="vbtns"><button class="y" data-a="planet"><i class="ico" data-i="planet"></i> Planet</button><button class="n" data-a="not"><i class="ico" data-i="notplanet"></i> Not</button><button class="u" data-a="unsure"><i class="ico" data-i="unsure"></i> Unsure</button></div>
       <div class="vfeed" id="vfeed"></div>
     </div>
@@ -355,7 +355,7 @@
       <div class="stat"><div class="k">Worlds</div><div class="v" id="shCount">—</div></div>
       <div class="stat"><div class="k">Your accuracy</div><div class="v" id="shAcc">—</div></div>
     </div>
-    <div class="row"><button class="go" id="shGo">Continue exploring →</button><button class="name2" id="shName2">Name ✎</button><button class="name2" id="shCert" title="Download certificate">🏆</button></div>
+    <div class="row"><button class="go" id="shGo">Continue exploring →</button><button class="name2" id="shName2">Name ✎</button><button class="name2" id="shCert" title="Download certificate"><i class="ico" data-i="trophy"></i></button></div>
   </div>
 
   <!-- atlas -->
@@ -939,7 +939,7 @@
   // swipe on scan card
   let sx=0,sy=0,sw=false; const sc=document.querySelector('.scancard');
   if(sc){ sc.addEventListener('touchstart',e=>{ if(answered)return; const t0=e.changedTouches[0]; sx=t0.clientX; sy=t0.clientY; sw=true; },{passive:true});
-    sc.addEventListener('touchend',e=>{ if(!sw||answered)return; sw=false; const t0=e.changedTouches[0],dx=t0.clientX-sx,dy=t0.clientY-sy; if(Math.abs(dx)>44&&Math.abs(dx)>Math.abs(dy))answer(dx>0?'planet':'not'); else if(dy<-44)answer('unsure'); },{passive:true}); }
+    sc.addEventListener('touchend',e=>{ if(!sw||answered)return; sw=false; const t0=e.changedTouches[0],dx=t0.clientX-sx,dy=t0.clientY-sy; if(Math.abs(dx)>55&&Math.abs(dy)<28)answer(dx>0?'planet':'not'); },{passive:true}); }
 
   // ---------- chart + reward ----------
   function chartSystem(sys){ if(!state.charted[sys.h]){ state.charted[sys.h]=true; save(); if(window.LOPSync){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5').then(()=>LOPSync.logClaim(sys.h,'#5DCAA5')); } }
@@ -948,7 +948,7 @@
     setTimeout(()=>openReward(sys,false),520);
   }
   function openReward(sys,revisit){ over=true; curSys=sys;
-    document.getElementById('shEb').textContent=revisit?'✦ In your Atlas':'✦ Charted & added to your Atlas';
+    document.getElementById('shEb').innerHTML=ic('atlas')+' '+(revisit?'In your Atlas':'Charted &amp; added to your Atlas');
     document.getElementById('shGo').textContent=revisit?'Done':'Continue exploring →';
     const wrap=document.getElementById('shWorlds'); wrap.innerHTML='';
     sys.pl.slice(0,3).forEach((pl,i)=>{ const cc=document.createElement('canvas'); const sz= sys.pl.length>2?86:110; cc.width=sz; cc.height=sz; cc.style.width=(sz*0.66)+'px'; cc.style.height=(sz*0.66)+'px'; cc.getContext('2d').drawImage(planet(sz,pl.p,sys.seed+i*7),0,0); wrap.appendChild(cc); });

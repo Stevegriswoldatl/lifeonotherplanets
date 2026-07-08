@@ -159,7 +159,7 @@
       <canvas id="lc"></canvas>
       <div class="axhint"><span>time →</span><span>← brightness</span></div>
       <div class="q" id="question">Is there a real planet transiting this star?</div>
-      <div class="swipehint" id="swipehint">Tap a button — or on a phone, swipe → for planet, ← for not, ↑ for unsure.</div>
+      <div class="swipehint" id="swipehint">Tap a button below — or on a phone, swipe → for planet, ← for not a planet.</div>
       <div class="btns">
         <button class="yes" data-a="planet"><i class="ico" data-i="planet"></i> Real planet</button>
         <button class="no" data-a="not"><i class="ico" data-i="notplanet"></i> Not a planet</button>
@@ -594,8 +594,8 @@ let sx=0,sy=0,swiping=false;
 const panel=document.getElementById("cardpanel");
 panel.addEventListener("touchstart",e=>{ if(answered)return; const t=e.changedTouches[0]; sx=t.clientX; sy=t.clientY; swiping=true; },{passive:true});
 panel.addEventListener("touchend",e=>{ if(!swiping||answered)return; swiping=false; const t=e.changedTouches[0], dx=t.clientX-sx, dy=t.clientY-sy;
-  if(Math.abs(dx)>44 && Math.abs(dx)>Math.abs(dy)){ answer(dx>0?"planet":"not"); }
-  else if(dy<-44 && Math.abs(dy)>Math.abs(dx)){ answer("unsure"); } },{passive:true});
+  // only a deliberate HORIZONTAL swipe answers — vertical movement is a page scroll, never an answer
+  if(Math.abs(dx)>55 && Math.abs(dy)<28){ answer(dx>0?"planet":"not"); } },{passive:true});
 
 /* ---------- boot ---------- */
 function boot(){
