@@ -162,6 +162,8 @@
   .cons .ccredit{ margin-top:8px; font-size:12.5px; font-weight:800; color:#5DCAA5; background:rgba(93,202,165,.1); border:1px solid rgba(93,202,165,.3); border-radius:10px; padding:8px 11px; }
   /* shareable explorer card */
   .sharebtn{ padding:8px 12px; border-radius:12px; font-size:13px; font-weight:800; color:#5DCAA5; cursor:pointer; }
+  .todpill{ position:absolute; left:50%; transform:translateX(-50%); bottom:130px; z-index:3; padding:8px 14px; border-radius:999px; font-size:12.5px; color:#f5c977; cursor:pointer; align-items:center; gap:5px; border:1px solid rgba(245,201,119,.28) !important; }
+  .todpill b{ color:#fff; font-weight:700; }
   .cardmodal{ position:absolute; inset:0; z-index:15; display:flex; align-items:center; justify-content:center; flex-direction:column; background:rgba(3,4,12,.9); backdrop-filter:blur(8px); padding:20px; opacity:0; visibility:hidden; pointer-events:none; transition:opacity .28s ease, visibility .28s; }
   .cardmodal.show{ opacity:1; visibility:visible; pointer-events:auto; }
   .cardmodal img{ max-width:min(92vw,400px); max-height:68vh; border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,.6); transition:transform .42s cubic-bezier(.16,1,.3,1), opacity .3s ease; transform:scale(.9); opacity:0; }
@@ -188,6 +190,7 @@
 
   <div class="hint" id="hint">Tap a glowing star to scan it</div>
   <div class="synced" id="synced"></div>
+  <div class="glass todpill" id="todPill" style="display:none;"></div>
   <div class="glass seltip" id="seltip"></div>
   <div class="funtoast" id="funtoast"></div>
 
@@ -222,7 +225,7 @@
       <div class="stat"><div class="k">Worlds</div><div class="v" id="shCount">—</div></div>
       <div class="stat"><div class="k">Your accuracy</div><div class="v" id="shAcc">—</div></div>
     </div>
-    <div class="row"><button class="go" id="shGo">Continue exploring →</button><button class="name2" id="shName2">Name ✎</button></div>
+    <div class="row"><button class="go" id="shGo">Continue exploring →</button><button class="name2" id="shName2">Name ✎</button><button class="name2" id="shCert" title="Download certificate">🏆</button></div>
   </div>
 
   <!-- atlas -->
@@ -426,7 +429,11 @@
   const parts=[]; let t=0, shake=0, sel=null, over=false;
   function burst(x,y,color,n,glow){ for(let i=0;i<n;i++){ const a=Math.random()*6.28,sp=1+Math.random()*4.5; parts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,color,size:1.2+Math.random()*2.6,glow}); } }
   function chartedCount(){ return SYSTEMS.filter(s=>state.charted[s.h]).length; }
-  function updateHUD(){ const c=chartedCount(); document.getElementById('n').textContent=c; document.getElementById('rn').textContent=c; document.getElementById('ringp').style.strokeDashoffset=62.8*(1-c/SYSTEMS.length); }
+  function updateHUD(){ const c=chartedCount(); document.getElementById('n').textContent=c; document.getElementById('rn').textContent=c; document.getElementById('ringp').style.strokeDashoffset=62.8*(1-c/SYSTEMS.length); updateTod(); }
+  // Target of the Day — a shared daily featured system, deterministic by date
+  function todayNum(){ const d=new Date(); return d.getFullYear()*10000 + (d.getMonth()+1)*100 + d.getDate(); }
+  function todaySys(){ return SYSTEMS[ todayNum() % SYSTEMS.length ]; }
+  function updateTod(){ const el=document.getElementById('todPill'); if(!el)return; const s=todaySys(); el.style.display='inline-flex'; el.innerHTML='🎯 <b>Target of the Day</b> · '+esc(s.h)+(state.charted[s.h]?' ✓':''); }
 
   // ---------- map interaction ----------
   cv.addEventListener('pointerdown',e=>{ audio(); if(over){ if(document.getElementById('sheet').classList.contains('show')) closeReward(); return; } const r=cv.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
@@ -530,7 +537,33 @@
   document.getElementById('atlasClose').onclick=()=>document.getElementById('atlas').classList.remove('show');
 
   // ---------- shareable explorer card ----------
-  let _cardCanvas=null;
+  let _cardCanvas=null; let _cardFile='the-search.png';
+  function showImageModal(cv,fname){ _cardCanvas=cv; _cardFile=fname||'the-search.png'; document.getElementById('cardImg').src=cv.toDataURL('image/png'); document.getElementById('cardModal').classList.add('show'); }
+  function makeCertificate(sys){
+    const w=1400,h=1000,c=document.createElement('canvas'); c.width=w;c.height=h; const x=c.getContext('2d');
+    x.fillStyle='#070b14'; x.fillRect(0,0,w,h);
+    [['rgba(93,202,165,.12)',.5,.14,.6],['rgba(127,178,255,.10)',.5,.92,.6]].forEach(cl=>{ const g=x.createRadialGradient(cl[1]*w,cl[2]*h,0,cl[1]*w,cl[2]*h,Math.max(w,h)*cl[3]); g.addColorStop(0,cl[0]); g.addColorStop(1,'rgba(0,0,0,0)'); x.fillStyle=g; x.fillRect(0,0,w,h); });
+    const rnd=mulberry(555); for(let i=0;i<120;i++){ x.globalAlpha=.15+rnd()*.5; x.fillStyle='#fff'; x.beginPath(); x.arc(rnd()*w,rnd()*h,rnd()*1.6+.3,0,6.283); x.fill(); } x.globalAlpha=1;
+    x.strokeStyle='rgba(245,201,119,.55)'; x.lineWidth=3; rr(x,40,40,w-80,h-80,20); x.stroke();
+    x.strokeStyle='rgba(245,201,119,.25)'; x.lineWidth=1.5; rr(x,54,54,w-108,h-108,14); x.stroke();
+    x.textAlign='center';
+    x.fillStyle='#f5c977'; x.font='800 22px "Space Grotesk",system-ui'; x.fillText('✦   T H E   S E A R C H   ✦', w/2, 116);
+    x.fillStyle='#e8ecf6'; x.font='700 52px "Fredoka",system-ui'; x.fillText('Certificate of Discovery', w/2, 178);
+    x.drawImage(planet(300,sys.pl[0].p,sys.seed), w/2-150, 205);
+    x.fillStyle='#9fb0d0'; x.font='500 24px system-ui'; x.fillText('This certifies that', w/2, 558);
+    x.fillStyle='#fff'; x.font='700 46px "Space Grotesk",system-ui'; x.fillText(state.explorer||'Explorer', w/2, 614);
+    const nm=state.names[sys.pl[0].n];
+    x.fillStyle='#9fb0d0'; x.font='500 23px system-ui'; x.fillText('charted the system '+sys.h+(sys.d?(' · '+Math.round(sys.d)+' light-years from Earth'):''), w/2, 662);
+    if(nm){ x.fillStyle='#f5c977'; x.font='700 34px "Space Grotesk",system-ui'; x.fillText('and named the world “'+nm+'”', w/2, 712); x.fillStyle='#7fb2ff'; x.font='500 20px system-ui'; x.fillText('('+sys.pl[0].n+')', w/2, 742); }
+    else { x.fillStyle='#e8ecf6'; x.font='600 30px "Space Grotesk"'; x.fillText(sys.pl[0].n, w/2, 714); }
+    const dstr=new Date().toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
+    x.fillStyle='#c7d2ea'; x.font='500 22px system-ui'; x.fillText('using real NASA telescope data · '+dstr, w/2, h-152);
+    x.fillStyle='#6f7ea3'; x.font='400 16px system-ui'; x.fillText('An honorary nickname — official star naming is by the International Astronomical Union.', w/2, h-112);
+    x.fillStyle='#5DCAA5'; x.font='800 26px "Space Grotesk"'; x.fillText('lifeonotherplanets.space', w/2, h-62);
+    return c;
+  }
+  function openCertificate(){ if(!curSys)return; if(!state.explorer){ const nm=prompt('Your explorer name (for the certificate):',''); if(nm && cleanName(nm.trim()).ok){ state.explorer=nm.trim(); save(); } }
+    (document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()).then(function(){ showImageModal(makeCertificate(curSys),'discovery-certificate.png'); }); }
   function rr(x,rx,ry,rw,rh,rad){ x.beginPath(); x.moveTo(rx+rad,ry); x.arcTo(rx+rw,ry,rx+rw,ry+rh,rad); x.arcTo(rx+rw,ry+rh,rx,ry+rh,rad); x.arcTo(rx,ry+rh,rx,ry,rad); x.arcTo(rx,ry,rx+rw,ry,rad); x.closePath(); }
   function makeShareCard(){
     const w=1080,h=1350,c=document.createElement('canvas'); c.width=w;c.height=h; const x=c.getContext('2d');
@@ -560,10 +593,10 @@
     return c;
   }
   function openCard(){ if(!state.explorer){ const nm=prompt('Your explorer name (shown on your card):',''); if(nm && cleanName(nm.trim()).ok){ state.explorer=nm.trim(); save(); } }
-    (document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()).then(function(){ _cardCanvas=makeShareCard(); document.getElementById('cardImg').src=_cardCanvas.toDataURL('image/png'); document.getElementById('cardModal').classList.add('show'); }); }
-  function saveCard(){ if(!_cardCanvas)return; _cardCanvas.toBlob(function(b){ const u=URL.createObjectURL(b),a=document.createElement('a'); a.href=u; a.download='my-search-card.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(u);},3000); }); }
-  function shareCardImg(){ if(!_cardCanvas)return; _cardCanvas.toBlob(function(b){ const f=new File([b],'my-search-card.png',{type:'image/png'}); if(navigator.canShare&&navigator.canShare({files:[f]})){ navigator.share({files:[f],title:'The Search',text:'I’m charting real worlds in The Search — join me! lifeonotherplanets.space'}).catch(function(){}); } else saveCard(); }); }
-  { const _sb=document.getElementById('shareBtn'); if(_sb)_sb.onclick=openCard; const _ws=document.getElementById('winShare'); if(_ws)_ws.onclick=openCard;
+    (document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()).then(function(){ showImageModal(makeShareCard(),'my-search-card.png'); }); }
+  function saveCard(){ if(!_cardCanvas)return; _cardCanvas.toBlob(function(b){ const u=URL.createObjectURL(b),a=document.createElement('a'); a.href=u; a.download=_cardFile; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(u);},3000); }); }
+  function shareCardImg(){ if(!_cardCanvas)return; _cardCanvas.toBlob(function(b){ const f=new File([b],_cardFile,{type:'image/png'}); if(navigator.canShare&&navigator.canShare({files:[f]})){ navigator.share({files:[f],title:'The Search',text:'I’m charting real worlds in The Search — join me! lifeonotherplanets.space'}).catch(function(){}); } else saveCard(); }); }
+  { const _sb=document.getElementById('shareBtn'); if(_sb)_sb.onclick=openCard; const _ws=document.getElementById('winShare'); if(_ws)_ws.onclick=openCard; const _sc=document.getElementById('shCert'); if(_sc)_sc.onclick=openCertificate; const _tp=document.getElementById('todPill'); if(_tp)_tp.onclick=function(){ const s=todaySys(); if(state.charted[s.h]) openReward(s,true); else openScan(s); };
     document.getElementById('cardSave').onclick=saveCard; document.getElementById('cardShareBtn').onclick=shareCardImg; document.getElementById('cardClose').onclick=function(){document.getElementById('cardModal').classList.remove('show');}; }
   function renderAtlas(){
     // progression header: rank + XP + streak, regions, achievements
@@ -596,6 +629,7 @@
       } else { const pp=.5+.5*Math.sin(t*1.6+s.seed); ctx.fillStyle='#eaf2ff'; ctx.shadowBlur=10+pp*10; ctx.shadowColor='#9fc0ff'; ctx.beginPath(); ctx.arc(s.x,s.y,2.4+pp*1,0,6.28); ctx.fill(); ctx.shadowBlur=0;
         ctx.globalAlpha=.3+pp*.3; ctx.strokeStyle='#cfe0ff'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(s.x-7-pp*4,s.y); ctx.lineTo(s.x+7+pp*4,s.y); ctx.moveTo(s.x,s.y-7-pp*4); ctx.lineTo(s.x,s.y+7+pp*4); ctx.stroke(); ctx.globalAlpha=1; }
     });
+    (function(){ const td=todaySys(); if(td&&td.x!=null){ const pr=(state.charted[td.h]?20:15)+Math.sin(t*2.2)*2.5; ctx.globalAlpha=.5+Math.sin(t*2.2)*.25; ctx.strokeStyle='#f5c977'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(td.x,td.y,pr,0,6.283); ctx.stroke(); ctx.globalAlpha=1; } })();
     for(let i=parts.length-1;i>=0;i--){ const p=parts[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=.03; p.vx*=.98; p.life-=.018; if(p.life<=0){parts.splice(i,1);continue;} ctx.globalAlpha=p.life; ctx.fillStyle=p.color; if(p.glow){ctx.shadowBlur=10;ctx.shadowColor=p.color;} ctx.beginPath(); ctx.arc(p.x,p.y,p.size*p.life,0,6.28); ctx.fill(); ctx.shadowBlur=0; }
     ctx.globalAlpha=1; ctx.restore(); requestAnimationFrame(frame);
   }
