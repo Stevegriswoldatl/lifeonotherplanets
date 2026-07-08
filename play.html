@@ -545,7 +545,7 @@
   const KEY="loop_search_state_v2";
   function load(){ try{ return Object.assign({explorer:"",avatar:"astronaut",charted:{},claims:{},names:{}}, JSON.parse(localStorage.getItem(KEY))||{}); }catch(e){ return {explorer:"",avatar:"astronaut",charted:{},claims:{},names:{}}; } }
   function save(){ try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){} pushRemote(); }
-  let state=load(); state.charted=state.charted||{}; state.names=state.names||{}; state.xp=state.xp||0; state.badges=state.badges||{}; state.bestStreak=state.bestStreak||0; state.constellations=state.constellations||[]; state.sector=state.sector||0;
+  let state=load(); state.charted=state.charted||{}; state.names=state.names||{}; state.xp=state.xp||0; state.badges=state.badges||{}; state.bestStreak=state.bestStreak||0; state.constellations=state.constellations||[]; state.sector=state.sector||0; state.ruled=state.ruled||{};
   const R={done:0,correct:0}; // session accuracy
   let curStreak=0;
 
@@ -847,7 +847,7 @@
       '<div style="margin-top:9px;">'+kv.join('')+'</div>'+checks+
       '<div class="cons" id="cons"></div>'+
       '<button class="nextb" id="nb">Chart '+esc(curSys.h)+' →</button>';
-    document.getElementById('nb').onclick=()=>{ const sysDone=curSys; candidateMode=false; closeScan(); chartSystem(sysDone); };
+    const mv=a; document.getElementById('nb').onclick=()=>{ const sysDone=curSys; candidateMode=false; closeScan(); chartCandidate(sysDone, mv); };
     if(window.LOPSync && LOPSync.enabled && c.id){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5').then(()=>LOPSync.logVote(c.id,a)).then(()=>LOPSync.getConsensus(c.id)).then(cc=>renderConsensus(cc,a,null)); }
   }
   function closeScan(){ document.getElementById('scan').classList.remove('show'); over=false; curSys=null; frontierMode=false; candidateMode=false;
@@ -951,6 +951,18 @@
     addXP(25); checkRegion(); checkBadges(); creditSectorWork();
     setTimeout(()=>openReward(sys,false),520);
   }
+  // an open TESS candidate you REVIEWED: only add a world if you flagged it a planet.
+  // "not a planet"/"unsure" marks it reviewed (ruled out) — no world, no Atlas entry.
+  function chartCandidate(sys, vote){
+    const planet = (vote==='planet');
+    if(!state.charted[sys.h]){ state.charted[sys.h]=true; if(!planet) state.ruled[sys.h]=true; save();
+      if(window.LOPSync && planet){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5').then(()=>LOPSync.logClaim(sys.h,'#5DCAA5')); } }
+    sys._grow=.0001; shake=planet?8:5; burst(sys.x,sys.y, planet?'#5DCAA5':'#8a97b5', planet?40:22, true); playSfx('chart'); updateHUD();
+    addXP(planet?25:12); checkRegion(); checkBadges(); creditSectorWork();
+    if(planet){ setTimeout(()=>openReward(sys,false),520); }
+    else { celebrate('Reviewed — you flagged it not a planet. Thanks!','#9fb8d6'); checkSectorDone(); }
+  }
+  function checkSectorDone(){ if(SYSTEMS.length && chartedCount()>=SYSTEMS.length) setTimeout(()=>{ prepWin(); document.getElementById('win').classList.add('show'); playSfx('win'); },500); }
   function openReward(sys,revisit){ over=true; curSys=sys;
     document.getElementById('shEb').innerHTML=ic('atlas')+' '+(revisit?'In your Atlas':'Charted &amp; added to your Atlas');
     document.getElementById('shGo').textContent=revisit?'Done':'Continue exploring →';
@@ -995,7 +1007,7 @@
     }
     btn.onclick=function(){ w.classList.remove('show'); nextSector(); };
   }
-  function closeReward(){ document.getElementById('sheet').classList.remove('show'); over=false; renderAtlas(); if(chartedCount()>=SYSTEMS.length) setTimeout(()=>{ prepWin(); document.getElementById('win').classList.add('show'); playSfx('win'); },450); }
+  function closeReward(){ document.getElementById('sheet').classList.remove('show'); over=false; renderAtlas(); checkSectorDone(); }
   // on load, if the current sector is already fully charted, show its "next section" prompt so there's always a way forward
   function maybeSectorComplete(){ if(SYSTEMS.length && chartedCount()>=SYSTEMS.length){ prepWin(); document.getElementById('win').classList.add('show'); } }
   document.getElementById('shGo').onclick=closeReward; document.getElementById('sheetClose').onclick=closeReward;
@@ -1047,7 +1059,7 @@
     x.textAlign='center';
     x.fillStyle='#5DCAA5'; x.font='800 24px "Space Grotesk",system-ui'; x.fillText('THE SEARCH · EXPLORER CARD', w/2, 88);
     x.fillStyle='#fff'; x.font='600 58px "Fredoka",system-ui'; x.fillText('Life On Other Planets?', w/2, 156);
-    const charted=SYSTEMS.filter(s=>state.charted[s.h]);
+    const charted=SYSTEMS.filter(s=>state.charted[s.h] && !state.ruled[s.h]);
     const hp=charted.length?charted[0].pl[0].p:'gas', hs=charted.length?charted[0].seed:3;
     x.drawImage(planet(340,hp,hs), w/2-170, 190);
     x.fillStyle='#fff'; x.font='700 52px "Space Grotesk",system-ui'; x.fillText(state.explorer||'Explorer', w/2, 606);
@@ -1078,7 +1090,7 @@
     x.textAlign='center';
     x.fillStyle='#5DCAA5'; x.font='800 26px "Space Grotesk"'; x.fillText('✦   M Y   S K Y   ✦', w/2, 74);
     x.fillStyle='#fff'; x.font='700 46px "Fredoka"'; x.fillText((state.explorer||'Explorer')+'’s Neighborhood', w/2, 128);
-    const charted=SYSTEMS.filter(s=>state.charted[s.h]); const worlds=charted.reduce((n,s)=>n+s.pl.length,0);
+    const charted=SYSTEMS.filter(s=>state.charted[s.h] && !state.ruled[s.h]); const worlds=charted.reduce((n,s)=>n+s.pl.length,0);
     const pct=Math.round(charted.length/SYSTEMS.length*100);
     x.fillStyle='#9fb0d0'; x.font='500 22px system-ui'; x.fillText(pct+'% of the neighborhood charted · real NASA discoveries', w/2, 166);
     // layout systems by distance (reuses each system's saved angle so it matches the live map)
@@ -1146,7 +1158,7 @@
     ph+='</div>';
     const pe=document.getElementById('atlasProg'); if(pe) pe.innerHTML=ph;
     // worlds grid
-    const grid=document.getElementById('atlasGrid'), charted=SYSTEMS.filter(s=>state.charted[s.h]); const worlds=[];
+    const grid=document.getElementById('atlasGrid'), charted=SYSTEMS.filter(s=>state.charted[s.h] && !state.ruled[s.h]); const worlds=[];
     charted.forEach(s=>s.pl.forEach((pl,i)=>worlds.push({pl,s,i})));
     document.getElementById('atlasCount').textContent=worlds.length+' world'+(worlds.length!==1?'s':'');
     document.getElementById('atlasEmpty').style.display=worlds.length?'none':'block';
@@ -1176,7 +1188,10 @@
       ctx.strokeStyle='#e6d8ff'; ctx.lineWidth=2.4; ctx.shadowBlur=8; ctx.shadowColor='#c7aef8'; ctx.beginPath();
       cDraft.forEach(e=>{ const a=SYSBYH[e[0]],b=SYSBYH[e[1]]; if(a&&b){ ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); } }); ctx.stroke(); ctx.shadowBlur=0; }
     SYSTEMS.forEach(s=>{ const charted=state.charted[s.h];
-      if(charted){ let scv=1; if(s._grow>0){ s._grow=Math.min(1,s._grow+.05); scv=1-Math.pow(1-s._grow,3); } const sz=54*scv, bob=Math.sin(t*1.1+s.seed)*2.2; drawSpin(s.x, s.y+bob, sz*0.32, s.pl[0].p, s.seed, t+s.seed);
+      if(charted && state.ruled[s.h]){ // reviewed & flagged NOT a planet — a quiet checked-off marker, not a collected world
+        const bob=Math.sin(t*1.1+s.seed)*1.6; ctx.save(); ctx.globalAlpha=.8; ctx.strokeStyle='rgba(150,172,205,.7)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(s.x,s.y+bob,11,0,6.283); ctx.stroke();
+        ctx.strokeStyle='#9fb8d6'; ctx.lineWidth=2.6; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(s.x-4.5,s.y+bob+.5); ctx.lineTo(s.x-1,s.y+bob+4); ctx.lineTo(s.x+5,s.y+bob-4); ctx.stroke(); ctx.restore(); }
+      else if(charted){ let scv=1; if(s._grow>0){ s._grow=Math.min(1,s._grow+.05); scv=1-Math.pow(1-s._grow,3); } const sz=54*scv, bob=Math.sin(t*1.1+s.seed)*2.2; drawSpin(s.x, s.y+bob, sz*0.32, s.pl[0].p, s.seed, t+s.seed);
         const oa=t*0.9+s.seed*1.7, orx=sz*0.42, stx=s.x+Math.cos(oa)*orx, sty=(s.y+bob)+Math.sin(oa)*orx*0.42;
         ctx.globalAlpha=.9; ctx.fillStyle='#9be7ff'; ctx.shadowBlur=6; ctx.shadowColor='#4fd8ff'; ctx.beginPath(); ctx.arc(stx,sty,1.5,0,6.283); ctx.fill(); ctx.shadowBlur=0; ctx.globalAlpha=1;
         if(s.pl.length>1){ ctx.fillStyle='rgba(255,255,255,.85)'; ctx.font='700 9px "Space Grotesk"'; }
