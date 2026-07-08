@@ -66,6 +66,9 @@
   .authcard .send{ background:#4fd8ff; color:#052029; }
   .authcard .cancel{ background:#16203a; color:#dbe4fb; border:1px solid #29365a; }
   .authcard .msg{ font-size:13px; margin-top:10px; min-height:16px; font-family:'Space Grotesk'; }
+  .authcard .navlink{ display:flex; align-items:center; gap:10px; padding:12px 12px; margin:2px 0; border-radius:10px; color:#dbe4fb; text-decoration:none; font-family:'Space Grotesk'; font-size:14.5px; border:1px solid transparent; }
+  .authcard .navlink:hover{ background:rgba(79,216,255,.1); border-color:rgba(79,216,255,.25); }
+  .authcard .navlink .lopico{ color:#4fd8ff; font-size:19px; }
 
   /* selected-system tooltip pill */
   .seltip{ position:absolute; z-index:3; transform:translate(-50%,-140%); pointer-events:none; opacity:0; transition:opacity .2s; white-space:nowrap;
@@ -306,6 +309,7 @@
     <div class="glass iconbtn" id="constBtn" title="Constellations"><i class="ico" data-i="constellation"></i></div>
     <div class="glass iconbtn" id="atlasBtn" title="My Atlas"><i class="ico" data-i="atlas"></i></div>
     <div class="glass iconbtn" id="muteBtn" title="Sound"><i class="ico" data-i="sound"></i></div>
+    <div class="glass iconbtn" id="menuBtn" title="Menu"><i class="ico" data-i="menu"></i></div>
   </div>
 
   <div class="hint" id="hint">Tap a glowing star to scan it</div>
@@ -393,6 +397,21 @@
       <input id="authEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com">
       <div class="arow"><button class="cancel" id="authCancel">Cancel</button><button class="send" id="authSend">Email me a link</button></div>
       <div class="msg" id="authMsg"></div>
+    </div>
+  </div>
+
+  <!-- in-game menu: reach the other stations + pages -->
+  <div class="authsheet" id="navSheet">
+    <div class="authcard" style="text-align:left;">
+      <h3 style="text-align:center;">Explore the search</h3>
+      <a class="navlink" href="index.html"><i class="ico" data-i="atlas"></i> Home</a>
+      <a class="navlink" href="vet.html"><i class="ico" data-i="scan"></i> Data Lab — vet light curves</a>
+      <a class="navlink" href="seti.html"><i class="ico" data-i="signal"></i> Signal Lab — hunt radio signals</a>
+      <a class="navlink" href="relay.html"><i class="ico" data-i="together"></i> AI Lab — cross-check with AI</a>
+      <a class="navlink" href="rankings.html"><i class="ico" data-i="star"></i> Rankings</a>
+      <a class="navlink" href="guide.html"><i class="ico" data-i="eye"></i> Field Guide</a>
+      <a class="navlink" href="scoreboard.html"><i class="ico" data-i="trophy"></i> Scoreboard</a>
+      <button class="cancel" id="navClose" style="width:100%;margin-top:12px;">Close</button>
     </div>
   </div>
 
@@ -1154,6 +1173,10 @@
     document.getElementById('secLater').onclick=closeSector;
     const _gb=document.getElementById('galaxyBtn'); if(_gb)_gb.onclick=openGalaxy;
     const _mb=document.getElementById('muteBtn'); if(_mb)_mb.onclick=toggleMute;
+    const _mn=document.getElementById('menuBtn'), _ns=document.getElementById('navSheet'), _nc=document.getElementById('navClose');
+    if(_mn&&_ns)_mn.onclick=function(){ _ns.classList.add('show'); };
+    if(_nc&&_ns)_nc.onclick=function(){ _ns.classList.remove('show'); };
+    if(_ns)_ns.addEventListener('click',function(e){ if(e.target===_ns) _ns.classList.remove('show'); });
     document.getElementById('galClose').onclick=closeGalaxy;
     const _scp=document.getElementById('secChip'); if(_scp)_scp.onclick=function(){ openSector(sectorNow()); };
     document.getElementById('cardSave').onclick=saveCard; document.getElementById('cardShareBtn').onclick=shareCardImg; document.getElementById('cardClose').onclick=function(){document.getElementById('cardModal').classList.remove('show');}; }

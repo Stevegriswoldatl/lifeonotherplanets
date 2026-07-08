@@ -30,6 +30,7 @@
     flag:'<path d="M6 20V4"/><path d="M6 5h10l-2 3 2 3H6"/>',
     together:'<circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/>',
     eye:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.6"/>',
+    menu:'<path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/>',
     reward:'<path class="f" d="M12 3.5l2.2 4.6 5 .6-3.7 3.4 1 5-4.5-2.5-4.5 2.5 1-5L6.8 8.7l5-.6z"/>'
   };
   function svg(name, cls) {
