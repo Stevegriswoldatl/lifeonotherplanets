@@ -164,6 +164,15 @@
   .sharebtn{ padding:8px 12px; border-radius:12px; font-size:13px; font-weight:800; color:#5DCAA5; cursor:pointer; }
   .todpill{ position:absolute; left:50%; transform:translateX(-50%); bottom:130px; z-index:3; padding:8px 14px; border-radius:999px; font-size:12.5px; color:#f5c977; cursor:pointer; align-items:center; gap:5px; border:1px solid rgba(245,201,119,.28) !important; }
   .todpill b{ color:#fff; font-weight:700; }
+  .frontpill{ bottom:174px; color:#c7aef8; border:1px solid rgba(150,120,246,.34) !important; }
+  /* frontier (open-candidate) styling */
+  .tag.front{ color:#c7aef8; background:rgba(150,120,246,.14); border-color:rgba(150,120,246,.4); }
+  .vfeed.front{ background:rgba(150,120,246,.1); border:1px solid rgba(150,120,246,.34); }
+  .fkv{ display:flex; justify-content:space-between; gap:10px; font-size:12px; color:#c7d2ea; padding:4px 0; border-bottom:1px solid rgba(255,255,255,.06); }
+  .fkv b{ color:#fff; font-weight:700; }
+  .fchecks{ margin-top:10px; font-size:12px; line-height:1.45; }
+  .fchecks .fh{ font-weight:800; color:#c7aef8; margin-bottom:4px; }
+  .fchk{ color:#c7d2ea; margin:2px 0; } .fchk.flag{ color:#f3a9a9; }
   .cardmodal{ position:absolute; inset:0; z-index:15; display:flex; align-items:center; justify-content:center; flex-direction:column; background:rgba(3,4,12,.9); backdrop-filter:blur(8px); padding:20px; opacity:0; visibility:hidden; pointer-events:none; transition:opacity .28s ease, visibility .28s; }
   .cardmodal.show{ opacity:1; visibility:visible; pointer-events:auto; }
   .cardmodal img{ max-width:min(92vw,400px); max-height:68vh; border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,.6); transition:transform .42s cubic-bezier(.16,1,.3,1), opacity .3s ease; transform:scale(.9); opacity:0; }
@@ -191,6 +200,7 @@
   <div class="hint" id="hint">Tap a glowing star to scan it</div>
   <div class="synced" id="synced"></div>
   <div class="glass todpill" id="todPill" style="display:none;"></div>
+  <div class="glass todpill frontpill" id="frontPill" style="display:none;"></div>
   <div class="glass seltip" id="seltip"></div>
   <div class="funtoast" id="funtoast"></div>
 
@@ -451,6 +461,12 @@
 
   // ---------- scan / vet flow ----------
   let DECK=[], usingFallback=false, curSys=null, curCard=null, scanN=0, answered=false;
+  // frontier deck = REAL open TESS candidates (no answer key); reviewing them feeds the community consensus
+  let FRONTIER=[], frontierMode=false, fQueue=[], fIdx=0;
+  function loadFrontier(){ return fetch('frontier_curves.json',{cache:'no-store'}).then(r=>r.ok?r.json():[]).catch(()=>[])
+    .then(fd=>{ FRONTIER=Array.isArray(fd)?fd.filter(c=>c&&Array.isArray(c.f)&&c.f.length):[]; updateFrontPill(); }); }
+  function updateFrontPill(){ const el=document.getElementById('frontPill'); if(!el)return;
+    if(FRONTIER.length){ el.style.display='inline-flex'; el.innerHTML='🔭 <b>Review new candidates</b> · '+FRONTIER.length+' open'; } else el.style.display='none'; }
   function gauss(s){ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random(); return s*Math.sqrt(-2*Math.log(u))*Math.cos(6.2831853*v); }
   function synthCard(){ const roll=Math.random(),N=200,f=[]; for(let i=0;i<N;i++)f.push(1+gauss(.006)); let truth,kind,why;
     if(roll<.45){truth='planet';kind='transit';why='Evenly-spaced, flat-bottomed dips — the signature of a transiting planet.'; const P=40+Math.random()*20,t0=Math.random()*P,d=.012+Math.random()*.01; for(let i=0;i<N;i++){const ph=((i-t0)%P+P)%P; if(ph<4||ph>P-4)f[i]-=d;}}
@@ -466,12 +482,56 @@
     document.getElementById('scanSub').textContent=Math.round(sys.d)+" light-years away · real telescope data";
     const p=(DECK.length?Promise.resolve():loadDeck()); p.then(()=>{ document.getElementById('scan').classList.add('show'); nextCard(); });
   }
-  function closeScan(){ document.getElementById('scan').classList.remove('show'); over=false; curSys=null; }
+  function closeScan(){ document.getElementById('scan').classList.remove('show'); over=false; curSys=null; frontierMode=false;
+    const qz=document.querySelector('.qz'); if(qz)qz.textContent='Real planet, or a false alarm?';
+    const dd=document.getElementById('scanDots'); if(dd)dd.style.display=''; }
   document.getElementById('scanClose').onclick=closeScan;
+
+  // ---------- frontier review (real open candidates) ----------
+  function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const tmp=a[i]; a[i]=a[j]; a[j]=tmp; } return a; }
+  function fkv(k,v){ return '<div class="fkv"><span>'+esc(k)+'</span><b>'+esc(v)+'</b></div>'; }
+  function openFrontier(){ if(!FRONTIER.length){ loadFrontier(); return; }
+    frontierMode=true; over=true; fQueue=shuffle(FRONTIER).slice(0,6); fIdx=0;
+    document.getElementById('scanTitle').firstChild.textContent='Reviewing new candidates';
+    document.getElementById('scanSub').textContent='real open TESS candidates · no answer key';
+    document.getElementById('scanDots').style.display='none';
+    document.getElementById('scan').classList.add('show'); nextFrontier();
+  }
+  function nextFrontier(){ if(fIdx>=fQueue.length){ closeScan(); celebrate('🛰️ Thanks — your first looks are in!','#c7aef8'); return; }
+    answered=false; curCard=fQueue[fIdx];
+    document.getElementById('scanProg').textContent='Candidate '+(fIdx+1)+' / '+fQueue.length;
+    const t=document.getElementById('lcTag'); t.className='tag front'; t.innerHTML='● New — open candidate';
+    const qz=document.querySelector('.qz'); if(qz)qz.textContent='Your first look — planet, or a false alarm?';
+    const vf=document.getElementById('vfeed'); vf.className='vfeed'; vf.innerHTML='';
+    document.querySelectorAll('.vbtns button').forEach(b=>b.disabled=false);
+    drawLC(curCard.f);
+  }
+  function answerFrontier(a){ if(answered||!curCard)return; answered=true; audio();
+    document.querySelectorAll('.vbtns button').forEach(b=>b.disabled=true);
+    addXP(8); tone(560,.18,'sine',.11,840);
+    const c=curCard, vf=document.getElementById('vfeed'); vf.className='vfeed show front';
+    const kv=[ fkv('Candidate',c.name), fkv('Status','Planet candidate (open)') ];
+    if(c.constellation) kv.push(fkv('Constellation',c.constellation));
+    if(c.distance_ly!=null) kv.push(fkv('Distance',c.distance_ly+' ly'));
+    if(c.period_days) kv.push(fkv('Period',c.period_days+' d'));
+    if(c.depth_ppm) kv.push(fkv('Dip depth',Number(c.depth_ppm).toLocaleString()+' ppm'));
+    let checks='';
+    if(Array.isArray(c.checks)&&c.checks.length){ const nf=c.checks.filter(k=>k.flag).length;
+      checks='<div class="fchecks"><div class="fh">🔬 Automated checks — run on the data'+(nf?' · '+nf+' red flag'+(nf>1?'s':''):' · all clear')+'</div>'+
+        c.checks.map(k=>'<div class="fchk'+(k.flag?' flag':'')+'">'+(k.flag?'⚠ ':'✓ ')+'<b>'+esc(k.test)+'</b> — '+esc(k.note)+'</div>').join('')+'</div>'; }
+    const last=(fIdx>=fQueue.length-1);
+    vf.innerHTML='<div class="h">🛰️ First look recorded — thank you!</div>'+
+      '<div class="p"><b>A real, still-open TESS candidate.</b> No answer key — your read joins the community’s consensus below.</div>'+
+      '<div style="margin-top:9px;">'+kv.join('')+'</div>'+checks+
+      '<div class="cons" id="cons"></div>'+
+      '<button class="nextb" id="nb">'+(last?'Finish ✓':'Next candidate →')+'</button>';
+    document.getElementById('nb').onclick=()=>{ fIdx++; nextFrontier(); };
+    if(window.LOPSync && LOPSync.enabled && c.id){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5').then(()=>LOPSync.logVote(c.id,a)).then(()=>LOPSync.getConsensus(c.id)).then(cc=>renderConsensus(cc,a,null)); }
+  }
   function nextCard(){ answered=false; curCard=pickCard();
     document.getElementById('scanProg').textContent=scanN+" / 3";
     document.querySelectorAll('#scanDots i').forEach((el,i)=>el.className=i<scanN?'on':'');
-    document.getElementById('lcTag').innerHTML = curCard.source&&curCard.source.indexOf('Real')===0 ? '● Real TESS data' : '● Training curve';
+    const lt=document.getElementById('lcTag'); lt.className='tag'; lt.innerHTML = curCard.source&&curCard.source.indexOf('Real')===0 ? '● Real TESS data' : '● Training curve';
     const vf=document.getElementById('vfeed'); vf.className='vfeed'; vf.innerHTML='';
     document.querySelectorAll('.vbtns button').forEach(b=>b.disabled=false);
     drawLC(curCard.f);
@@ -482,7 +542,7 @@
     lctx.strokeStyle='rgba(127,178,255,.08)'; lctx.lineWidth=1; for(let g=0;g<=4;g++){ const y=pad+g/4*(Hc-2*pad); lctx.beginPath(); lctx.moveTo(pad,y); lctx.lineTo(Wc-pad,y); lctx.stroke(); }
     lctx.fillStyle='#8fd0ff'; lctx.shadowBlur=6; lctx.shadowColor='#5fd0ff';
     for(let i=0;i<f.length;i++){ const x=pad+i/(f.length-1)*(Wc-2*pad), y=pad+(1-(f[i]-mn)/sp)*(Hc-2*pad); lctx.beginPath(); lctx.arc(x,y,1.5,0,6.28); lctx.fill(); } lctx.shadowBlur=0; }
-  function answer(a){ if(answered||!curCard)return; answered=true; audio(); document.querySelectorAll('.vbtns button').forEach(b=>b.disabled=true);
+  function answer(a){ if(frontierMode)return answerFrontier(a); if(answered||!curCard)return; answered=true; audio(); document.querySelectorAll('.vbtns button').forEach(b=>b.disabled=true);
     const truth=curCard.truth, correct=(a===truth); R.done++; if(a!=='unsure'&&correct)R.correct++;
     addXP(10+(correct?5:0));
     if(a!=='unsure'){ if(correct){ curStreak++; if(curStreak>state.bestStreak){ state.bestStreak=curStreak; save(); } if(curStreak===5) celebrate('🔥 5 in a row!','#f5c977'); checkBadges(); } else curStreak=0; }
@@ -603,7 +663,7 @@
     (document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()).then(function(){ showImageModal(makeShareCard(),'my-search-card.png'); }); }
   function saveCard(){ if(!_cardCanvas)return; _cardCanvas.toBlob(function(b){ const u=URL.createObjectURL(b),a=document.createElement('a'); a.href=u; a.download=_cardFile; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(u);},3000); }); }
   function shareCardImg(){ if(!_cardCanvas)return; _cardCanvas.toBlob(function(b){ const f=new File([b],_cardFile,{type:'image/png'}); if(navigator.canShare&&navigator.canShare({files:[f]})){ navigator.share({files:[f],title:'The Search',text:'I’m charting real worlds in The Search — join me! lifeonotherplanets.space'}).catch(function(){}); } else saveCard(); }); }
-  { const _sb=document.getElementById('shareBtn'); if(_sb)_sb.onclick=openCard; const _ws=document.getElementById('winShare'); if(_ws)_ws.onclick=openCard; const _sc=document.getElementById('shCert'); if(_sc)_sc.onclick=openCertificate; const _tp=document.getElementById('todPill'); if(_tp)_tp.onclick=function(){ const s=todaySys(); if(state.charted[s.h]) openReward(s,true); else openScan(s); };
+  { const _sb=document.getElementById('shareBtn'); if(_sb)_sb.onclick=openCard; const _ws=document.getElementById('winShare'); if(_ws)_ws.onclick=openCard; const _sc=document.getElementById('shCert'); if(_sc)_sc.onclick=openCertificate; const _tp=document.getElementById('todPill'); if(_tp)_tp.onclick=function(){ const s=todaySys(); if(state.charted[s.h]) openReward(s,true); else openScan(s); }; const _fp=document.getElementById('frontPill'); if(_fp)_fp.onclick=openFrontier;
     document.getElementById('cardSave').onclick=saveCard; document.getElementById('cardShareBtn').onclick=shareCardImg; document.getElementById('cardClose').onclick=function(){document.getElementById('cardModal').classList.remove('show');}; }
   function renderAtlas(){
     // progression header: rank + XP + streak, regions, achievements
@@ -645,7 +705,7 @@
   const syncEl=document.getElementById('synced');
   if(window.LOPSync&&LOPSync.enabled){ syncEl.textContent='Cloud sync on · your discoveries are saved'; LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5'); }
   else { syncEl.textContent='Saving to this device'; }
-  updateHUD(); updateRank(); checkBadges(); renderAtlas(); loadDeck(); frame();
+  updateHUD(); updateRank(); checkBadges(); renderAtlas(); loadDeck(); loadFrontier(); frame();
 })();
 </script>
 </body>
