@@ -23,7 +23,8 @@
   const _thr = {
     classifications: { last: 0, count: 0, minGap: 700,  cap: 3000 },
     claims:          { last: 0, count: 0, minGap: 1500, cap: 800  },
-    discoveries:     { last: 0, count: 0, minGap: 1500, cap: 400  }
+    discoveries:     { last: 0, count: 0, minGap: 1500, cap: 400  },
+    votes:           { last: 0, count: 0, minGap: 500,  cap: 4000 }
   };
   function allow(kind) {
     const t = _thr[kind], now = Date.now();
@@ -85,6 +86,18 @@
     async projectHealth() {
       if (!client) return null;
       try { const r = await client.from("project_health").select("*").limit(1); return r.data && r.data[0]; }
+      catch (e) { return null; }
+    },
+    // ---- co-op verification: per-card community votes + consensus ----
+    async logVote(cardId, verdict) {
+      if (!client || !cardId) return;
+      if (!allow("votes")) return;
+      try { await client.from("card_votes").insert({ card_id: String(cardId), explorer_id: explorerId, verdict: verdict }); }
+      catch (e) { console.warn("LOP sync: logVote", e); }
+    },
+    async getConsensus(cardId) {
+      if (!client || !cardId) return null;
+      try { const r = await client.from("card_consensus").select("*").eq("card_id", String(cardId)).limit(1); return (r.data && r.data[0]) || null; }
       catch (e) { return null; }
     }
   };

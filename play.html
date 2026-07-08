@@ -148,6 +148,13 @@
   .bdg{ background:rgba(20,28,46,.4); border:1px solid rgba(255,255,255,.07); border-radius:14px; padding:10px 6px; text-align:center; opacity:.45; }
   .bdg.on{ opacity:1; border-color:rgba(127,178,255,.35); background:rgba(127,178,255,.08); }
   .bdg .bi{ font-size:20px; } .bdg .bn{ font-size:10px; font-weight:700; margin-top:3px; line-height:1.15; }
+  /* co-op consensus panel */
+  .cons{ margin-top:11px; }
+  .cons .ch{ font-size:12.5px; font-weight:800; color:#9be7c6; }
+  .cons .cbar{ height:8px; border-radius:5px; overflow:hidden; display:flex; margin-top:6px; background:rgba(255,255,255,.08); }
+  .cons .cbar i{ display:block; height:100%; }
+  .cons .cn{ font-size:11.5px; color:#9fb0d0; margin-top:5px; font-weight:600; }
+  .cons .ccredit{ margin-top:8px; font-size:12.5px; font-weight:800; color:#5DCAA5; background:rgba(93,202,165,.1); border:1px solid rgba(93,202,165,.3); border-radius:10px; padding:8px 11px; }
 </style>
 </head>
 <body>
@@ -384,8 +391,18 @@
     const head=a==='unsure'?'Fair call to flag it':(correct?(truth==='planet'?'🎉 Real one!':'✓ Correct'):'Not quite');
     const isReal=curCard.source&&curCard.source.indexOf('Real')===0;
     let tl = truth==='planet' ? (curCard.kind==='injection'?'Real planet (faint injected transit)':(isReal?'Real confirmed planet':'A planet transit')) : (curCard.kind==='eb'?'Not a planet — eclipsing binary':'Not a planet — quiet star');
-    vf.innerHTML='<div class="h">'+head+'</div><div class="p"><b>'+tl+'.</b> '+curCard.why+'</div>'+(isReal?'<div class="src">📡 '+curCard.source+(curCard.name?' · '+curCard.name:'')+'</div>':'')+'<button class="nextb" id="nb">'+(scanN>=2?'Chart '+curSys.h+' →':'Next curve →')+'</button>';
+    vf.innerHTML='<div class="h">'+head+'</div><div class="p"><b>'+tl+'.</b> '+curCard.why+'</div>'+(isReal?'<div class="src">📡 '+curCard.source+(curCard.name?' · '+curCard.name:'')+'</div>':'')+'<div class="cons" id="cons"></div><button class="nextb" id="nb">'+(scanN>=2?'Chart '+curSys.h+' →':'Next curve →')+'</button>';
     document.getElementById('nb').onclick=()=>{ scanN++; if(scanN>=3){ const sysDone=curSys; closeScan(); chartSystem(sysDone); } else { nextCard(); } };
+    if(window.LOPSync && LOPSync.enabled && curCard.id){ const key=curCard.id, mv=a, tr=truth; LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5').then(()=>LOPSync.logVote(key,mv)).then(()=>LOPSync.getConsensus(key)).then(c=>renderConsensus(c,mv,tr)); }
+  }
+  function renderConsensus(c,myVote,truth){ const el=document.getElementById('cons'); if(!el)return;
+    if(!c||!c.votes){ el.innerHTML='<div class="cn">🛰️ You’re among the first to vet this star — consensus builds as more explorers join.</div>'; return; }
+    const v=c.votes,p=c.planet_votes||0,n=c.not_votes||0,u=c.unsure_votes||0,voters=c.voters||v;
+    const topIsPlanet=p>=n, reached=voters>=5 && Math.max(p,n)/v>=0.7;
+    el.innerHTML='<div class="ch">'+(reached?'🔒 Consensus reached — candidate advancing!':'👥 '+voters+' explorer'+(voters>1?'s':'')+' vetting this')+'</div>'+
+      '<div class="cbar"><i style="width:'+(p/v*100)+'%;background:#5DCAA5"></i><i style="width:'+(n/v*100)+'%;background:#c96b4a"></i><i style="width:'+(u/v*100)+'%;background:#6b7690"></i></div>'+
+      '<div class="cn">Planet '+Math.round(p/v*100)+'% · Not '+Math.round(n/v*100)+'% · Unsure '+Math.round(u/v*100)+'%</div>';
+    if(reached){ const agreed=(topIsPlanet&&myVote==='planet')||(!topIsPlanet&&myVote==='not'); if(agreed){ el.innerHTML+='<div class="ccredit">🤝 You share co-discovery credit on this world.</div>'; celebrate('🤝 Consensus — shared credit!','#5DCAA5'); } }
   }
   document.querySelectorAll('.vbtns button').forEach(b=>b.addEventListener('click',()=>answer(b.dataset.a)));
   // swipe on scan card

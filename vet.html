@@ -317,19 +317,33 @@ function answer(a){
     html += '<div class="src">📡 '+esc(current.source)+'</div>';
   }
 
-  // simulated crowd — HONESTLY labeled as demo until the community is live
+  // crowd consensus — REAL when cloud sync is on; clearly-labeled demo when local-only
   if(current.isReal){
-    let cp=0,cn=0,cu=0,sims=24;
-    for(let i=0;i<sims;i++){ const good=Math.random()<0.86; let vote=good?(truth==="planet"?"planet":"not"):(truth==="planet"?"not":"planet"); if(Math.random()<0.06) vote="unsure"; if(vote==="planet")cp++; else if(vote==="not")cn++; else cu++; }
-    const tot=cp+cn+cu;
-    html += '<div class="crowd"><span class="demoflag">Simulated crowd (demo)</span> — real agreement turns on once explorers are live:'+
-      '<div class="crowdbar"><i style="width:'+(cp/tot*100)+'%;background:#5DCAA5;"></i><i style="width:'+(cn/tot*100)+'%;background:#c96b4a;"></i><i style="width:'+(cu/tot*100)+'%;background:#6b7690;"></i></div>'+
-      '<div style="margin-top:5px;">Planet '+Math.round(cp/tot*100)+'% · Not '+Math.round(cn/tot*100)+'% · Unsure '+Math.round(cu/tot*100)+'%</div></div>';
+    if(window.LOPSync && LOPSync.enabled && current.id){
+      html += '<div class="crowd" id="crowd">Checking the crowd…</div>';
+    } else {
+      let cp=0,cn=0,cu=0,sims=24;
+      for(let i=0;i<sims;i++){ const good=Math.random()<0.86; let vote=good?(truth==="planet"?"planet":"not"):(truth==="planet"?"not":"planet"); if(Math.random()<0.06) vote="unsure"; if(vote==="planet")cp++; else if(vote==="not")cn++; else cu++; }
+      const tot=cp+cn+cu;
+      html += '<div class="crowd"><span class="demoflag">Simulated crowd (demo)</span> — turns real once cloud sync is on and others vet:'+
+        '<div class="crowdbar"><i style="width:'+(cp/tot*100)+'%;background:#5DCAA5;"></i><i style="width:'+(cn/tot*100)+'%;background:#c96b4a;"></i><i style="width:'+(cu/tot*100)+'%;background:#6b7690;"></i></div>'+
+        '<div style="margin-top:5px;">Planet '+Math.round(cp/tot*100)+'% · Not '+Math.round(cn/tot*100)+'% · Unsure '+Math.round(cu/tot*100)+'%</div></div>';
+    }
   }
 
   html += '<div style="margin-top:12px;"><button id="nextbtn" style="flex:0 0 auto;">Next light curve &rarr;</button></div>';
   v.innerHTML=html;
   document.getElementById("nextbtn").onclick=advance;
+  if(current.isReal && window.LOPSync && LOPSync.enabled && current.id){ const key=current.id, mv=a, tr=truth; LOPSync.ensureExplorer(explorerName(),"stargazer","#f5c977").then(function(){ return LOPSync.logVote(key,mv); }).then(function(){ return LOPSync.getConsensus(key); }).then(function(c){ renderCrowd(c,mv,tr); }); }
+}
+function renderCrowd(c,myVote,truth){ const el=document.getElementById('crowd'); if(!el) return;
+  if(!c||!c.votes){ el.innerHTML='🛰️ You’re among the first to vet this star — the crowd builds as more explorers join.'; return; }
+  const v=c.votes,p=c.planet_votes||0,n=c.not_votes||0,u=c.unsure_votes||0,voters=c.voters||v;
+  const topIsPlanet=p>=n, reached=voters>=5 && Math.max(p,n)/v>=0.7;
+  el.innerHTML=(reached?'🔒 <b>Consensus reached</b> — this candidate advances for review!':'👥 '+voters+' explorer'+(voters>1?'s':'')+' have vetted this — agreement advances a candidate:')+
+    '<div class="crowdbar"><i style="width:'+(p/v*100)+'%;background:#5DCAA5;"></i><i style="width:'+(n/v*100)+'%;background:#c96b4a;"></i><i style="width:'+(u/v*100)+'%;background:#6b7690;"></i></div>'+
+    '<div style="margin-top:5px;">Planet '+Math.round(p/v*100)+'% · Not '+Math.round(n/v*100)+'% · Unsure '+Math.round(u/v*100)+'%</div>'+
+    (reached && ((topIsPlanet&&myVote==='planet')||(!topIsPlanet&&myVote==='not')) ? '<div style="margin-top:7px;color:#5DCAA5;font-weight:700;">🤝 You share co-discovery credit on this candidate.</div>' : '');
 }
 
 function advance(){
