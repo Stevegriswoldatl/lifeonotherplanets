@@ -155,6 +155,16 @@
   .cons .cbar i{ display:block; height:100%; }
   .cons .cn{ font-size:11.5px; color:#9fb0d0; margin-top:5px; font-weight:600; }
   .cons .ccredit{ margin-top:8px; font-size:12.5px; font-weight:800; color:#5DCAA5; background:rgba(93,202,165,.1); border:1px solid rgba(93,202,165,.3); border-radius:10px; padding:8px 11px; }
+  /* shareable explorer card */
+  .sharebtn{ padding:8px 12px; border-radius:12px; font-size:13px; font-weight:800; color:#5DCAA5; cursor:pointer; }
+  .cardmodal{ position:absolute; inset:0; z-index:15; display:none; align-items:center; justify-content:center; flex-direction:column; background:rgba(3,4,12,.9); backdrop-filter:blur(8px); padding:20px; }
+  .cardmodal.show{ display:flex; }
+  .cardmodal img{ max-width:min(92vw,400px); max-height:68vh; border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,.6); }
+  .cardbtns{ display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; justify-content:center; }
+  .cbtn{ font:800 15px "Space Grotesk"; padding:13px 20px; border-radius:14px; border:none; cursor:pointer; }
+  .cbtn.save{ background:#141c2e; color:#fff; border:1px solid rgba(255,255,255,.16); }
+  .cbtn.share{ background:linear-gradient(180deg,#7fe6bd,#5DCAA5); color:#05231b; }
+  .cbtn.close{ background:transparent; color:#9fb0d0; }
 </style>
 </head>
 <body>
@@ -209,7 +219,7 @@
 
   <!-- atlas -->
   <div class="atlas" id="atlas">
-    <div class="ah"><div class="glass close" id="atlasClose">✕</div><h2>My <span>Atlas</span></h2><div class="spacer sg" style="color:#9fb0d0;font-size:13px;font-weight:700;" id="atlasCount"></div></div>
+    <div class="ah"><div class="glass close" id="atlasClose">✕</div><h2>My <span>Atlas</span></h2><div class="spacer sg" style="color:#9fb0d0;font-size:13px;font-weight:700;" id="atlasCount"></div><div class="glass sharebtn" id="shareBtn">Share ↗</div></div>
     <div class="atlas-scroll">
       <div class="prog-sec" id="atlasProg"></div>
       <div class="grid" id="atlasGrid"></div>
@@ -217,7 +227,13 @@
     </div>
   </div>
 
-  <div class="win" id="win"><h1>🌌 The Neighborhood is charted</h1><p>You explored every nearby system and lit up your whole constellation — by doing real science on real NASA data. This is Season 1 complete.</p><button id="again">Keep exploring</button></div>
+  <!-- shareable explorer card -->
+  <div class="cardmodal" id="cardModal">
+    <img id="cardImg" alt="My explorer card">
+    <div class="cardbtns"><button class="cbtn save" id="cardSave">💾 Save image</button><button class="cbtn share" id="cardShareBtn">📤 Share</button><button class="cbtn close" id="cardClose">Close</button></div>
+  </div>
+
+  <div class="win" id="win"><h1>🌌 The Neighborhood is charted</h1><p>You explored every nearby system and lit up your whole constellation — by doing real science on real NASA data. This is Season 1 complete.</p><button id="winShare" style="margin-top:12px;background:#141c2e;color:#fff;border:1px solid rgba(255,255,255,.16);padding:14px 26px;border-radius:14px;font:800 15px 'Space Grotesk';cursor:pointer;">📤 Share your card</button><button id="again">Keep exploring</button></div>
 </div>
 
 <script>
@@ -466,6 +482,43 @@
   const atlasBtn=document.getElementById('atlasBtn');
   atlasBtn.onclick=()=>{ renderAtlas(); document.getElementById('atlas').classList.add('show'); };
   document.getElementById('atlasClose').onclick=()=>document.getElementById('atlas').classList.remove('show');
+
+  // ---------- shareable explorer card ----------
+  let _cardCanvas=null;
+  function rr(x,rx,ry,rw,rh,rad){ x.beginPath(); x.moveTo(rx+rad,ry); x.arcTo(rx+rw,ry,rx+rw,ry+rh,rad); x.arcTo(rx+rw,ry+rh,rx,ry+rh,rad); x.arcTo(rx,ry+rh,rx,ry,rad); x.arcTo(rx,ry,rx+rw,ry,rad); x.closePath(); }
+  function makeShareCard(){
+    const w=1080,h=1350,c=document.createElement('canvas'); c.width=w;c.height=h; const x=c.getContext('2d');
+    x.fillStyle='#04060e'; x.fillRect(0,0,w,h);
+    [['rgba(93,202,165,.16)',.3,.26,.55],['rgba(127,178,255,.15)',.72,.58,.6],['rgba(160,106,208,.12)',.4,.86,.5]].forEach(cl=>{ const g=x.createRadialGradient(cl[1]*w,cl[2]*h,0,cl[1]*w,cl[2]*h,Math.max(w,h)*cl[3]); g.addColorStop(0,cl[0]); g.addColorStop(1,'rgba(0,0,0,0)'); x.fillStyle=g; x.fillRect(0,0,w,h); });
+    const rnd=mulberry(777); for(let i=0;i<170;i++){ x.globalAlpha=.2+rnd()*.7; x.fillStyle=rnd()<.15?'#bfe9ff':'#fff'; x.beginPath(); x.arc(rnd()*w,rnd()*h,rnd()*2+.4,0,6.283); x.fill(); } x.globalAlpha=1;
+    x.strokeStyle='rgba(255,255,255,.12)'; x.lineWidth=3; rr(x,24,24,w-48,h-48,36); x.stroke();
+    x.textAlign='center';
+    x.fillStyle='#5DCAA5'; x.font='800 24px "Space Grotesk",system-ui'; x.fillText('THE SEARCH · EXPLORER CARD', w/2, 88);
+    x.fillStyle='#fff'; x.font='600 58px "Fredoka",system-ui'; x.fillText('Life On Other Planets?', w/2, 156);
+    const charted=SYSTEMS.filter(s=>state.charted[s.h]);
+    const hp=charted.length?charted[0].pl[0].p:'gas', hs=charted.length?charted[0].seed:3;
+    x.drawImage(planet(340,hp,hs), w/2-170, 190);
+    x.fillStyle='#fff'; x.font='700 52px "Space Grotesk",system-ui'; x.fillText(state.explorer||'Explorer', w/2, 606);
+    const o=rankFor(state.xp);
+    x.fillStyle='#f5c977'; x.font='800 30px "Space Grotesk",system-ui'; x.fillText('★ '+o.r.n+'   ·   '+state.xp+' XP', w/2, 652);
+    const worlds=[]; charted.forEach(s=>s.pl.forEach((pl,i)=>worlds.push({p:pl.p,seed:s.seed+i*7}))); const show=worlds.slice(0,6);
+    if(show.length){ const pw=118,gap=16,tot=show.length*pw+(show.length-1)*gap,sx0=w/2-tot/2; show.forEach((wd,i)=>x.drawImage(planet(pw,wd.p,wd.seed),sx0+i*(pw+gap),700)); }
+    else { x.fillStyle='#9fb0d0'; x.font='500 28px system-ui'; x.fillText('Just getting started — discover your first world', w/2, 760); }
+    const badges=Object.keys(state.badges||{}).length;
+    const stats=[['Worlds',worlds.length],['Systems',charted.length+'/'+SYSTEMS.length],['Streak','🔥 '+(state.bestStreak||0)],['Badges',badges]];
+    const sw=228,sg=16,st=4*sw+3*sg,sx=w/2-st/2,sy=880;
+    stats.forEach((s2,i)=>{ const bx=sx+i*(sw+sg); rr(x,bx,sy,sw,120,20); x.fillStyle='rgba(255,255,255,.06)'; x.fill(); x.strokeStyle='rgba(255,255,255,.1)'; x.lineWidth=1.5; x.stroke(); x.fillStyle='#8fa0c4'; x.font='800 17px "Space Grotesk"'; x.fillText(String(s2[0]).toUpperCase(),bx+sw/2,sy+40); x.fillStyle='#fff'; x.font='800 38px "Space Grotesk"'; x.fillText(String(s2[1]),bx+sw/2,sy+90); });
+    x.fillStyle='#b9c2d6'; x.font='500 27px system-ui'; x.fillText('Charting the nearest stars for signs of life.', w/2, 1120);
+    x.fillStyle='#fff'; x.font='700 32px "Space Grotesk"'; x.fillText('Play free · real NASA data', w/2, h-118);
+    x.fillStyle='#5DCAA5'; x.font='800 42px "Space Grotesk"'; x.fillText('lifeonotherplanets.space', w/2, h-64);
+    return c;
+  }
+  function openCard(){ if(!state.explorer){ const nm=prompt('Your explorer name (shown on your card):',''); if(nm && cleanName(nm.trim()).ok){ state.explorer=nm.trim(); save(); } }
+    (document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()).then(function(){ _cardCanvas=makeShareCard(); document.getElementById('cardImg').src=_cardCanvas.toDataURL('image/png'); document.getElementById('cardModal').classList.add('show'); }); }
+  function saveCard(){ if(!_cardCanvas)return; _cardCanvas.toBlob(function(b){ const u=URL.createObjectURL(b),a=document.createElement('a'); a.href=u; a.download='my-search-card.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(u);},3000); }); }
+  function shareCardImg(){ if(!_cardCanvas)return; _cardCanvas.toBlob(function(b){ const f=new File([b],'my-search-card.png',{type:'image/png'}); if(navigator.canShare&&navigator.canShare({files:[f]})){ navigator.share({files:[f],title:'The Search',text:'I’m charting real worlds in The Search — join me! lifeonotherplanets.space'}).catch(function(){}); } else saveCard(); }); }
+  { const _sb=document.getElementById('shareBtn'); if(_sb)_sb.onclick=openCard; const _ws=document.getElementById('winShare'); if(_ws)_ws.onclick=openCard;
+    document.getElementById('cardSave').onclick=saveCard; document.getElementById('cardShareBtn').onclick=shareCardImg; document.getElementById('cardClose').onclick=function(){document.getElementById('cardModal').classList.remove('show');}; }
   function renderAtlas(){
     // progression header: rank + XP + streak, regions, achievements
     const o=rankFor(state.xp), pct=o.nx?Math.round(((state.xp-o.r.xp)/(o.nx.xp-o.r.xp))*100):100;
