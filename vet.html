@@ -123,6 +123,7 @@
   <h1>The Search — Data Lab</h1>
   <p class="sub">You're shown a <b>light curve</b> — a star's brightness measured over time by NASA's TESS planet-hunting telescope. A planet crossing its star makes a tiny, repeating dip. Your job: tell a real planet from noise, a glitch, or two stars eclipsing each other. Real cards use <b>real TESS data</b> and each has a known answer, so your accuracy is measured for real.<span id="syncst" style="color:#5DCAA5;font-family:'Space Grotesk',sans-serif;font-size:13px;"></span></p>
 
+  <div id="tessCountdown" style="text-align:center;margin:2px 0 14px;font-family:'Space Grotesk',sans-serif;font-size:12.5px;color:#7fb2ff;"></div>
   <div class="mission" id="mission" style="display:none;"></div>
 
   <div style="display:flex;justify-content:center;margin:0 0 12px;">
@@ -255,6 +256,33 @@ function annotate(){
   _annRAF=requestAnimationFrame(step);
 }
 
+/* ---------- transit animation: watch the planet cross its star, synced to the dip ---------- */
+let _transRAF=0;
+function transitAnim(){
+  cancelAnimationFrame(_transRAF); const card=current;
+  const wrap=document.createElement('div'); wrap.style.marginTop='12px';
+  wrap.innerHTML='<div style="font-size:12.5px;color:#9fb0d0;font-weight:600;">👀 Why it dips — the planet crossing its star:</div>';
+  const cv=document.createElement('canvas'); cv.style.width='100%'; cv.style.height='120px'; cv.style.display='block'; cv.style.borderRadius='10px'; cv.style.background='#0a0f1c'; cv.style.marginTop='6px'; wrap.appendChild(cv);
+  const nb=document.getElementById('nextbtn'), v=document.getElementById('verdict');
+  if(nb&&nb.parentNode&&nb.parentNode.parentNode===v){ v.insertBefore(wrap, nb.parentNode); } else { v.appendChild(wrap); }
+  const t0=performance.now();
+  function loop(now){ if(current!==card) return;
+    const dpr=window.devicePixelRatio||1, W=cv.clientWidth, H=120; cv.width=W*dpr; cv.height=H*dpr; const x=cv.getContext('2d'); x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,W,H);
+    const sx=W*0.5, sy=42, sr=22, P=4000, px=(((now-t0)/P)%1)*(W+60)-30, dip=0.5, sig=15;
+    const dimAt=q=>1-dip*Math.exp(-((q-sx)/sig)*((q-sx)/sig));
+    const cyTop=82, cyBot=110, bY=b=>cyBot-(b-(1-dip))/dip*(cyBot-cyTop);
+    x.strokeStyle='rgba(127,178,255,.5)'; x.lineWidth=2; x.beginPath(); for(let q=6;q<=W-6;q+=3){ const y=bY(dimAt(q)); q===6?x.moveTo(q,y):x.lineTo(q,y);} x.stroke();
+    let g=x.createRadialGradient(sx,sy,0,sx,sy,sr*2); g.addColorStop(0,'rgba(245,201,119,.95)'); g.addColorStop(.4,'rgba(245,201,119,.5)'); g.addColorStop(1,'rgba(245,201,119,0)'); x.fillStyle=g; x.beginPath(); x.arc(sx,sy,sr*2,0,6.283); x.fill();
+    x.fillStyle='#ffe08a'; x.beginPath(); x.arc(sx,sy,sr,0,6.283); x.fill();
+    x.fillStyle='#141c2e'; x.beginPath(); x.arc(px,sy,7,0,6.283); x.fill();
+    const my=bY(dimAt(px)); x.strokeStyle='rgba(255,255,255,.16)'; x.lineWidth=1; x.beginPath(); x.moveTo(px,sy+9); x.lineTo(px,my-6); x.stroke();
+    x.fillStyle='#5DCAA5'; x.beginPath(); x.arc(px,my,4,0,6.283); x.fill();
+    _transRAF=requestAnimationFrame(loop); }
+  _transRAF=requestAnimationFrame(loop);
+}
+function nextTessDays(){ const anchor=Date.UTC(2026,5,13), period=27.4*86400000, now=Date.now(); const nb=anchor+Math.ceil((now-anchor)/period)*period; return Math.max(1,Math.ceil((nb-now)/86400000)); }
+(function(){ const el=document.getElementById('tessCountdown'); if(el) el.innerHTML='🛰️ NASA’s next TESS sky window in ~'+nextTessDays()+' days — new patches of sky arrive about every 27 days.'; })();
+
 /* ---------- card flow ---------- */
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 function buildRealQueue(){
@@ -378,7 +406,7 @@ function answer(a){
   v.innerHTML=html;
   document.getElementById("nextbtn").onclick=advance;
   if(current.isReal && window.LOPSync && LOPSync.enabled && current.id){ const key=current.id, mv=a, tr=truth; LOPSync.ensureExplorer(explorerName(),"stargazer","#f5c977").then(function(){ return LOPSync.logVote(key,mv); }).then(function(){ return LOPSync.getConsensus(key); }).then(function(c){ renderCrowd(c,mv,tr); }); }
-  annotate();
+  annotate(); if(current&&current.truth==="planet") transitAnim();
 }
 function renderCrowd(c,myVote,truth){ const el=document.getElementById('crowd'); if(!el) return;
   if(!c||!c.votes){ el.innerHTML='🛰️ You’re among the first to vet this star — the crowd builds as more explorers join.'; return; }

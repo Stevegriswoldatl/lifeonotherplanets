@@ -80,6 +80,7 @@
     <a class="play" href="play.html">Start exploring →</a>
     <a class="index" href="rankings.html">See the habitability rankings</a>
   </div>
+  <div id="tessCountdown" style="margin-top:16px;font-family:'Space Grotesk',sans-serif;font-size:13px;color:#7fb2ff;"></div>
 </div>
 
 <!-- ===== How It Works: 4-step visual flow (design handoff) ===== -->
@@ -273,6 +274,8 @@
 
 <script>
   // Per-step accordion toggle (independent open/close)
+  function nextTessDays(){ var anchor=Date.UTC(2026,5,13), period=27.4*86400000, now=Date.now(); var nb=anchor+Math.ceil((now-anchor)/period)*period; return Math.max(1,Math.ceil((nb-now)/86400000)); }
+  (function(){ var el=document.getElementById('tessCountdown'); if(el) el.innerHTML='🛰️ NASA’s next TESS sky window in ~'+nextTessDays()+' days — new data to search arrives about every 27 days.'; })();
   function hiwToggle(btn){
     var card = btn.closest('.hiw-card');
     var detail = card.querySelector('.hiw-detail');
