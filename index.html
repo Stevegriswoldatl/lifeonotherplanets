@@ -75,7 +75,7 @@
   <a class="brand" href="index.html">Life On Other Planets?</a>
   <a href="play.html">Explore</a>
   <a href="rankings.html">Rankings</a>
-  <a href="vet.html">Data Lab</a> <a href="seti.html">Signal Lab</a>
+  <a href="vet.html">Data Lab</a> <a href="seti.html">Signal Lab</a> <a href="relay.html">AI Lab</a>
   <a href="guide.html">Field Guide</a>
   <a href="scoreboard.html">Scoreboard</a>
 </nav>
@@ -281,7 +281,7 @@
 
 <script>
   // Per-step accordion toggle (independent open/close)
-  function nextTessDays(){ var anchor=Date.UTC(2026,5,13), period=27.4*86400000, now=Date.now(); var nb=anchor+Math.ceil((now-anchor)/period)*period; return Math.max(1,Math.ceil((nb-now)/86400000)); }
+  function nextTessDays(){ var now=new Date(), d=now.getUTCDate(), dim=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()+1,0)).getUTCDate(), days=[1,15,29]; for(var i=0;i<days.length;i++){ if(days[i]>d) return days[i]-d; } return (dim-d)+1; }
   (function(){ var el=document.getElementById('tessCountdown'); if(!el)return; var d=nextTessDays();
     el.innerHTML='<span class="tc-dot"></span><span class="tc-lab">Next NASA data drop</span>'+
       '<b class="tc-num">'+d+'</b><span class="tc-unit">day'+(d===1?'':'s')+'</span>'+

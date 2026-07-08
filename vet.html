@@ -116,7 +116,7 @@
 <a href="play.html" style="color:#9aa6bf;text-decoration:none;">Explore</a>
 <a href="rankings.html" style="color:#9aa6bf;text-decoration:none;">Rankings</a>
 <a href="vet.html" style="color:#e8ecf6;text-decoration:none;">Data Lab</a>
-<a href="seti.html" style="color:#9aa6bf;text-decoration:none;">Signal Lab</a>
+<a href="seti.html" style="color:#9aa6bf;text-decoration:none;">Signal Lab</a> <a href="relay.html" style="color:#9aa6bf;text-decoration:none;">AI Lab</a>
 <a href="guide.html" style="color:#9aa6bf;text-decoration:none;">Field Guide</a>
 <a href="scoreboard.html" style="color:#9aa6bf;text-decoration:none;">Scoreboard</a>
 </nav>
@@ -311,7 +311,7 @@ function transitAnim(){
     _transRAF=requestAnimationFrame(loop); }
   _transRAF=requestAnimationFrame(loop);
 }
-function nextTessDays(){ const anchor=Date.UTC(2026,5,13), period=27.4*86400000, now=Date.now(); const nb=anchor+Math.ceil((now-anchor)/period)*period; return Math.max(1,Math.ceil((nb-now)/86400000)); }
+function nextTessDays(){ var now=new Date(), d=now.getUTCDate(), dim=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()+1,0)).getUTCDate(), days=[1,15,29]; for(var i=0;i<days.length;i++){ if(days[i]>d) return days[i]-d; } return (dim-d)+1; }
 (function(){ const el=document.getElementById('tessCountdown'); if(el) el.innerHTML='🛰️ NASA’s next TESS sky window in ~'+nextTessDays()+' days — new patches of sky arrive about every 27 days.'; })();
 
 /* ---------- card flow ---------- */
