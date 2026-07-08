@@ -1,0 +1,29 @@
+name: Refresh TESS data
+on:
+  schedule:
+    - cron: '17 6 1,15,29 * *'
+  workflow_dispatch:
+    inputs:
+      count:
+        description: 'How many NEW open candidates to add'
+        default: '40'
+permissions:
+  contents: write
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11', cache: pip }
+      - run: pip install -r requirements.txt
+      - run: python scripts/fetch_frontier.py --append --out frontier_curves.json --max "${{ github.event.inputs.count || '40' }}" --pool 400
+      - run: |
+          git config user.name "tess-refresh-bot"
+          git config user.email "actions@users.noreply.github.com"
+          if git diff --quiet -- frontier_curves.json; then echo "No new candidates."; else
+            git add frontier_curves.json
+            git commit -m "Auto-refresh: new open TESS candidates"
+            git push
+          fi
