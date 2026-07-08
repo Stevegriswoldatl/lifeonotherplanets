@@ -215,6 +215,30 @@ function valuesAgree(vals){ // vals: array of raw value strings
   const norm=vals.map(v=>String(v).trim().toLowerCase());
   return norm.every(v=>v===norm[0]);
 }
+// known-value control check: pull the numbers an AI reported, compare to truth
+function extractNums(data){
+  const out={};
+  if(Array.isArray(data.parameters)){
+    data.parameters.forEach(pm=>{
+      const n=String(pm&&pm.name||"").toLowerCase(); const v=numOf(pm&&pm.value);
+      if(v==null) return;
+      if(/rad/.test(n) && out.radius==null) out.radius=v;
+      if(/(insol|flux|irradia)/.test(n) && out.insolation==null) out.insolation=v;
+      if(/dist/.test(n) && out.distance==null) out.distance=v;
+    });
+  }
+  const text=(Array.isArray(data.key_facts)?data.key_facts.join("  "):"")+"  "+(data.follow_up_status||"");
+  if(out.radius==null){ const m=text.match(/rad[a-z]*[^0-9]{0,12}([0-9.]+)\s*(?:earth|r⊕|re\b|r_earth)/i); if(m) out.radius=parseFloat(m[1]); }
+  if(out.distance==null){ const m=text.match(/([0-9.]+)\s*light[-\s]?years/i); if(m) out.distance=parseFloat(m[1]); }
+  return out;
+}
+function controlCheck(data, truth){
+  const got=extractNums(data||{}); const checks=[];
+  const within=(a,b,tol)=> a!=null && b!=null && b!==0 && Math.abs(a-b)/Math.abs(b)<=tol;
+  if(got.radius!=null)   checks.push({param:"radius",   said:got.radius+" R⊕", known:truth.radius+" R⊕",     ok:within(got.radius,truth.radius,0.25)});
+  if(got.distance!=null) checks.push({param:"distance", said:got.distance+" ly", known:truth.distanceLy+" ly", ok:within(got.distance,truth.distanceLy,0.25)});
+  return { checked:checks.length, passed:checks.filter(c=>c.ok).length, checks };
+}
 // ---------- end pure helpers ----------
 
 const $ = id => document.getElementById(id);
@@ -230,6 +254,25 @@ function syncOn(){ return !!(window.LOPSync && window.LOPSync.enabled); }
 function modelsSummary(list){
   const c={}; list.forEach(s=>{ c[s.who]=(c[s.who]||0)+1; });
   return Object.keys(c).map(k=> c[k]>1?`${k} ×${c[k]}`:k).join(", ") || "—";
+}
+function planetTruth(){ const p=PLANETS[+sel.value]; return { radius:p.r, insolation:p.s, hostK:p.t, distanceLy:p.d }; }
+// returns {html, failed:Set(models that missed a known value)}
+function reliabilityBlock(list){
+  const truth=planetTruth();
+  const rel=list.map(s=>({ who:s.who, r:controlCheck(s.data, truth) }));
+  const failed=new Set();
+  if(!rel.some(x=>x.r.checked>0)) return { html:"", failed };
+  let rows="";
+  rel.forEach(x=>{
+    if(x.r.checked===0){ rows+=`<div class="factli"><b>${x.who}</b> <span class="badge b-single">no known value to check</span></div>`; return; }
+    const ok=x.r.passed===x.r.checked;
+    if(!ok) failed.add(x.who);
+    const detail=x.r.checks.map(c=>`${c.param} ${c.ok?"✓":"✗"} <span class="who-tag">(said ${c.said}, known ${c.known})</span>`).join(" &nbsp; ");
+    rows+=`<div class="factli"><b>${x.who}</b> ${ok?`<span class="badge b-ok">✓ passed ${x.r.passed}/${x.r.checked}</span>`:`<span class="badge b-conflict">⚠ missed ${x.r.checked-x.r.passed}/${x.r.checked}</span>`} &nbsp; ${detail}</div>`;
+  });
+  const html=`<div class="field"><div class="k">Pipeline reliability — known-value checks</div><div>${rows}`+
+    `<div class="note" style="margin-top:8px;">These silently compare each AI's reported numbers to values already established for this world. An AI that misses a known value has its other claims treated with extra caution below.</div></div>`;
+  return { html, failed };
 }
 function combinedList(){
   let list = subs.slice();
@@ -398,8 +441,11 @@ async function initSync(){
   updateShareState();
 }
 
-function badgeFor(count, total){
-  if(count>=2) return `<span class="badge b-ok">✓ corroborated · ${count} AIs</span>`;
+function badgeFor(whos, failed){
+  failed = failed || new Set();
+  const trusted = whos.filter(w=>!failed.has(w));
+  if(trusted.length>=2) return `<span class="badge b-ok">✓ corroborated · ${trusted.length} AIs</span>`;
+  if(whos.length>=2) return `<span class="badge b-single">agreed — but by AIs that missed a known value</span>`;
   return `<span class="badge b-single">single-source</span>`;
 }
 
@@ -410,16 +456,24 @@ function buildDossierConsensus(list){
   let html = `<div style="font-family:'Space Grotesk';font-weight:700;margin:6px 0 4px;">Consensus dossier — ${pname}</div>`;
   html += `<div class="hint" style="margin-top:0;">Cross-checked across ${total} answer${total>1?"s":""} from ${modelsSummary(list)}.</div>`;
 
+  // Pipeline reliability — known-value control checks (Step 3)
+  const rb = reliabilityBlock(list); const failed = rb.failed;
+  html += rb.html;
+
   // Atmosphere status — the headline, citation-sensitive
   const atmos = list.map(s=>({who:s.who, v:String((s.data&&s.data.atmosphere_status)||"unknown").toLowerCase().trim()}));
   const uniq = [...new Set(atmos.map(a=>a.v))];
+  const trustedAtmo = new Set(list.filter(s=>!failed.has(s.who)).map(s=>s.who)).size;
   let atmoHtml;
   if(uniq.length===1){
     const v=uniq[0]; const cls = v==="detected"?"ok":v==="tentative"?"warn":"";
-    atmoHtml = `<span class="pill ${cls?'':''}">${v}</span> ${distinct>1?`<span class="badge b-ok">✓ ${distinct} AIs agree</span>`:`<span class="badge b-single">single-source</span>`}`;
+    const badge = trustedAtmo>=2 ? `<span class="badge b-ok">✓ ${trustedAtmo} AIs agree</span>`
+      : distinct>1 ? `<span class="badge b-single">agreed — but among AIs that missed a known value</span>`
+      : `<span class="badge b-single">single-source</span>`;
+    atmoHtml = `<span class="pill ${cls?'':''}">${v}</span> ${badge}`;
   } else {
     atmoHtml = `<span class="badge b-conflict">⚠ conflict — needs a human</span><div class="conflictbox">`+
-      atmos.map(a=>`<b>${a.who}:</b> ${a.v}`).join(" &nbsp;·&nbsp; ")+`</div>`;
+      atmos.map(a=>`<b>${a.who}${failed.has(a.who)?" (missed a known value)":""}:</b> ${a.v}`).join(" &nbsp;·&nbsp; ")+`</div>`;
   }
   html += `<div class="field"><div class="k">Atmosphere</div><div>${atmoHtml}</div></div>`;
 
@@ -436,7 +490,7 @@ function buildDossierConsensus(list){
   const grouped=groupFacts(facts);
   if(grouped.length){
     html += `<div class="field"><div class="k">Key facts</div><div>`+
-      grouped.map(g=>`<div class="factli">• ${g.text} ${badgeFor(g.whos.length,total)} <span class="who-tag">${g.whos.join(", ")}</span></div>`).join("")+`</div></div>`;
+      grouped.map(g=>`<div class="factli">• ${g.text} ${badgeFor(g.whos, failed)} <span class="who-tag">${g.whos.join(", ")}</span></div>`).join("")+`</div></div>`;
   }
 
   // Notable / debated claims — always flagged
@@ -471,6 +525,9 @@ function buildCrosscheckConsensus(list){
   const pname = (list[0].data && list[0].data.planet) || PLANETS[+sel.value].n;
   let html = `<div style="font-family:'Space Grotesk';font-weight:700;margin:6px 0 4px;">Catalog cross-check — ${pname}</div>`;
   html += `<div class="hint" style="margin-top:0;">Reconciled across ${total} answer${total>1?"s":""} from ${modelsSummary(list)}.</div>`;
+
+  // Pipeline reliability — known-value control checks (Step 3)
+  html += reliabilityBlock(list).html;
 
   // collect parameters keyed by lowercased name
   const params={};
