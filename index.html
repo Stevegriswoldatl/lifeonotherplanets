@@ -67,8 +67,15 @@
     .hiw-trail, .hiw-truckster { display:none; }
     .hiw h2.hiw-title { font-size:32px !important; }
   }
+  .stations{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin:8px 0 4px; }
+  .station{ display:flex; flex-direction:column; gap:6px; padding:16px; border-radius:14px; background:#0b1120; border:1px solid rgba(79,216,255,.18); text-decoration:none; transition:transform .12s ease, border-color .12s ease; }
+  .station:hover{ transform:translateY(-3px); border-color:rgba(79,216,255,.5); box-shadow:0 0 22px rgba(79,216,255,.12); }
+  .station .si{ font-size:24px; color:#4fd8ff; line-height:0; }
+  .station b{ color:#e8ecf6; font-family:"Space Grotesk",sans-serif; font-size:16px; }
+  .station .sd{ color:#9aa6bf; font-size:13px; line-height:1.45; }
 </style>
 <link rel="stylesheet" href="theme-mc.css">
+<script src="icons.js" defer></script>
 </head>
 <body>
 <nav>
@@ -89,6 +96,15 @@
     <a class="play" href="play.html">Start exploring →</a>
   </div>
   <div id="tessCountdown" class="tess-countdown"></div>
+</div>
+
+<div class="wrap" style="padding-top:8px;">
+  <h2>Three ways to join the search</h2>
+  <div class="stations">
+    <a class="station" href="vet.html"><span class="si"><i class="ico" data-i="scan"></i></span><b>Data Lab</b><span class="sd">Spot real planets in NASA light curves — the core science task.</span></a>
+    <a class="station" href="seti.html"><span class="si"><i class="ico" data-i="signal"></i></span><b>Signal Lab</b><span class="sd">Hunt for alien radio signals using the ON-OFF cadence test.</span></a>
+    <a class="station" href="relay.html"><span class="si"><i class="ico" data-i="together"></i></span><b>AI Lab</b><span class="sd">Cross-check candidates with help from your own AI.</span></a>
+  </div>
 </div>
 
 <!-- ===== How It Works: 4-step visual flow (design handoff) ===== -->
