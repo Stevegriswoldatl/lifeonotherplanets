@@ -855,10 +855,10 @@
     const mIco=document.getElementById('mdIco'), mMain=document.getElementById('mdMain'), mSub=document.getElementById('mdSub'), mGo=document.getElementById('mdGo');
     mIco.innerHTML = licensed ? ic('satellite') : ic('lock');
     mMain.innerHTML = licensed
-      ? (FRONTIER.length ? ('<b>'+FRONTIER.length+' open</b> — NASA needs this') : 'Real-data explorer · next TESS batch soon')
+      ? (FRONTIER.length ? ('<b>'+FRONTIER.length+' open</b> — review fast, skip the map') : 'Real-data explorer · next TESS batch soon')
       : 'Training — earn your observer’s license';
     mSub.innerHTML = drop+' · Target: <span class="tgt" id="mdTgt">'+esc(s.h)+(charted?' ✓':'')+'</span>';
-    mGo.textContent = licensed ? 'Review →' : 'Train →';
+    mGo.textContent = licensed ? 'Help review →' : 'Train →';
     const tgt=document.getElementById('mdTgt'); if(tgt)tgt.onclick=function(ev){ ev.stopPropagation(); const t=todaySys(); if(state.charted[t.h]) openReward(t,true); else openScan(t); }; }
   function updateTod(){ updateDock(); }
 
