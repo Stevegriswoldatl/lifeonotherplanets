@@ -107,6 +107,31 @@
   .modebar.real b{ color:#efe6ff; }
   .modebar.practice{ border-color:#2c6b56; background:linear-gradient(180deg,#0d211b,#0a1a16); color:#a7e0c8; }
   .modebar .prog{ color:#f5c977; font-weight:700; white-space:nowrap; }
+  /* Deep Scan: optional light-curve inspector */
+  .inspectbtn{ width:100%; margin:12px 0 2px; background:rgba(127,224,255,.08); border:1px solid rgba(127,224,255,.3); color:#7fe0ff; font:800 13.5px 'Space Grotesk'; padding:11px; border-radius:14px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:8px; }
+  .inspectbtn:active{ transform:scale(.97); } .inspectbtn .lopico{ font-size:17px; }
+  .deepscan{ position:absolute; inset:0; z-index:14; display:flex; flex-direction:column; gap:10px; background:rgba(3,4,12,.95); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 14px); opacity:0; visibility:hidden; pointer-events:none; transition:opacity .28s ease, visibility .28s; overflow-y:auto; }
+  .deepscan.show{ opacity:1; visibility:visible; pointer-events:auto; }
+  .ds-head{ display:flex; align-items:center; gap:10px; }
+  .ds-head h2{ font:800 18px 'Space Grotesk'; margin:0; } .ds-head h2 span{ color:#7fe0ff; } .ds-head h2 b{ color:#9be7ff; }
+  .ds-plotwrap{ position:relative; border-radius:16px; overflow:hidden; border:1px solid rgba(127,224,255,.2); background:linear-gradient(180deg,#0c1c30,#08131f); height:240px; flex:0 0 auto; }
+  #dsCanvas{ width:100%; height:100%; display:block; touch-action:none; cursor:grab; }
+  #dsCanvas:active{ cursor:grabbing; }
+  .ds-tools{ position:absolute; top:10px; right:10px; display:flex; flex-direction:column; gap:6px; }
+  .ds-tools button{ width:34px; height:34px; border-radius:10px; background:rgba(9,22,42,.82); border:1px solid rgba(127,224,255,.32); color:#7fe0ff; font:700 16px system-ui; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .ds-tools button:active{ transform:scale(.92); } .ds-tools .lopico{ font-size:16px; }
+  .ds-axhint{ position:absolute; left:10px; right:10px; bottom:6px; display:flex; justify-content:space-between; font-size:10px; color:#5f6e92; pointer-events:none; }
+  .ds-measure{ font-size:12.5px; color:#c7d2ea; min-height:18px; padding:0 2px; } .ds-measure b{ color:#f5c977; }
+  .ds-fold{ font-size:12.5px; color:#b8a6e6; background:rgba(150,120,246,.08); border:1px solid rgba(150,120,246,.22); border-radius:12px; padding:9px 12px; line-height:1.5; } .ds-fold b{ color:#e0d4ff; }
+  .ds-readout{ display:flex; gap:8px; }
+  .ds-stat{ flex:1; background:rgba(9,18,38,.6); border:1px solid rgba(255,255,255,.09); border-radius:12px; padding:9px 12px; }
+  .ds-stat .k{ font-size:10px; color:#8fa2c6; text-transform:uppercase; letter-spacing:.05em; }
+  .ds-stat .dsval{ font-size:16px; font-weight:800; color:#9be7ff; margin-top:2px; } .ds-stat .dsval .u{ font-size:11px; font-weight:400; color:#8fa2c6; } .ds-stat .dsval.flag{ color:#f5a06b; }
+  .ds-checks-h{ font-size:11px; color:#8fa2c6; text-transform:uppercase; letter-spacing:.05em; margin-top:2px; }
+  .ds-checks{ display:flex; flex-direction:column; gap:6px; }
+  .dsc{ font-size:12px; line-height:1.45; color:#c7d2ea; background:rgba(93,202,165,.08); border:1px solid rgba(93,202,165,.2); border-radius:10px; padding:8px 10px; }
+  .dsc.flag{ background:rgba(240,150,90,.09); border-color:rgba(240,150,90,.3); color:#f0c3a8; } .dsc b{ color:#e8ecf6; } .dsc .lopico{ color:#6be6c1; }
+  .ds-hint{ font-size:11px; color:#8fa2c6; text-align:center; padding-bottom:4px; }
 </style>
 <link rel="stylesheet" href="theme-mc.css">
 </head>
@@ -159,6 +184,7 @@
       <div class="progresstrack" id="practicetrack" style="margin-top:8px;"><i></i><i></i><i></i></div>
       <canvas id="lc"></canvas>
       <div class="axhint"><span>time →</span><span>← brightness</span></div>
+      <button class="inspectbtn" id="inspectBtn" style="display:none;"><i class="ico" data-i="scan"></i> Inspect closely</button>
       <div class="q" id="question">Is there a real planet transiting this star?</div>
       <div class="swipehint" id="swipehint">Tap a button below — or on a phone, swipe → for planet, ← for not a planet.</div>
       <div class="btns">
@@ -197,6 +223,30 @@
     </div>
   </div>
 </div>
+
+  <!-- Deep Scan: optional light-curve inspector (real candidates) -->
+  <div class="deepscan" id="deepscan">
+    <div class="ds-head"><div class="glass close" id="dsClose">✕</div><h2>🔬 Deep <span>Scan</span> · <b id="dsName"></b></h2></div>
+    <div class="ds-plotwrap">
+      <canvas id="dsCanvas"></canvas>
+      <div class="ds-tools">
+        <button id="dsZoomIn" title="Zoom in">+</button>
+        <button id="dsZoomOut" title="Zoom out">−</button>
+        <button id="dsSnap" title="Snap to the transit"><i class="ico" data-i="target"></i></button>
+        <button id="dsResetBtn" title="Reset view">⟲</button>
+      </div>
+      <div class="ds-axhint"><span>phase →</span><span>← brightness</span></div>
+    </div>
+    <div class="ds-measure" id="dsMeasure"></div>
+    <div class="ds-fold" id="dsFold"></div>
+    <div class="ds-readout">
+      <div class="ds-stat"><div class="k">Transit depth</div><div class="dsval" id="dsDepth">—</div></div>
+      <div class="ds-stat"><div class="k">Estimated size</div><div class="dsval" id="dsSize">—</div></div>
+    </div>
+    <div class="ds-checks-h">What the pros check for</div>
+    <div class="ds-checks" id="dsChecks"></div>
+    <div class="ds-hint">drag to pan · pinch / scroll to zoom · tap the curve to measure</div>
+  </div>
 
 <script>
 /* ---- real TESS deck is fetched; synthetic generator powers practice + graceful fallback ---- */
@@ -266,6 +316,7 @@ function draw(f){
   x.fillStyle="#7fb2ff";
   for(let i=0;i<f.length;i++){ x.globalAlpha=0.85; x.beginPath(); x.arc(X(i),Y(f[i]),1.6,0,6.2832); x.fill(); }
   x.globalAlpha=1;
+  toggleInspect();
 }
 /* ---------- "show me why": circle the dips / X the glitches, animated ---------- */
 let _annRAF=0;
@@ -623,6 +674,72 @@ function startFlow(){
   // else: overlay stays until they hit Start
 }
 boot();
+  // ---------- Deep Scan: optional light-curve inspector (real candidates only) ----------
+  function dsIc(n){ return window.LOPIcon?LOPIcon(n):''; }
+  function dsAvail(){ return !!(current && current.frontier && current.f && current.f.length); }
+  function toggleInspect(){ var b=document.getElementById('inspectBtn'); if(b)b.style.display=dsAvail()?'inline-flex':'none'; }
+  let dsCam=null, dsFit=null, dsMark=null;
+  function dsMedian(f){ const s=f.slice().sort(function(a,b){return a-b;}); return s[Math.floor(s.length/2)]||1; }
+  function dsFitCalc(){ const cv=document.getElementById('dsCanvas'); const W=cv.clientWidth||320, H=cv.clientHeight||220, pad=22;
+    const f=current.f, N=f.length, mn=Math.min.apply(null,f), mx=Math.max.apply(null,f), sp=(mx-mn)||1e-6;
+    dsFit={ W:W, H:H, pad:pad, N:N, mn:mn, mx:mx, sp:sp }; }
+  function dsFx(i){ return dsFit.pad + i/(dsFit.N-1)*(dsFit.W-2*dsFit.pad); }
+  function dsFy(v){ return dsFit.pad + (1-(v-dsFit.mn)/dsFit.sp)*(dsFit.H-2*dsFit.pad); }
+  function dsW2S(fx,fy,cv){ return [ (fx-dsCam.camX)*dsCam.zoom + cv.clientWidth/2, (fy-dsCam.camY)*dsCam.zoom + cv.clientHeight/2 ]; }
+  function dsS2W(px,py,cv){ return [ (px-cv.clientWidth/2)/dsCam.zoom + dsCam.camX, (py-cv.clientHeight/2)/dsCam.zoom + dsCam.camY ]; }
+  function dsReset(){ const cv=document.getElementById('dsCanvas'); dsCam={ camX:(cv.clientWidth||320)/2, camY:(cv.clientHeight||220)/2, zoom:1, min:1, max:16 }; dsMark=null; drawDeep(); }
+  function drawDeep(){ const cv=document.getElementById('dsCanvas'); if(!cv||!dsFit||!dsCam)return;
+    const dpr=Math.min(window.devicePixelRatio||1,2), W=cv.clientWidth, H=cv.clientHeight;
+    if(cv.width!==Math.round(W*dpr))cv.width=Math.round(W*dpr); if(cv.height!==Math.round(H*dpr))cv.height=Math.round(H*dpr);
+    const x=cv.getContext('2d'); x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,W,H);
+    x.strokeStyle='rgba(127,178,255,.08)'; x.lineWidth=1;
+    for(let g=0;g<=4;g++){ const yy=dsW2S(0,dsFit.pad+g/4*(dsFit.H-2*dsFit.pad),cv)[1]; x.beginPath(); x.moveTo(0,yy); x.lineTo(W,yy); x.stroke(); }
+    const f=current.f, N=f.length, r=Math.min(3.2,1.6+dsCam.zoom*0.28);
+    x.fillStyle='#8fd0ff'; x.shadowBlur=5; x.shadowColor='#5fd0ff';
+    for(let i=0;i<N;i++){ const s=dsW2S(dsFx(i),dsFy(f[i]),cv); if(s[0]<-6||s[0]>W+6||s[1]<-6||s[1]>H+6)continue; x.beginPath(); x.arc(s[0],s[1],r,0,6.283); x.fill(); }
+    x.shadowBlur=0;
+    if(dsMark!=null){ const s=dsW2S(dsFx(dsMark),dsFy(f[dsMark]),cv); x.strokeStyle='rgba(245,201,119,.8)'; x.lineWidth=1.5; x.beginPath(); x.moveTo(s[0],0); x.lineTo(s[0],H); x.stroke(); x.fillStyle='#f5c977'; x.beginPath(); x.arc(s[0],s[1],4.5,0,6.283); x.fill(); } }
+  function dsShowMeasure(i){ dsMark=i; const f=current.f, base=dsMedian(f), pct=Math.max(0,(base-f[i])/base*100);
+    const el=document.getElementById('dsMeasure'); if(el) el.innerHTML = pct>0.02 ? ('Measured here: <b>'+pct.toFixed(3)+'%</b> below the star’s normal brightness') : 'Measured here: flat — out-of-transit baseline'; drawDeep(); }
+  function dsZoom(clientX,clientY,factor,cv){ const rct=cv.getBoundingClientRect(), px=clientX-rct.left, py=clientY-rct.top, w=dsS2W(px,py,cv);
+    dsCam.zoom=Math.max(dsCam.min,Math.min(dsCam.max,dsCam.zoom*factor)); dsCam.camX=w[0]-(px-cv.clientWidth/2)/dsCam.zoom; dsCam.camY=w[1]-(py-cv.clientHeight/2)/dsCam.zoom; }
+  function dsSnap(){ const f=current.f; let mi=0; for(let i=1;i<f.length;i++) if(f[i]<f[mi])mi=i; dsCam.camX=dsFx(mi); dsCam.camY=dsFy(f[mi]); dsCam.zoom=Math.min(dsCam.max,5); dsShowMeasure(mi); }
+  function dsCat(r){ if(r>22)return 'too big — likely a star'; if(r>10)return 'gas giant'; if(r>3.9)return 'Neptune-like'; if(r>2)return 'mini-Neptune'; if(r>1.25)return 'super-Earth'; return 'rocky · Earth-sized'; }
+  function dsSizeInfo(){ let note=null, flag=false; (current.checks||[]).forEach(function(c){ if(c.test==='Implied size'){ note=c.note; flag=!!c.flag; } });
+    if(note){ const m=note.match(/([\d.]+)\s*Earth/); if(m){ const rr=parseFloat(m[1]); return {html:'~'+rr+' R⊕ <span class="u">'+dsCat(rr)+'</span>', flag:flag}; } }
+    return {html:'—', flag:false}; }
+  function dsRenderChecks(){ const box=document.getElementById('dsChecks'); if(!box)return;
+    const cs=(current.checks||[]).filter(function(c){ return c.test!=='Implied size'; });
+    if(!cs.length){ box.innerHTML='<div class="dsc ok">'+dsIc('check')+' No red flags in the automated checks — a clean-looking candidate.</div>'; return; }
+    box.innerHTML = cs.map(function(c){ return '<div class="dsc '+(c.flag?'flag':'ok')+'">'+(c.flag?'⚠ ':dsIc('check')+' ')+'<b>'+esc(c.test)+'</b> · '+esc(c.note)+'</div>'; }).join(''); }
+  function openDeepScan(){ if(!dsAvail())return; dsMark=null;
+    document.getElementById('dsName').textContent = current.name || current.id || 'candidate';
+    const P=current.period_days; document.getElementById('dsFold').innerHTML = P ? ('🌀 Folded on its <b>'+P+'-day</b> orbit — every lap of the planet is stacked into this one view, so a faint dip adds up instead of hiding in the noise.') : 'Every observation is stacked so a faint dip adds up instead of hiding in the noise.';
+    const dp=current.depth_ppm; document.getElementById('dsDepth').innerHTML = dp ? ((dp/1e4).toFixed(3)+'% <span class="u">('+dp.toLocaleString()+' ppm)</span>') : '—';
+    const sz=dsSizeInfo(); const sEl=document.getElementById('dsSize'); sEl.innerHTML=sz.html; sEl.className='dsval'+(sz.flag?' flag':'');
+    dsRenderChecks();
+    document.getElementById('dsMeasure').textContent='Tap the curve to measure any point yourself.';
+    document.getElementById('deepscan').classList.add('show');
+    dsSetup(); dsFitCalc(); dsReset(); }
+  function closeDeep(){ document.getElementById('deepscan').classList.remove('show'); }
+  function dsSetup(){ const cv=document.getElementById('dsCanvas'); if(!cv||cv._wired)return; cv._wired=true;
+    const pts=new Map(); let drag=false, moved=0, lx=0, ly=0, dxn=0, pinch=0;
+    cv.addEventListener('pointerdown',function(e){ cv.setPointerCapture(e.pointerId); pts.set(e.pointerId,{x:e.clientX,y:e.clientY}); if(pts.size===1){ drag=true; moved=0; lx=e.clientX; ly=e.clientY; dxn=e.clientX; } else if(pts.size===2){ const p=[...pts.values()]; pinch=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y); drag=false; } });
+    cv.addEventListener('pointermove',function(e){ if(!pts.has(e.pointerId))return; pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      if(pts.size>=2){ const p=[...pts.values()], d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y); if(pinch)dsZoom((p[0].x+p[1].x)/2,(p[0].y+p[1].y)/2,d/pinch,cv); pinch=d; drawDeep(); return; }
+      if(drag){ const ddx=e.clientX-lx, ddy=e.clientY-ly; moved+=Math.abs(ddx)+Math.abs(ddy); dsCam.camX-=ddx/dsCam.zoom; dsCam.camY-=ddy/dsCam.zoom; lx=e.clientX; ly=e.clientY; drawDeep(); } });
+    function up(e){ if(pts.has(e.pointerId))pts.delete(e.pointerId); if(pts.size<2)pinch=0; if(pts.size===0){ if(drag&&moved<7){ const rct=cv.getBoundingClientRect(); const px=dxn-rct.left; const fx=dsS2W(px,0,cv)[0]; let i=Math.round((fx-dsFit.pad)/((dsFit.W-2*dsFit.pad))*(dsFit.N-1)); i=Math.max(0,Math.min(dsFit.N-1,i)); dsShowMeasure(i); } drag=false; } }
+    cv.addEventListener('pointerup',up); cv.addEventListener('pointercancel',up);
+    cv.addEventListener('wheel',function(e){ e.preventDefault(); dsZoom(e.clientX,e.clientY, e.deltaY<0?1.12:0.892, cv); drawDeep(); },{passive:false});
+    window.addEventListener('resize',function(){ const g=document.getElementById('deepscan'); if(g&&g.classList.contains('show')){ dsFitCalc(); drawDeep(); } }); }
+
+  (function(){ var _ib=document.getElementById('inspectBtn'); if(_ib)_ib.onclick=openDeepScan;
+    var _dc=document.getElementById('dsClose'); if(_dc)_dc.onclick=closeDeep;
+    var _zi=document.getElementById('dsZoomIn'); if(_zi)_zi.onclick=function(){ var cv=document.getElementById('dsCanvas'),r=cv.getBoundingClientRect(); dsZoom(r.left+cv.clientWidth/2,r.top+cv.clientHeight/2,1.3,cv); drawDeep(); };
+    var _zo=document.getElementById('dsZoomOut'); if(_zo)_zo.onclick=function(){ var cv=document.getElementById('dsCanvas'),r=cv.getBoundingClientRect(); dsZoom(r.left+cv.clientWidth/2,r.top+cv.clientHeight/2,0.77,cv); drawDeep(); };
+    var _rb=document.getElementById('dsResetBtn'); if(_rb)_rb.onclick=function(){ dsFitCalc(); dsReset(); };
+    var _sn=document.getElementById('dsSnap'); if(_sn)_sn.onclick=dsSnap;
+  })();
 </script>
 <script src="nav-menu.js" defer></script>
 </body>
