@@ -233,6 +233,9 @@
   .md-go{ flex:0 0 auto; background:#12324a; border:1px solid rgba(127,224,255,.4); color:#7fe0ff; font-weight:800; font-size:12.5px; padding:9px 13px; border-radius:12px; cursor:pointer; font-family:inherit; white-space:nowrap; }
   .missiondock.locked .md-go{ background:#2a2410; border-color:rgba(245,201,119,.45); color:#f5c977; }
   .md-go:active{ transform:scale(.94); }
+  .setipill{ position:absolute; left:50%; transform:translateX(-50%); top:calc(env(safe-area-inset-top) + 62px); z-index:4; padding:7px 13px; border-radius:999px; font-size:12.5px; color:#c7aef8; text-decoration:none; display:inline-flex; align-items:center; gap:6px; border:1px solid rgba(150,120,246,.34) !important; cursor:pointer; transition:box-shadow .15s ease, transform .1s ease; }
+  .setipill:hover{ box-shadow:0 0 16px rgba(150,120,246,.28); } .setipill:active{ transform:translateX(-50%) scale(.94); }
+  .setipill b{ color:#e0d4ff; } .setipill span{ color:#9aa6bf; }
   .navdiv{ height:1px; background:rgba(255,255,255,.08); margin:8px 2px; }
   .muteflag{ margin-left:auto; font-size:12px; color:#8fa2c6; text-transform:uppercase; letter-spacing:.05em; }
   /* frontier (open-candidate) styling */
@@ -356,6 +359,8 @@
   <div class="synced" id="synced"></div>
   <div class="glass todpill" id="todPill" style="display:none;"></div>
   <div class="glass todpill frontpill" id="frontPill" style="display:none;"></div>
+  <!-- Signal Lab map entry (launches SETI; shows this explorer's ruled-out count) -->
+  <a class="glass setipill" id="setiPill" href="seti.html"><i class="ico" data-i="signal"></i> <b>Signal Lab</b><span id="setiRuled"></span></a>
   <!-- consolidated bottom mission dock (replaces the two floating pills + countdown chip) -->
   <div class="missiondock" id="missionDock" style="display:none;">
     <div class="md-ico" id="mdIco"></div>
@@ -1395,6 +1400,7 @@
   function saveCard(){ if(!_cardCanvas)return; _cardCanvas.toBlob(function(b){ const u=URL.createObjectURL(b),a=document.createElement('a'); a.href=u; a.download=_cardFile; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(u);},3000); }); }
   function shareCardImg(){ if(!_cardCanvas)return; _cardCanvas.toBlob(function(b){ const f=new File([b],_cardFile,{type:'image/png'}); if(navigator.canShare&&navigator.canShare({files:[f]})){ navigator.share({files:[f],title:'The Search',text:'I’m charting real worlds in The Search — join me! lifeonotherplanets.space'}).catch(function(){}); } else saveCard(); }); }
   { const _sb=document.getElementById('shareBtn'); if(_sb)_sb.onclick=openCard; const _ws=document.getElementById('winShare'); if(_ws)_ws.onclick=openCard; const _sc=document.getElementById('shCert'); if(_sc)_sc.onclick=openCertificate; const _md=document.getElementById('missionDock'); if(_md)_md.onclick=openFrontier;
+    (function(){ var _sr=document.getElementById('setiRuled'); if(_sr){ var r=(state.seti&&state.seti.ruledOut)||0; _sr.textContent = r>0 ? (' · '+r+' star'+(r>1?'s':'')+' ruled out') : ' · listen for signals'; } })();
     ['galaxyBtn','atlasBtn','constBtn'].forEach(function(id){ var _b=document.getElementById(id); if(_b)_b.addEventListener('click',function(){ var _ns=document.getElementById('navSheet'); if(_ns)_ns.classList.remove('show'); }); });
     // UI sound effects on chrome: tap for menus/nav, warp for the galaxy, back for closers
     var _sfx=function(n){ return function(){ playSfx(n); }; };

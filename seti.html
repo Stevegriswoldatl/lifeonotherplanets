@@ -161,6 +161,10 @@
           <div style="font-size:12px;color:#9aa6bf;font-family:'Space Grotesk';" id="rulec">0 / 0</div>
         </div>
       </div>
+      <div class="ledger" id="ledgerBox" style="display:none;">
+        <div style="font-size:11px;font-weight:700;color:#9aa6bf;font-family:'Space Grotesk';margin:12px 0 4px;">📡 Your quiet-sky ledger — stars you've ruled out</div>
+        <div id="ledgerList" style="font-size:12px;line-height:1.5;font-family:'Space Grotesk';"></div>
+      </div>
       <div class="stat" style="margin-top:14px;"><div class="k">Current streak</div><div class="v" id="streak">0</div></div>
       <div class="badge" id="hunterbadge"><span>&#128225;</span> Signal Hunter — 8/10 correct on real reads</div>
       <div class="note">
@@ -204,6 +208,21 @@ function addXP(n){ const st=loadState(); st.xp=(st.xp||0)+n; st.seti=st.seti||{r
 function recordSeti(){ const st=loadState(); st.seti=st.seti||{reviewed:0,candidates:0,ruledOut:0,bestStreak:0};
   st.seti.reviewed=S.done; st.seti.candidates=S.candFlagged; st.seti.ruledOut=S.ruleOut;
   st.seti.bestStreak=Math.max(st.seti.bestStreak||0, S.streak); saveState(st); }
+/* ---------- "quiet-sky ledger": the specific stars this explorer has ruled out ---------- */
+function _esc(s){ return String(s==null?'':s).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+function addRuledOut(card, verdict){ const st=loadState(); st.seti=st.seti||{reviewed:0,candidates:0,ruledOut:0,bestStreak:0};
+  st.seti.ledger=st.seti.ledger||[]; const nm=card&&card.name; if(!nm)return;
+  if(!st.seti.ledger.some(function(e){ return e.name===nm; })){
+    st.seti.ledger.unshift({ name:nm, constellation:card.constellation||'', freq:card.freq_mhz||null, verdict:verdict, kind:card.kind||'' });
+    if(st.seti.ledger.length>200) st.seti.ledger.pop(); saveState(st);
+  } }
+function renderLedger(){ const box=document.getElementById('ledgerBox'), list=document.getElementById('ledgerList'); if(!box||!list)return;
+  const st=loadState(), led=(st.seti&&st.seti.ledger)||[];
+  if(!led.length){ box.style.display='none'; return; }
+  box.style.display='block';
+  list.innerHTML=led.slice(0,40).map(function(e){ const v=e.verdict==='interference'?'interference (from Earth)':'quiet — no signal';
+    return '<div style="padding:4px 0;border-top:1px solid rgba(255,255,255,.06);color:#c7d2ea;"><b style="color:#e8ecf6;">'+_esc(e.name)+'</b>'+(e.constellation?'<span style="color:#9aa6bf;"> · '+_esc(e.constellation)+'</span>':'')+'<span style="color:#9aa6bf;"> · '+v+'</span></div>';
+  }).join('') + (led.length>40?('<div style="padding:4px 0;color:#7a879f;">…and '+(led.length-40)+' more</div>'):''); }
 
 /* ---------- waterfall renderer ---------- */
 const COLS = 58;   // time samples per panel
@@ -358,7 +377,7 @@ function answer(verdict){
   S.done++;
   if(correct) S.correct++;
   if(truth==='candidate'){ S.candTotal++; if(correct) S.candFlagged++; }
-  else { S.ruleTotal++; if(correct) S.ruleOut++; }
+  else { S.ruleTotal++; if(correct){ S.ruleOut++; addRuledOut(current, truth); } }
   if(correct){ S.streak++; } else { S.streak=0; }
   S.last10.push(correct); if(S.last10.length>10) S.last10.shift();
 
@@ -423,6 +442,7 @@ function updateStats(){
   const last10ok = S.last10.filter(Boolean).length;
   const badge = document.getElementById('hunterbadge');
   if(S.last10.length>=10 && last10ok>=8){ badge.className='badge on'; }
+  renderLedger();
 }
 
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.className='toast show'; setTimeout(()=>{ t.className='toast'; }, 2200); }
