@@ -641,7 +641,7 @@
   const KEY="loop_search_state_v2";
   function load(){ try{ return Object.assign({explorer:"",avatar:"astronaut",charted:{},claims:{},names:{}}, JSON.parse(localStorage.getItem(KEY))||{}); }catch(e){ return {explorer:"",avatar:"astronaut",charted:{},claims:{},names:{}}; } }
   function save(){ try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){} pushRemote(); }
-  let state=load(); state.charted=state.charted||{}; state.names=state.names||{}; state.xp=state.xp||0; state.badges=state.badges||{}; state.bestStreak=state.bestStreak||0; state.constellations=state.constellations||[]; state.sector=state.sector||0; state.ruled=state.ruled||{};
+  let state=load(); state.charted=state.charted||{}; state.names=state.names||{}; state.xp=state.xp||0; state.badges=state.badges||{}; state.bestStreak=state.bestStreak||0; state.constellations=state.constellations||[]; state.sector=state.sector||0; state.ruled=state.ruled||{}; state.deepScans=state.deepScans||0;
   const R={done:0,correct:0}; // session accuracy
   let curStreak=0;
 
@@ -658,6 +658,7 @@
   const BADGES=[
     {id:'first',n:'First Light',d:'Chart your first system',got:()=>chartedCount()>=1},
     {id:'sharp',n:'Sharp Eye',d:'5 correct vets in a row',got:()=>state.bestStreak>=5},
+    {id:'deepobs',n:'Deep Observer',d:'Study a candidate up close in Deep Scan',got:()=>(state.deepScans||0)>=1},
     {id:'namer',n:'Namer',d:'Name a world',got:()=>Object.keys(state.names).length>=1},
     {id:'stargazer',n:'Stargazer',d:'Create a constellation',got:()=>(state.constellations||[]).length>=1},
     {id:'carto',n:'Cartographer',d:'Chart 10 systems',got:()=>chartedCount()>=10},
@@ -1168,7 +1169,7 @@
     const cs=(curCard.checks||[]).filter(function(c){ return c.test!=='Implied size'; });
     if(!cs.length){ box.innerHTML='<div class="dsc ok">'+ic('check')+' No red flags in the automated checks — a clean-looking candidate.</div>'; return; }
     box.innerHTML = cs.map(function(c){ return '<div class="dsc '+(c.flag?'flag':'ok')+'">'+(c.flag?'⚠ ':ic('check')+' ')+'<b>'+esc(c.test)+'</b> · '+esc(c.note)+'</div>'; }).join(''); }
-  function openDeepScan(){ if(!dsAvail())return; playSfx('warp'); dsMark=null;
+  function openDeepScan(){ if(!dsAvail())return; state.deepScans=(state.deepScans||0)+1; save(); checkBadges(); playSfx('warp'); dsMark=null;
     document.getElementById('dsName').textContent = (curSys&&(curSys.label||curSys.h)) || curCard.name || 'candidate';
     const P=curCard.period_days; document.getElementById('dsFold').innerHTML = P ? ('🌀 Folded on its <b>'+P+'-day</b> orbit — every lap of the planet is stacked into this one view, so a faint dip adds up instead of hiding in the noise.') : 'Every observation is stacked so a faint dip adds up instead of hiding in the noise.';
     const dp=curCard.depth_ppm; document.getElementById('dsDepth').innerHTML = dp ? ((dp/1e4).toFixed(3)+'% <span class="u">('+dp.toLocaleString()+' ppm)</span>') : '—';
