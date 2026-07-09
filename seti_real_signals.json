@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "dataset": "Breakthrough Listen \u00b7 Voyager 1 \u00b7 GBT X-band (single coarse channel, fine res)",
+  "source_url": "http://blpd0.ssl.berkeley.edu/Voyager_data/Voyager1.single_coarse.fine_res.fil",
+  "note": "Cards emitted from a REAL narrowband search on a real BL data file. 'measured' holds the actual numbers; 'signal' is the cosmetic panel mapping.",
+  "cards": [
+    {
+      "id": "seti_bl_voyager_carrier",
+      "kind": "real",
+      "real_data": true,
+      "name": "Voyager 1 \u2014 recovered carrier",
+      "constellation": "Ophiuchus",
+      "freq_mhz": 8419.297,
+      "cadence": [
+        "ON",
+        "OFF",
+        "ON",
+        "OFF",
+        "ON",
+        "OFF"
+      ],
+      "difficulty": "real",
+      "truth": "candidate",
+      "signal": {
+        "present": true,
+        "type": "narrowband",
+        "freq": 0.46,
+        "drift": -0.314,
+        "width": 0.0229,
+        "snr": "strong",
+        "in_off": false
+      },
+      "measured": {
+        "center_mhz": 8419.296978,
+        "drift_hz_s": -0.377,
+        "width_hz": 108.96,
+        "snr": 343.5,
+        "n_tones": 3
+      },
+      "source": "Real Breakthrough Listen data \u00b7 Green Bank Telescope \u00b7 Voyager 1 (X-band)",
+      "why": "This is a genuine detection from a real BL data file. A narrowband tone at 8419.297 MHz, drifting at -0.377 Hz/s (SNR \u2248 344). The search recovered 3 narrow tones \u2014 the carrier plus transmitter sidebands, exactly the structure of a real spacecraft downlink. It has the exact fingerprint we hunt for \u2014 steady, narrow, Doppler-drifting.",
+      "story": "The twist: it's us. This is Voyager 1's transmitter, 20+ billion km away, recovered from the actual telescope data by the same narrowband search SETI runs on every star. Finding our own probe is how the method is proven \u2014 a real technosignature, made by human hands."
+    },
+    {
+      "id": "seti_bl_voyager_quiet",
+      "kind": "real",
+      "real_data": true,
+      "name": "Voyager 1 field \u2014 quiet band",
+      "constellation": "Ophiuchus",
+      "freq_mhz": 8421.204,
+      "cadence": [
+        "ON",
+        "OFF",
+        "ON",
+        "OFF",
+        "ON",
+        "OFF"
+      ],
+      "difficulty": "real",
+      "truth": "none",
+      "signal": {
+        "present": false,
+        "type": "none"
+      },
+      "measured": {
+        "start_mhz": 8421.386717,
+        "end_mhz": 8421.020506,
+        "rms": 2028006784.0
+      },
+      "source": "Real Breakthrough Listen data \u00b7 Green Bank Telescope \u00b7 Voyager 1 (X-band)",
+      "why": "A real stretch of the same observation with no coherent signal \u2014 just the receiver's own noise. Most of the sky is quiet, and confirming a band is clear is a real, publishable result: one more place the galaxy is silent.",
+      "story": "Same real data file, a different slice of frequency. No narrowband tone rises above the noise here. Ruling a region out isn't a failure \u2014 it's the other half of the search."
+    }
+  ]
+}

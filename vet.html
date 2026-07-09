@@ -521,7 +521,7 @@ function answer(a){
   const v=document.getElementById("verdict");
   v.className="verdict show "+(correct?"correct celebrate":"wrong");
   const head = a==="unsure" ? "Fair call to flag it — here's the answer"
-             : (correct ? (truth==="planet" ? "🎉 Nice — that's a real one!" : "✓ Correct")
+             : (correct ? (truth==="planet" ? ((window.LOPIcon?LOPIcon('reward'):'🎉')+" Nice — that's a real one!") : ((window.LOPIcon?LOPIcon('check'):'✓')+" Correct"))
                         : "Not quite — here's what it was");
   let truthLabel;
   if(current.isReal){
@@ -529,7 +529,7 @@ function answer(a){
       ? (current.kind==="injection" ? "Real planet (faint injected transit)" : "Real confirmed planet")
       : (current.kind==="eb" ? "Not a planet — eclipsing binary" : "Not a planet — quiet star / noise");
   } else {
-    truthLabel = truth==="planet" ? (current.kind==="mono"?"A single-transit planet — the kind automated pipelines miss! 🎯":"A planet transit") : (current.kind==="eb"?"An eclipsing binary":"Just noise");
+    truthLabel = truth==="planet" ? (current.kind==="mono"?("A single-transit planet — the kind automated pipelines miss! "+(window.LOPIcon?LOPIcon('target'):'🎯')):"A planet transit") : (current.kind==="eb"?"An eclipsing binary":"Just noise");
   }
   let html = "<h3>"+head+"</h3><p><b>"+truthLabel+".</b> "+current.why+"</p>";
 

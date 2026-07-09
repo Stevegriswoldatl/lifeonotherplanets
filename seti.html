@@ -34,6 +34,7 @@
   .cardtag.training { color:#4fd8ff; background:rgba(79,216,255,.12); border:1px solid rgba(79,216,255,.3); }
   .cardtag.warmup { color:#f5c977; background:rgba(245,201,119,.12); border:1px solid rgba(245,201,119,.32); }
   .cardtag.real { color:#b79cf6; background:rgba(150,120,246,.14); border:1px solid rgba(150,120,246,.36); }
+  .cardtag.realdata { color:#7ce7b0; background:rgba(124,231,176,.14); border:1px solid rgba(124,231,176,.42); }
   .wfwrap { position:relative; margin:10px 0 4px; }
   canvas { width:100%; height:452px; display:block; background:#060a14; border-radius:12px; touch-action:pan-y; }
   .axhint { display:flex; justify-content:space-between; font-size:11px; color:#6f7ea3; font-family:"Space Grotesk",sans-serif; }
@@ -319,7 +320,9 @@ function drawWaterfall(reveal){
 /* ---------- flow ---------- */
 function buildQueue(){
   const t = (DECK.training||[]).slice();
-  const real = (DECK.real||[]).slice();
+  // real pool: the Voyager real-DATA cards lead (headline of the lab), then the
+  // three famous historical cases. All render as "real" cards.
+  const real = (DECK.real_data||[]).slice().concat((DECK.real||[]).slice());
   // warm-up: first clear candidate + first clear interference from training
   const cand = t.findIndex(c=>c.truth==='candidate');
   const rfi  = t.findIndex(c=>c.truth==='interference');
@@ -329,7 +332,7 @@ function buildQueue(){
   if(rfi2>=0){ t[rfi2].__warmup=true; warm.push(t.splice(rfi2,1)[0]); }
   // shuffle the rest of training (seeded-ish by length for determinism-lite)
   for(let i=t.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [t[i],t[j]]=[t[j],t[i]]; }
-  // interleave the 3 famous real cards at roughly 1-in-3
+  // interleave the real cards at roughly 1-in-3 (Voyager detection appears first)
   const out = warm.slice();
   let ri=0;
   t.forEach((c,idx)=>{ out.push(c); if(idx%3===2 && ri<real.length){ out.push(real[ri++]); } });
@@ -341,10 +344,10 @@ function renderCard(){
   answered=false; current = queue[qi];
   if(!current){ queue = buildQueue(); qi=0; current = queue[qi]; } // loop forever
   current.__panels = null;
-  const warm = !!current.__warmup, real = current.kind==='real';
+  const warm = !!current.__warmup, real = current.kind==='real', realData = !!current.real_data;
   const tag = document.getElementById('cardtag');
-  tag.className = 'cardtag '+(real?'real':(warm?'warmup':'training'));
-  tag.textContent = real ? 'Real case' : (warm?'Warm-up':'Training');
+  tag.className = 'cardtag '+(realData?'realdata':(real?'real':(warm?'warmup':'training')));
+  tag.textContent = realData ? 'Real telescope data' : (real ? 'Real case' : (warm?'Warm-up':'Training'));
   document.getElementById('tasklabel').textContent = 'Observation #'+(S.done+1);
   document.getElementById('cardmeta').textContent =
     current.name + ' · ' + (current.constellation||'') + ' · ' + (current.freq_mhz? current.freq_mhz+' MHz':'');

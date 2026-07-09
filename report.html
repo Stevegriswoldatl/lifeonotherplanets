@@ -59,7 +59,17 @@
   .ai b{ color:var(--navy); }
   .ai .item{ margin-top:5px; padding-top:5px; border-top:1px dashed #e4d8bb; }
   .ai .q{ color:var(--mut); font-weight:700; }
-  .notes{ border:1px dashed var(--line); border-radius:6px; padding:10px 12px; margin-bottom:14px; font-size:12px; color:var(--mut); min-height:44px; }
+  .notes{ border:1px dashed var(--line); border-radius:6px; padding:10px 12px; margin-bottom:10px; font-size:12px; color:var(--mut); min-height:44px; }
+  .note{ padding:7px 0; border-bottom:1px solid var(--line); }
+  .note:last-child{ border-bottom:none; }
+  .note .ntxt{ color:var(--ink); font-size:12.5px; line-height:1.5; white-space:pre-wrap; }
+  .note .nmeta{ color:var(--mut); font-size:10.5px; margin-top:3px; }
+  .noteadd{ display:flex; flex-wrap:wrap; gap:7px; margin:0 0 16px; }
+  .noteadd input,.noteadd textarea{ font:inherit; font-size:12.5px; padding:7px 9px; border:1px solid var(--line); border-radius:6px; color:var(--ink); background:#fff; }
+  .noteadd input{ flex:0 0 168px; }
+  .noteadd textarea{ flex:1; min-width:220px; min-height:52px; resize:vertical; }
+  .noteadd button{ flex:0 0 auto; align-self:flex-start; font:inherit; font-weight:700; font-size:12.5px; padding:8px 14px; border-radius:6px; cursor:pointer; border:1px solid transparent; background:var(--navy); color:#fff; }
+  .noteadd button:disabled{ opacity:.6; cursor:default; }
   .foot{ border-top:1px solid var(--line); padding-top:9px; font-size:9.5px; color:#8593a8; line-height:1.55; }
   .empty{ color:var(--mut); font-size:12px; }
   .ready-box{ margin:12px 0 16px; }
@@ -68,7 +78,7 @@
   .rgate.ok{ color:var(--green); font-weight:600; } .rgate.no{ color:var(--mut); }
   .rverdict{ font-size:12.5px; color:var(--ink); background:#f7f9fc; border:1px solid var(--line); border-radius:6px; padding:8px 11px; line-height:1.5; }
   @media print{
-    body{ background:#fff; } .bar{ display:none; } .paper{ box-shadow:none; border:none; margin:0; max-width:100%; border-radius:0; }
+    body{ background:#fff; } .bar{ display:none; } .no-print{ display:none !important; } .paper{ box-shadow:none; border:none; margin:0; max-width:100%; border-radius:0; }
     .fcard,.ai,.fig,.notes{ break-inside:avoid; }
     @page{ margin:14mm; }
   }
@@ -168,13 +178,16 @@
         + '<div class="fcard fc-chk"><div class="h">Objective checks</div><div class="chk">'+renderChecks(card)+'</div></div>'
       + '</div>'
       + '<div class="findh">AI Lab dossier</div><div class="ai" id="aiBox"><span class="empty">loading…</span></div>'
-      + '<div class="findh">Observer notes</div><div class="notes">—</div>'
+      + '<div class="findh">Observer notes</div><div class="notes" id="notesList">—</div>'
+      + '<div class="noteadd no-print"><input id="noteAuthor" maxlength="60" placeholder="Your name (optional)"><textarea id="noteText" maxlength="1200" placeholder="Add a vetting note — what you checked, why it looks promising, any caveats…"></textarea><button id="noteSave">Add note</button></div>'
       + '<div class="foot">Data: NASA TESS / Exoplanet Archive. Community vetting by citizen scientists via lifeonotherplanets.space — <b>not peer-reviewed and not a confirmation claim</b>; prepared for ExoFOP-TESS / collaborator review. Per-observer votes and AI findings are retained in the project database. '
         + na.replace('title=','data-x=')+' Fields marked <b>a</b> are available from the NASA Exoplanet Archive / ExoFOP for this TIC. · Report ID LOP-'+dstr()+'-'+esc(card.id)+'</div>';
     $('reportBody').innerHTML=H;
     drawLC(card.f);
     aiCount=0; renderReadiness();
     loadDb();
+    var nb=$('noteSave'); if(nb) nb.onclick=saveNote;
+    loadNotes();
   }
   function row(l,v){ return '<tr><td class="lbl">'+l+'</td><td class="v">'+v+'</td></tr>'; }
   function small(s){ return '<span style="font-weight:400;color:#5a6b85;font-size:11px">'+esc(s)+'</span>'; }
@@ -217,6 +230,38 @@
       out+='<div class="item"><span class="q">'+esc(q||'note')+'</span> — '+esc(String(summary).slice(0,240))+' <span style="color:#8a6d2a">('+esc(f.model||'AI')+')</span></div>';
     });
     box.innerHTML=out;
+  }
+
+  // ---- observer notes: free-text vetting annotations, stored as ai_dossiers rows
+  //      (mode 'note:observer') so no new table/SQL is needed. Excluded from the
+  //      AI-research readiness gate (that reads only 'check:%' findings). ----
+  function loadNotes(){
+    var box=$('notesList'); if(!box)return;
+    if(!(window.LOPSync && LOPSync.enabled)){ box.innerHTML='<span class="empty">Cloud data off — notes are not available in this view.</span>'; return; }
+    LOPSync.getDossiers(card.id, 'note:observer').then(function(list){ renderNotes(list||[]); }).catch(function(){ renderNotes([]); });
+  }
+  function renderNotes(list){
+    var box=$('notesList'); if(!box)return;
+    if(!list.length){ box.innerHTML='<span class="empty">No observer notes yet — add the first one below.</span>'; return; }
+    box.innerHTML=list.map(function(r){
+      var p=r.payload||{}, txt=p.summary||p.note||'', who=p.author||'Anonymous observer', d=String(r.created_at||'').slice(0,10);
+      return '<div class="note"><div class="ntxt">'+esc(txt)+'</div><div class="nmeta">— '+esc(who)+(d?' · '+d:'')+'</div></div>';
+    }).join('');
+  }
+  function saveNote(){
+    if(!card)return;
+    if(!(window.LOPSync && LOPSync.enabled)){ alert('Cloud data is off in this deployment — notes cannot be saved here.'); return; }
+    var ta=$('noteText'), au=$('noteAuthor'), btn=$('noteSave');
+    var txt=(ta.value||'').trim(); if(!txt){ ta.focus(); return; }
+    txt=txt.slice(0,1200); var who=(au.value||'').trim().slice(0,60);
+    var t0=btn.textContent; btn.disabled=true; btn.textContent='Saving…';
+    LOPSync.ensureExplorer(who||'Observer','stargazer','#2b6cb0').then(function(){
+      return LOPSync.saveDossier(card.id, 'note:observer', 'observer', { summary: txt, author: who||'Anonymous observer' });
+    }).then(function(id){
+      ta.value=''; btn.textContent = id? '✓ Added' : 'Slow down a moment';
+      setTimeout(function(){ btn.textContent=t0; btn.disabled=false; }, 1900);
+      loadNotes();
+    }).catch(function(){ btn.textContent='Failed — retry'; btn.disabled=false; });
   }
 
   function copyCTOI(){
