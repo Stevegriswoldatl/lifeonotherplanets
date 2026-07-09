@@ -35,7 +35,9 @@
   };
   function svg(name, cls) {
     var p = P[name]; if (!p) return '';
-    return '<svg class="lopico' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true">' + p + '</svg>';
+    // Explicit width/height + xmlns: iOS Safari collapses inline SVGs to 0x0 inside
+    // flex containers when they lack an intrinsic size; the attributes fix that.
+    return '<svg class="lopico' + (cls ? ' ' + cls : '') + '" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">' + p + '</svg>';
   }
   function apply(root) {
     var els = (root || document).querySelectorAll('i.ico[data-i]:not([data-done])');

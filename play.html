@@ -804,13 +804,22 @@
         const g=document.getElementById('galaxy'); if(g&&g.classList.contains('show')) renderGalaxy(); })
       .catch(function(){}); }
   function openGalaxy(){ const g=document.getElementById('galaxy'); g.classList.add('show');
-    if(!galHexes){ galLayout(); galSeededStars(); } galSetup(); galFit(); drawGalaxy(); refreshGalaxyMap(); }
+    if(!galHexes){ galLayout(); galSeededStars(); } galLoadIcons(); galSetup(); galFit(); drawGalaxy(); refreshGalaxyMap(); }
   function closeGalaxy(){ document.getElementById('galaxy').classList.remove('show'); }
   function enterSector(id){ if(!state.graduated){ if(id!==TRAIN_ID)return; } else { state.activeSector=id; save(); }
     closeGalaxy(); const h=document.getElementById('hint'); if(h){ h.style.opacity=1; h.textContent = state.graduated ? ('Working '+secName(id)+' — tap a star to scan') : 'Training — tap a glowing star to scan'; } }
   // ---- canvas galaxy hex-map (replaces the flat #galGrid) ----
   const HEX_SIZE=48;                 // hex radius in world units (px at scale 1)
   let galHexes=null, galStars=null, galBound=null, galCam=null;
+  // custom line-art icons (from icons.js) pre-rendered to images so canvas can draw them
+  const GAL_ICONS={}; let galIconsInit=false; const GAL_ICON_COLOR='#eaf6ff';
+  function galIconURL(name){ let raw=window.LOPIcon?LOPIcon(name):''; if(!raw)return null;
+    raw=raw.replace('width="1em" height="1em" ','width="48" height="48" ')
+      .replace('aria-hidden="true">','aria-hidden="true"><style>.lopico{fill:none;stroke:'+GAL_ICON_COLOR+';stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.lopico .f{fill:'+GAL_ICON_COLOR+';stroke:none}</style>');
+    return 'data:image/svg+xml;utf8,'+encodeURIComponent(raw); }
+  function galLoadIcons(){ if(galIconsInit)return; galIconsInit=true;
+    ['graduate','star','planet','together','flag','lock'].forEach(function(n){ const u=galIconURL(n); if(!u)return;
+      const img=new Image(); img.onload=function(){ const g=document.getElementById('galaxy'); if(g&&g.classList.contains('show'))drawGalaxy(); }; img.src=u; GAL_ICONS[n]=img; }); }
   function galLayout(){ const hexes=[], w=Math.sqrt(3)*HEX_SIZE, vs=1.5*HEX_SIZE;
     for(let id=0; id<GAL_N; id++){ const c=id%GAL_COLS, r=Math.floor(id/GAL_COLS);
       hexes.push({id, x:c*w + (r%2)*(w/2), y:r*vs}); }
@@ -832,14 +841,14 @@
     const isTrain=(id===TRAIN_ID&&!state.graduated), myHome=(state.graduated&&id===state.homeSector), myWork=(myHome||sectorWork(id)>0);
     const otherHome=(gm&&gm.home_explorer&&myId&&gm.home_explorer!==myId)?(gm.home_color||'#7fb2ff'):null;
     const otherWork=(gm&&gm.work>0&&!myWork);
-    const together=(myWork&&gm&&gm.explorers>=2); const col=myColor(); let bg,bd,badge,sub;
-    if(isTrain){ bg='rgba(245,201,119,.14)'; bd='#f5c977'; badge='🎓'; sub='Training'; }
-    else if(myWork){ bg=hex(col,.15+fill*.45); bd=col; badge=together?'🤝':(myHome?'★':'●'); sub=Math.round(fill*100)+'%'; }
-    else if(otherHome){ bg=hex(otherHome,.16); bd=otherHome; badge='◆'; sub='claimed'; }
-    else if(otherWork){ bg=hex(gm.home_color||'#7fb2ff',.07); bd='rgba(255,255,255,.16)'; badge='·'; sub='active'; }
-    else if(state.graduated){ bg='rgba(255,255,255,.03)'; bd='rgba(255,255,255,.11)'; badge='+'; sub=''; }
-    else { bg='rgba(255,255,255,.03)'; bd='rgba(255,255,255,.11)'; badge='🔒'; sub=''; }
-    return {bg,bd,badge,sub,active,tappable:(state.graduated||isTrain),together:!!together,otherHome:!!otherHome}; }
+    const together=(myWork&&gm&&gm.explorers>=2); const col=myColor(); let bg,bd,badge,sub,icon;
+    if(isTrain){ bg='rgba(245,201,119,.14)'; bd='#f5c977'; badge='🎓'; icon='graduate'; sub='Training'; }
+    else if(myWork){ bg=hex(col,.15+fill*.45); bd=col; badge=together?'🤝':(myHome?'★':'●'); icon=together?'together':(myHome?'star':'planet'); sub=Math.round(fill*100)+'%'; }
+    else if(otherHome){ bg=hex(otherHome,.16); bd=otherHome; badge='◆'; icon='flag'; sub='claimed'; }
+    else if(otherWork){ bg=hex(gm.home_color||'#7fb2ff',.07); bd='rgba(255,255,255,.16)'; badge='·'; icon='dot'; sub='active'; }
+    else if(state.graduated){ bg='rgba(255,255,255,.03)'; bd='rgba(255,255,255,.11)'; badge='+'; icon='plus'; sub=''; }
+    else { bg='rgba(255,255,255,.03)'; bd='rgba(255,255,255,.11)'; badge='🔒'; icon='lock'; sub=''; }
+    return {bg,bd,badge,sub,icon,active,tappable:(state.graduated||isTrain),together:!!together,otherHome:!!otherHome}; }
   function drawGalaxy(){ const cv=document.getElementById('galCanvas'); if(!cv||!galCam||!galHexes)return;
     const dpr=window.devicePixelRatio||1, W=cv.clientWidth, H=cv.clientHeight;
     if(cv.width!==Math.round(W*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
@@ -859,7 +868,11 @@
       ctx.lineWidth=s.active?3:1.6; ctx.strokeStyle=s.active?'#ffffff':s.bd; ctx.stroke();
       if(s.active){ ctx.lineWidth=1.1; ctx.strokeStyle='rgba(255,255,255,.45)'; ctx.stroke(); }
       ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.font=Math.round(R*0.42)+'px system-ui,"Apple Color Emoji","Segoe UI Emoji"'; ctx.fillStyle='#fff'; ctx.fillText(s.badge, cx, cy-R*0.20);
+      const by=cy-R*0.20, img=GAL_ICONS[s.icon];   // custom line-art badge (matches game icon set)
+      if(img && img.complete && img.naturalWidth){ const isz=R*0.5; ctx.drawImage(img, cx-isz/2, by-isz/2, isz, isz); }
+      else if(s.icon==='plus'){ const a=R*0.16; ctx.strokeStyle='rgba(255,255,255,.4)'; ctx.lineWidth=Math.max(1.2,R*0.03); ctx.beginPath(); ctx.moveTo(cx-a,by); ctx.lineTo(cx+a,by); ctx.moveTo(cx,by-a); ctx.lineTo(cx,by+a); ctx.stroke(); }
+      else if(s.icon==='dot'){ ctx.fillStyle='rgba(255,255,255,.5)'; ctx.beginPath(); ctx.arc(cx,by,R*0.08,0,6.2832); ctx.fill(); }
+      else { ctx.font=Math.round(R*0.42)+'px system-ui,"Apple Color Emoji","Segoe UI Emoji"'; ctx.fillStyle='#fff'; ctx.fillText(s.badge, cx, by); }
       ctx.font='700 '+Math.round(R*0.21)+'px system-ui'; ctx.fillStyle='#e8ecf6'; ctx.fillText(secName(h.id).replace('Sector ',''), cx, cy+R*0.20);
       if(s.sub){ ctx.font=Math.round(R*0.165)+'px system-ui'; ctx.fillStyle='#c7d2ea'; ctx.fillText(s.sub, cx, cy+R*0.45); } }
     drawGalMini(cv,ctx,W,H);
@@ -900,7 +913,7 @@
       ? ('Home: <b style="color:'+col+'">'+secName(state.homeSector)+'</b> · '+Object.keys(state.sectorWork||{}).filter(id=>sectorWork(id)>0).length+' worked'
          +(tog?' · 🤝 '+tog+' together':'')+(others?' · ◆ '+others+' other explorer'+(others>1?'s':''):'')+' — drag to explore, tap a sector to work it.')
       : ('🎓 <b>Training</b> — '+(state.trainCorrect||0)+'/'+TRAIN_GOAL+' good vets to earn your own territory. Tap a glowing sector to scan real data.'); }
-  function renderGalaxy(){ if(!galHexes){ galLayout(); galSeededStars(); } galSetup(); if(!galCam) galFit(); drawGalaxy(); }
+  function renderGalaxy(){ if(!galHexes){ galLayout(); galSeededStars(); } galLoadIcons(); galSetup(); if(!galCam) galFit(); drawGalaxy(); }
   function gauss(s){ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random(); return s*Math.sqrt(-2*Math.log(u))*Math.cos(6.2831853*v); }
   function synthCard(){ const roll=Math.random(),N=200,f=[]; for(let i=0;i<N;i++)f.push(1+gauss(.006)); let truth,kind,why;
     if(roll<.45){truth='planet';kind='transit';why='Evenly-spaced, flat-bottomed dips — the signature of a transiting planet.'; const P=40+Math.random()*20,t0=Math.random()*P,d=.012+Math.random()*.01; for(let i=0;i<N;i++){const ph=((i-t0)%P+P)%P; if(ph<4||ph>P-4)f[i]-=d;}}
