@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Findings Dashboard — Life On Other Planets?</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="assets/app-icon.svg">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<style>
+  :root{ --navy:#0c2340; --ink:#1a2230; --mut:#5a6b85; --line:#d5dbe6; --blue:#2b6cb0; --green:#0a7d5a; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:#e9edf3; color:var(--ink); font-family:'Helvetica Neue',Arial,sans-serif; }
+  .bar{ background:var(--navy); color:#fff; padding:14px 20px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .emblem{ width:30px; height:30px; border-radius:50%; border:2px solid #4fd8ff; position:relative; flex:0 0 auto; }
+  .emblem span{ position:absolute; inset:7px; border-radius:50%; background:#4fd8ff; }
+  .bar .t1{ font-size:16px; font-weight:800; } .bar .t2{ font-size:11px; color:#9fb6d6; }
+  .bar .sp{ margin-left:auto; }
+  .bar button{ font:inherit; font-weight:700; font-size:12.5px; padding:8px 12px; border-radius:6px; cursor:pointer; border:1px solid transparent; background:#4fd8ff; color:#04121e; }
+  .bar a{ color:#9fb6d6; text-decoration:none; font-size:13px; }
+  .wrap{ max-width:1000px; margin:20px auto; padding:0 16px; }
+  .stats{ display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+  .stat{ flex:1; min-width:150px; background:#fff; border:1px solid var(--line); border-radius:8px; padding:12px 15px; }
+  .stat .n{ font-size:24px; font-weight:800; color:var(--navy); } .stat .l{ font-size:11px; color:var(--mut); text-transform:uppercase; letter-spacing:.04em; }
+  .ctrls{ display:flex; gap:10px; align-items:center; margin-bottom:10px; flex-wrap:wrap; font-size:13px; color:var(--mut); }
+  .ctrls select,.ctrls label{ font:inherit; }
+  .ctrls select{ padding:6px 9px; border-radius:6px; border:1px solid var(--line); background:#fff; color:var(--ink); }
+  .tblwrap{ background:#fff; border:1px solid var(--line); border-radius:8px; overflow-x:auto; }
+  table{ width:100%; border-collapse:collapse; font-size:13px; min-width:720px; }
+  th{ text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--mut); padding:10px 12px; border-bottom:2px solid var(--line); white-space:nowrap; }
+  td{ padding:9px 12px; border-bottom:1px solid #eef1f6; vertical-align:middle; }
+  tr:hover td{ background:#f7f9fc; }
+  td.r{ text-align:right; } .toi{ font-weight:700; color:var(--navy); }
+  .cbar{ width:96px; height:7px; border-radius:4px; background:#e3e9f2; overflow:hidden; display:inline-flex; vertical-align:middle; }
+  .cbar i{ display:block; height:100%; }
+  .pct{ font-size:11px; color:var(--mut); margin-left:6px; }
+  .badge{ font-size:10px; font-weight:800; padding:2px 7px; border-radius:20px; }
+  .b-reached{ background:#e3f6ec; color:var(--green); } .b-flag{ background:#fdeee2; color:#c0631f; } .b-clean{ background:#eef2f8; color:#5a6b85; }
+  .go{ color:var(--blue); text-decoration:none; font-weight:700; white-space:nowrap; }
+  .empty{ color:var(--mut); padding:16px; text-align:center; }
+  .note{ font-size:11.5px; color:var(--mut); margin:10px 2px; }
+</style>
+</head>
+<body>
+  <div class="bar">
+    <div class="emblem"><span></span></div>
+    <div><div class="t1">Findings Dashboard</div><div class="t2">Life On Other Planets? · community candidate vetting</div></div>
+    <span class="sp"></span>
+    <button id="btnExport">⤓ Export all (CSV)</button>
+    <a href="index.html">← site</a>
+  </div>
+
+  <div class="wrap">
+    <div class="stats" id="stats"></div>
+    <div class="ctrls">
+      <span>Sort:</span>
+      <select id="sort">
+        <option value="consensus">Consensus strength</option>
+        <option value="votes">Most reviewed</option>
+        <option value="flags">Most red flags</option>
+        <option value="ai">Most AI findings</option>
+        <option value="name">Name (A–Z)</option>
+      </select>
+      <label><input type="checkbox" id="onlyFindings" checked> With community findings only</label>
+    </div>
+    <div class="tblwrap"><table><thead><tr>
+      <th>Candidate</th><th>Constellation</th><th>Disp.</th><th class="r">Period</th><th class="r">Depth</th><th class="r">Size</th>
+      <th class="r">Checks</th><th class="r">Observers</th><th>Consensus</th><th class="r">AI</th><th></th>
+    </tr></thead><tbody id="rows"><tr><td colspan="11" class="empty">Loading…</td></tr></tbody></table></div>
+    <div class="note" id="note"></div>
+  </div>
+
+<script>
+(function(){
+  var $=function(id){ return document.getElementById(id); };
+  var esc=function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); };
+  var DECK=[], MODEL=[], cloudOn=false;
+
+  function impliedRe(card){ var note=null; (card.checks||[]).forEach(function(c){ if(c.test==='Implied size')note=c.note; });
+    if(note){ var m=note.match(/([\d.]+)\s*Earth/); if(m)return parseFloat(m[1]); } return null; }
+  function sbClient(){ try{ var c=window.LOP_SUPABASE||{}; if(c.url&&c.anonKey&&window.supabase&&window.supabase.createClient) return window.supabase.createClient(c.url,c.anonKey); }catch(e){} return null; }
+
+  function reached(m){ var v=m.votes||0,p=m.planet_votes||0,n=m.not_votes||0; return m.voters>=5 && v>0 && Math.max(p,n)/v>=0.7; }
+
+  function renderStats(){
+    var reviewed=MODEL.filter(function(m){return (m.voters||0)>0;}).length;
+    var totalVotes=MODEL.reduce(function(a,m){return a+(m.votes||0);},0);
+    var cons=MODEL.filter(reached).length;
+    var ai=MODEL.reduce(function(a,m){return a+(m.ai||0);},0);
+    $('stats').innerHTML=
+      stat(reviewed,'Candidates reviewed')+stat(totalVotes,'Total classifications')+stat(cons,'Reached consensus')+stat(ai,'AI findings');
+  }
+  function stat(n,l){ return '<div class="stat"><div class="n">'+n+'</div><div class="l">'+l+'</div></div>'; }
+
+  function render(){
+    var only=$('onlyFindings').checked, sort=$('sort').value;
+    var list=MODEL.slice().filter(function(m){ return only ? ((m.voters||0)>0 || (m.ai||0)>0) : true; });
+    list.sort(function(a,b){
+      if(sort==='name') return String(a.id).localeCompare(String(b.id));
+      if(sort==='votes') return (b.voters||0)-(a.voters||0) || (b.votes||0)-(a.votes||0);
+      if(sort==='flags') return (b.flags||0)-(a.flags||0) || (b.voters||0)-(a.voters||0);
+      if(sort==='ai') return (b.ai||0)-(a.ai||0) || (b.voters||0)-(a.voters||0);
+      // consensus: reached first, then agreement, then voters
+      var ra=reached(a)?1:0, rb=reached(b)?1:0; if(ra!==rb) return rb-ra;
+      return agree(b)-agree(a) || (b.voters||0)-(a.voters||0);
+    });
+    if(!list.length){ $('rows').innerHTML='<tr><td colspan="11" class="empty">'+(only?'No community findings yet — uncheck the filter to see all candidates, or check back as explorers vet them.':'No candidates loaded.')+'</td></tr>'; return; }
+    $('rows').innerHTML=list.map(rowHtml).join('');
+  }
+  function agree(m){ var v=m.votes||0; if(!v)return 0; return Math.max(m.planet_votes||0,m.not_votes||0)/v; }
+  function rowHtml(m){
+    var v=m.votes||0,p=m.planet_votes||0,n=m.not_votes||0,u=m.unsure_votes||0,voters=m.voters||0;
+    var pctPlanet = v?Math.round(p/v*100):0;
+    var consCell = voters? ('<span class="cbar"><i style="width:'+(v?p/v*100:0)+'%;background:#2b6cb0"></i><i style="width:'+(v?n/v*100:0)+'%;background:#c96b4a"></i><i style="width:'+(v?u/v*100:0)+'%;background:#9aa6bd"></i></span><span class="pct">'+pctPlanet+'% pl'+(reached(m)?' · <span class="badge b-reached">reached</span>':'')+'</span>')
+                        : '<span class="pct">—</span>';
+    var re=m.re;
+    var chk = (m.flags>0) ? '<span class="badge b-flag">⚠ '+m.flags+'</span>' : '<span class="badge b-clean">clean</span>';
+    return '<tr>'
+      + '<td class="toi">'+esc(m.id)+'</td>'
+      + '<td>'+esc(m.constellation||'—')+'</td>'
+      + '<td>'+esc(m.disposition||'PC')+'</td>'
+      + '<td class="r">'+(m.period_days!=null?m.period_days+' d':'—')+'</td>'
+      + '<td class="r">'+(m.depth_ppm!=null?m.depth_ppm.toLocaleString():'—')+'</td>'
+      + '<td class="r">'+(re!=null?'~'+re+' R⊕':'—')+'</td>'
+      + '<td class="r">'+chk+'</td>'
+      + '<td class="r">'+(voters||'—')+'</td>'
+      + '<td>'+consCell+'</td>'
+      + '<td class="r">'+(m.ai||0)+'</td>'
+      + '<td><a class="go" href="report.html?id='+encodeURIComponent(m.id)+'">Report →</a></td>'
+      + '</tr>';
+  }
+
+  // ---- CSV export (same as report.html) ----
+  function csvCell(v){ v=(v==null?'':String(v)); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+  function download(name,text){ var b=new Blob([text],{type:'text/csv'}); var uu=URL.createObjectURL(b),a=document.createElement('a'); a.href=uu; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(uu);},2000); }
+  function exportAll(){
+    var have=MODEL.filter(function(m){ return (m.voters||0)>0 || (m.ai||0)>0; });
+    if(!have.length){ alert('No community findings recorded yet — the export fills in as explorers vet candidates.'); return; }
+    var cols=['card_id','tic','disposition','period_days','depth_ppm','implied_rade','constellation','red_flags','voters','votes','pct_planet','pct_not','pct_unsure','consensus_reached','ai_findings'];
+    var rows=[cols.join(',')];
+    have.forEach(function(m){ var v=m.votes||0,p=m.planet_votes||0,n=m.not_votes||0,u=m.unsure_votes||0;
+      rows.push([m.id,String(m.tic||'').replace(/^TIC\s*/,''),m.disposition||'',m.period_days,m.depth_ppm,m.re!=null?m.re:'',m.constellation||'',m.flags||0,m.voters||0,v,v?Math.round(p/v*100):'',v?Math.round(n/v*100):'',v?Math.round(u/v*100):'',reached(m)?'yes':'no',m.ai||0].map(csvCell).join(',')); });
+    var d=new Date(), stamp=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    download('LOP-findings-'+stamp+'.csv', rows.join('\n'));
+  }
+
+  // ---- boot ----
+  $('sort').onchange=render; $('onlyFindings').onchange=render; $('btnExport').onclick=exportAll;
+  fetch('frontier_curves.json',{cache:'no-store'}).then(function(r){ return r.ok?r.json():[]; }).then(function(d){
+    DECK=(Array.isArray(d)?d:[]).filter(function(c){ return c&&c.id; });
+    MODEL=DECK.map(function(c){ return { id:c.id, tic:c.tic, constellation:c.constellation, disposition:c.disposition, period_days:c.period_days, depth_ppm:c.depth_ppm, re:impliedRe(c), flags:c.flag_count||0, voters:0, votes:0, planet_votes:0, not_votes:0, unsure_votes:0, ai:0 }; });
+    var byId={}; MODEL.forEach(function(m){ byId[m.id]=m; });
+    renderStats(); render();
+    var sb=sbClient();
+    if(!sb){ $('note').textContent='Cloud sync is off in this deployment — showing candidate parameters only (no community findings).'; return; }
+    cloudOn=true;
+    Promise.all([ sb.from('card_consensus').select('*'), sb.from('ai_dossiers').select('planet') ]).then(function(res){
+      var cons=(res[0]&&res[0].data)||[], ai=(res[1]&&res[1].data)||[];
+      cons.forEach(function(r){ var m=byId[r.card_id]; if(m){ m.voters=r.voters||0; m.votes=r.votes||0; m.planet_votes=r.planet_votes||0; m.not_votes=r.not_votes||0; m.unsure_votes=r.unsure_votes||0; } });
+      ai.forEach(function(r){ var m=byId[r.planet]; if(m) m.ai++; });
+      renderStats(); render();
+      $('note').textContent='Live community data · '+cons.length+' candidate'+(cons.length===1?'':'s')+' with votes. Click "Report →" for a printable per-candidate dossier, or export the full set as CSV.';
+    }).catch(function(){ $('note').textContent='Could not load community findings (showing parameters only).'; });
+  }).catch(function(){ $('rows').innerHTML='<tr><td colspan="11" class="empty">Could not load the candidate deck.</td></tr>'; });
+})();
+</script>
+</body>
+</html>
