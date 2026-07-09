@@ -387,7 +387,7 @@
   <div class="funtoast" id="funtoast"></div>
 
   <!-- constellation creator -->
-  <div class="glass cmode" id="cmode">✷ <b>Constellation mode</b> — tap two of your charted stars to connect them.</div>
+  <div class="glass cmode" id="cmode">✷ <b>Constellation mode</b> — every star you’ve charted, from every sector. Tap two to connect them.</div>
   <div class="ctools" id="ctools">
     <button id="cUndo">↶ Undo</button>
     <button id="cClear">Clear</button>
@@ -680,6 +680,7 @@
   ];
   let SYSTEMS = CURATED.slice();
   let SYSBYH = {}; SYSTEMS.forEach(s=>SYSBYH[s.h]=s);
+  let activeHex = null;   // which galaxy hex (A1..E4) the star map is currently showing
   document.getElementById('tot').textContent=SYSTEMS.length;
 
   // ---------- state (compatible with game.html / vet.html) ----------
@@ -725,7 +726,7 @@
   // ---------- layout systems by distance ----------
   const rndPos=mulberry(4242);
   function layout(){ const cx=W/2, cy=H*0.5, rmin=Math.min(W,H); const lmin=Math.log(4), lmax=Math.log(1250);
-    const sec=state.sector||0;
+    const sec=(state.graduated && activeHex!=null && activeHex!==TRAIN_ID) ? (hexRank(activeHex)+1) : (state.sector||0);
     if(sec===0){
       // Section 1: real systems arranged by distance (stable spiral)
       SYSTEMS.forEach((s,i)=>{ const ang=(i/SYSTEMS.length)*6.283 + (s._a||(s._a=rndPos()*0.9)); const rn=0.12+0.34*((Math.log(s.d)-lmin)/(lmax-lmin));
@@ -767,6 +768,29 @@
     }
     SYSBYH={}; SYSTEMS.forEach(s=>{ SYSBYH[s.h]=s; });
     const totEl=document.getElementById('tot'); if(totEl) totEl.textContent=SYSTEMS.length;
+  }
+  // --- galaxy-hex sectors: each hex (A1..E4) owns a STABLE, DISTINCT slice of the
+  //     candidate pool, so different sectors show different stars — and because charted
+  //     stars persist by name, a completed sector still shows the stars you charted there. ---
+  const HEX_STARS=6;
+  function hexRank(id){ return id<TRAIN_ID ? id : id-1; }   // 0-based rank among the non-training hexes
+  function sectorPool(){ return FRONTIER.filter(c=>c&&Array.isArray(c.f)&&c.f.length)
+      .slice().sort((a,b)=>String(a.name).localeCompare(String(b.name))); }
+  function buildSectorForHex(id){
+    if(id===TRAIN_ID){ SYSTEMS=CURATED.slice(); }
+    else{
+      const pool=sectorPool();
+      if(!pool.length){ SYSTEMS=CURATED.slice(); }
+      else{
+        const n=pool.length, base=hexRank(id)*HEX_STARS, arr=[];
+        for(let i=0;i<HEX_STARS && i<n;i++){ arr.push(candidateToSystem(pool[(base+i)%n], id, i)); }
+        const ctrl=controlToSystem(id,0); if(ctrl && arr.length>=3) arr.push(ctrl);   // 1 hidden known-answer check
+        SYSTEMS=arr;
+      }
+    }
+    SYSBYH={}; SYSTEMS.forEach(s=>{ SYSBYH[s.h]=s; });
+    const totEl=document.getElementById('tot'); if(totEl) totEl.textContent=SYSTEMS.length;
+    activeHex=id;
   }
   function nextSector(){ if(!freshCandidates().length) return;   // guarded — prepWin shows the "caught up" state instead
     state.sector=(state.sector||0)+1; save(); buildSector(state.sector); layout(); updateHUD();
@@ -847,13 +871,27 @@
   function updateFrontPill(){ updateDock(); }
 
   // ---------- constellation creator (your personal sky) ----------
-  let constMode=false, cDraft=[], cLastNode=null;
+  let constMode=false, cDraft=[], cLastNode=null, _constSave=null;
+  // gather EVERY charted star across ALL sectors, so a constellation can span sectors
+  function allChartedSystems(){ const out=[], seen={};
+    CURATED.forEach(s=>{ if(state.charted[s.h] && !seen[s.h]){ seen[s.h]=1; out.push(Object.assign({},s)); } });
+    const pool=sectorPool();
+    for(let id=0; id<GAL_N && pool.length; id++){ if(id===TRAIN_ID) continue;
+      const base=hexRank(id)*HEX_STARS, n=pool.length;
+      for(let i=0;i<HEX_STARS && i<n;i++){ const c=pool[(base+i)%n]; if(state.charted[c.name] && !seen[c.name]){ seen[c.name]=1; out.push(candidateToSystem(c,id,i)); } }
+    }
+    return out; }
+  function totalChartedCount(){ return allChartedSystems().length; }
   function enterConst(){ constMode=true; cDraft=[]; cLastNode=null;
+    _constSave={S:SYSTEMS,B:SYSBYH,H:activeHex};                 // remember the sector we were in
+    const all=allChartedSystems();                              // show every charted star, from every sector
+    if(all.length){ SYSTEMS=all; SYSBYH={}; SYSTEMS.forEach(s=>SYSBYH[s.h]=s); activeHex=1; layout(); }
     document.getElementById('cmode').classList.add('show'); document.getElementById('ctools').classList.add('show');
     document.getElementById('hint').style.opacity=0;
     updateDock();
     updateCTools(); }
   function exitConst(){ constMode=false; cDraft=[]; cLastNode=null;
+    if(_constSave){ SYSTEMS=_constSave.S; SYSBYH=_constSave.B; activeHex=_constSave.H; _constSave=null; layout(); updateHUD(); }
     document.getElementById('cmode').classList.remove('show'); document.getElementById('ctools').classList.remove('show');
     updateTod(); updateFrontPill(); updateSecChip(); }
   function updateCTools(){ const u=document.getElementById('cUndo'),s=document.getElementById('cSave'); if(u)u.disabled=!cDraft.length; if(s)s.disabled=!cDraft.length; }
@@ -946,7 +984,12 @@
     if(!galHexes){ galLayout(); galSeededStars(); } galLoadIcons(); galSetup(); galFit(); drawGalaxy(); refreshGalaxyMap(); }
   function closeGalaxy(){ document.getElementById('galaxy').classList.remove('show'); }
   function enterSector(id){ if(!state.graduated){ if(id!==TRAIN_ID)return; } else { state.activeSector=id; save(); } playSfx('warp');
-    closeGalaxy(); const h=document.getElementById('hint'); if(h){ h.style.opacity=1; h.textContent = state.graduated ? ('Working '+secName(id)+' — tap a star to scan') : 'Training — tap a glowing star to scan'; } }
+    if(state.graduated){ buildSectorForHex(id); layout(); updateHUD(); }
+    closeGalaxy(); const h=document.getElementById('hint'); if(h){ h.style.opacity=1;
+      const c=chartedCount(), tot=SYSTEMS.length;
+      h.textContent = !state.graduated ? 'Training — tap a glowing star to scan'
+        : (tot>0 && c>=tot) ? (secName(id)+' complete — every star here is charted')
+        : ('Working '+secName(id)+' — tap a star to scan'); } }
   // ---- canvas galaxy hex-map (replaces the flat #galGrid) ----
   const HEX_SIZE=48;                 // hex radius in world units (px at scale 1)
   let galHexes=null, galStars=null, galBound=null, galCam=null;
@@ -1304,6 +1347,15 @@
   function prepWin(){
     const lic=!!state.observerLicense, sec=state.sector||0, w=document.getElementById('win');
     const h1=w.querySelector('h1'), p=w.querySelector('p'), btn=document.getElementById('again');
+    // graduated players navigate by galaxy sector — finishing one sends them back to pick another
+    if(state.graduated){
+      const sn=secName(currentSector());
+      h1.innerHTML=ic('reward')+' '+esc(sn)+' charted!';
+      p.innerHTML='You gave a first look to every star in <b>'+esc(sn)+'</b> — real reads that feed the community’s consensus. Open your galaxy to pick the next sector to explore.';
+      btn.textContent='Choose next sector →';
+      btn.onclick=function(){ w.classList.remove('show'); openGalaxy(); };
+      return;
+    }
     // gate: real sectors require the observer's license (earned in the Data Lab)
     if(sec===0 && !lic){
       h1.innerHTML=ic('reward')+' Section 1 complete — Training charted!';
@@ -1451,7 +1503,7 @@
     document.querySelectorAll('#navSheet a.navlink').forEach(function(a){ a.addEventListener('click',_sfx('tap')); });
     var _gbW=document.getElementById('galaxyBtn'); if(_gbW)_gbW.addEventListener('click',_sfx('warp'));
     ['galClose','navClose'].forEach(function(id){ var _b=document.getElementById(id); if(_b)_b.addEventListener('click',_sfx('back')); });
-    const _cb=document.getElementById('constBtn'); if(_cb)_cb.onclick=function(){ if(constMode){ exitConst(); return; } if(chartedCount()<2){ celebrate('Chart 2+ stars first ✦','#f5c977'); return; } enterConst(); };
+    const _cb=document.getElementById('constBtn'); if(_cb)_cb.onclick=function(){ if(constMode){ exitConst(); return; } if(totalChartedCount()<2){ celebrate('Chart 2+ stars first ✦','#f5c977'); return; } enterConst(); };
     document.getElementById('cUndo').onclick=function(){ cDraft.pop(); cLastNode=null; updateCTools(); };
     document.getElementById('cClear').onclick=function(){ cDraft=[]; cLastNode=null; updateCTools(); };
     document.getElementById('cSave').onclick=saveConst;
@@ -1633,7 +1685,7 @@
   updateHUD(); updateRank(); checkBadges(); renderAtlas(); updateSecChip(); updateMuteBtn();
   (function(){ function fg(){ startAmbient(); document.removeEventListener('pointerdown',fg,true); } document.addEventListener('pointerdown',fg,true); })();
   loadDeck().then(function(){ if(window.__mcBoot)window.__mcBoot(); });
-  loadFrontier().then(function(){ if((state.sector||0)>0){ buildSector(state.sector); layout(); updateHUD(); } maybeSectorComplete(); });
+  loadFrontier().then(function(){ if(state.graduated){ buildSectorForHex(currentSector()); layout(); updateHUD(); } else if((state.sector||0)>0){ buildSector(state.sector); layout(); updateHUD(); } maybeSectorComplete(); });
   frame();
 })();
 </script>
