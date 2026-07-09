@@ -604,10 +604,10 @@ function updateMission(){
   const el=document.getElementById('mission'); if(!el) return; el.style.display='block';
   if(MISSION.done){
     el.className='mission done';
-    el.innerHTML=(window.LOPIcon?LOPIcon('reward'):'🎉')+' <b>'+esc(MISSION.system)+' charted!</b> You vetted '+MISSION.target+' real light curves to earn it. <a href="game.html">← Back to the map</a>';
+    el.innerHTML=(window.LOPIcon?LOPIcon('reward'):'🎉')+' <b>'+esc(MISSION.system)+' charted!</b> You vetted '+MISSION.target+' real light curves to earn it. <a href="play.html">← Back to the map</a>';
   } else {
     el.className='mission';
-    el.innerHTML='🔭 <b>Charting mission: '+esc(MISSION.system)+'</b> — vet '+MISSION.target+' real light curves to chart it &nbsp;<span style="color:#f5c977;">('+MISSION.count+'/'+MISSION.target+')</span> <a href="game.html">← map</a>';
+    el.innerHTML='🔭 <b>Charting mission: '+esc(MISSION.system)+'</b> — vet '+MISSION.target+' real light curves to chart it &nbsp;<span style="color:#f5c977;">('+MISSION.count+'/'+MISSION.target+')</span> <a href="play.html">← map</a>';
   }
 }
 function completeMission(){

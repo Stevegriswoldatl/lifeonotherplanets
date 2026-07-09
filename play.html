@@ -702,12 +702,12 @@
   function regionProg(rg){ return {done:rg.sys.filter(h=>state.charted[h]).length, total:rg.sys.length}; }
   function regionDone(id){ const rg=REGIONS.find(r=>r.id===id); return rg? rg.sys.every(h=>state.charted[h]) : false; }
   const BADGES=[
-    {id:'first',n:'First Light',d:'Chart your first system',got:()=>chartedCount()>=1},
+    {id:'first',n:'First Light',d:'Chart your first system',got:()=>totalChartedCount()>=1},
     {id:'sharp',n:'Sharp Eye',d:'5 correct vets in a row',got:()=>state.bestStreak>=5},
     {id:'deepobs',n:'Deep Observer',d:'Study a candidate up close in Deep Scan',got:()=>(state.deepScans||0)>=1},
     {id:'namer',n:'Namer',d:'Name a world',got:()=>Object.keys(state.names).length>=1},
     {id:'stargazer',n:'Stargazer',d:'Create a constellation',got:()=>(state.constellations||[]).length>=1},
-    {id:'carto',n:'Cartographer',d:'Chart 10 systems',got:()=>chartedCount()>=10},
+    {id:'carto',n:'Cartographer',d:'Chart 10 systems',got:()=>totalChartedCount()>=10},
     {id:'r_doorstep',n:'Doorstep',d:'Complete The Doorstep',got:()=>regionDone('doorstep')},
     {id:'r_reaches',n:'Near Reaches',d:'Complete The Near Reaches',got:()=>regionDone('reaches')},
     {id:'r_deepfield',n:'Deep Field',d:'Complete The Deep Field',got:()=>regionDone('deepfield')},
@@ -726,7 +726,7 @@
   // ---------- layout systems by distance ----------
   const rndPos=mulberry(4242);
   function layout(){ const cx=W/2, cy=H*0.5, rmin=Math.min(W,H); const lmin=Math.log(4), lmax=Math.log(1250);
-    const sec=(state.graduated && activeHex!=null && activeHex!==TRAIN_ID) ? (hexRank(activeHex)+1) : (state.sector||0);
+    const sec=(state.graduated && state.observerLicense && activeHex!=null && activeHex!==TRAIN_ID) ? (hexRank(activeHex)+1) : (state.sector||0);
     if(sec===0){
       // Section 1: real systems arranged by distance (stable spiral)
       SYSTEMS.forEach((s,i)=>{ const ang=(i/SYSTEMS.length)*6.283 + (s._a||(s._a=rndPos()*0.9)); const rn=0.12+0.34*((Math.log(s.d)-lmin)/(lmax-lmin));
@@ -777,7 +777,9 @@
   function sectorPool(){ return FRONTIER.filter(c=>c&&Array.isArray(c.f)&&c.f.length)
       .slice().sort((a,b)=>String(a.name).localeCompare(String(b.name))); }
   function buildSectorForHex(id){
-    if(id===TRAIN_ID){ SYSTEMS=CURATED.slice(); }
+    // real TESS sectors require the observer's license — unlicensed players stay on the
+    // curated Training set (so we only collect real judgements from proven-accurate users).
+    if(id===TRAIN_ID || !state.observerLicense){ SYSTEMS=CURATED.slice(); }
     else{
       const pool=sectorPool();
       if(!pool.length){ SYSTEMS=CURATED.slice(); }
@@ -983,7 +985,15 @@
   function openGalaxy(){ const g=document.getElementById('galaxy'); g.classList.add('show');
     if(!galHexes){ galLayout(); galSeededStars(); } galLoadIcons(); galSetup(); galFit(); drawGalaxy(); refreshGalaxyMap(); }
   function closeGalaxy(){ document.getElementById('galaxy').classList.remove('show'); }
-  function enterSector(id){ if(!state.graduated){ if(id!==TRAIN_ID)return; } else { state.activeSector=id; save(); } playSfx('warp');
+  function enterSector(id){
+    if(!state.graduated){ if(id!==TRAIN_ID)return; }
+    else if(id!==TRAIN_ID && !state.observerLicense){                 // real sectors need the license
+      closeGalaxy();
+      celebrate('🔒 Earn your observer’s license in the Data Lab to unlock real sectors','#f5c977');
+      setTimeout(function(){ location.href='vet.html'; }, 950);
+      return;
+    } else { state.activeSector=id; save(); }
+    playSfx('warp');
     if(state.graduated){ buildSectorForHex(id); layout(); updateHUD(); }
     closeGalaxy(); const h=document.getElementById('hint'); if(h){ h.style.opacity=1;
       const c=chartedCount(), tot=SYSTEMS.length;
@@ -1347,8 +1357,8 @@
   function prepWin(){
     const lic=!!state.observerLicense, sec=state.sector||0, w=document.getElementById('win');
     const h1=w.querySelector('h1'), p=w.querySelector('p'), btn=document.getElementById('again');
-    // graduated players navigate by galaxy sector — finishing one sends them back to pick another
-    if(state.graduated){
+    // licensed graduated players navigate by galaxy sector — finishing one sends them back to pick another
+    if(state.graduated && state.observerLicense){
       const sn=secName(currentSector());
       h1.innerHTML=ic('reward')+' '+esc(sn)+' charted!';
       p.innerHTML='You gave a first look to every star in <b>'+esc(sn)+'</b> — real reads that feed the community’s consensus. Open your galaxy to pick the next sector to explore.';
@@ -1435,7 +1445,7 @@
     x.textAlign='center';
     x.fillStyle='#5DCAA5'; x.font='800 24px "Space Grotesk",system-ui'; x.fillText('THE SEARCH · EXPLORER CARD', w/2, 88);
     x.fillStyle='#fff'; x.font='600 58px "Fredoka",system-ui'; x.fillText('Life On Other Planets?', w/2, 156);
-    const charted=SYSTEMS.filter(s=>state.charted[s.h] && !state.ruled[s.h]);
+    const charted=allChartedSystems().filter(s=>!state.ruled[s.h]);
     const hp=charted.length?charted[0].pl[0].p:'gas', hs=charted.length?charted[0].seed:3;
     x.drawImage(planet(340,hp,hs), w/2-170, 190);
     x.fillStyle='#fff'; x.font='700 52px "Space Grotesk",system-ui'; x.fillText(state.explorer||'Explorer', w/2, 606);
@@ -1445,7 +1455,7 @@
     if(show.length){ const pw=118,gap=16,tot=show.length*pw+(show.length-1)*gap,sx0=w/2-tot/2; show.forEach((wd,i)=>x.drawImage(planet(pw,wd.p,wd.seed),sx0+i*(pw+gap),700)); }
     else { x.fillStyle='#9fb0d0'; x.font='500 28px system-ui'; x.fillText('Just getting started — discover your first world', w/2, 760); }
     const badges=Object.keys(state.badges||{}).length;
-    const stats=[['Worlds',worlds.length],['Systems',charted.length+'/'+SYSTEMS.length],['Streak','🔥 '+(state.bestStreak||0)],['Badges',badges]];
+    const stats=[['Worlds',worlds.length],['Systems',String(charted.length)],['Streak','🔥 '+(state.bestStreak||0)],['Badges',badges]];
     const sw=228,sg=16,st=4*sw+3*sg,sx=w/2-st/2,sy=880;
     stats.forEach((s2,i)=>{ const bx=sx+i*(sw+sg); rr(x,bx,sy,sw,120,20); x.fillStyle='rgba(255,255,255,.06)'; x.fill(); x.strokeStyle='rgba(255,255,255,.1)'; x.lineWidth=1.5; x.stroke(); x.fillStyle='#8fa0c4'; x.font='800 17px "Space Grotesk"'; x.fillText(String(s2[0]).toUpperCase(),bx+sw/2,sy+40); x.fillStyle='#fff'; x.font='800 38px "Space Grotesk"'; x.fillText(String(s2[1]),bx+sw/2,sy+90); });
     x.fillStyle='#b9c2d6'; x.font='500 27px system-ui'; x.fillText('Charting the nearest stars for signs of life.', w/2, 1120);
@@ -1466,22 +1476,18 @@
     x.textAlign='center';
     x.fillStyle='#5DCAA5'; x.font='800 26px "Space Grotesk"'; x.fillText('✦   M Y   S K Y   ✦', w/2, 74);
     x.fillStyle='#fff'; x.font='700 46px "Fredoka"'; x.fillText((state.explorer||'Explorer')+'’s Neighborhood', w/2, 128);
-    const charted=SYSTEMS.filter(s=>state.charted[s.h] && !state.ruled[s.h]); const worlds=charted.reduce((n,s)=>n+s.pl.length,0);
-    const pct=Math.round(charted.length/SYSTEMS.length*100);
-    x.fillStyle='#9fb0d0'; x.font='500 22px system-ui'; x.fillText(pct+'% of the neighborhood charted · real NASA discoveries', w/2, 166);
-    // layout systems by distance (reuses each system's saved angle so it matches the live map)
-    const cx=w/2, cy=h*0.48, R=Math.min(w,h)*0.36, lmin=Math.log(4), lmax=Math.log(1250), pos={};
-    SYSTEMS.forEach((s,i)=>{ const ang=(i/SYSTEMS.length)*6.283 + (s._a||0); const rn=0.14+0.82*((Math.log(s.d)-lmin)/(lmax-lmin)); pos[s.h]={x:cx+Math.cos(ang)*rn*R, y:cy+Math.sin(ang)*rn*R}; });
-    // auto-links between charted neighbours
-    x.lineWidth=2; SYSTEMS.forEach(s=>{ if(!state.charted[s.h])return; (s._lk||[]).forEach(j=>{ const o=SYSTEMS[j]; if(!state.charted[o.h])return; const a=pos[s.h],b=pos[o.h]; const g=x.createLinearGradient(a.x,a.y,b.x,b.y); g.addColorStop(0,'#5DCAA5'); g.addColorStop(1,'#7fb2ff'); x.strokeStyle=g; x.globalAlpha=.3; x.beginPath(); x.moveTo(a.x,a.y); x.lineTo(b.x,b.y); x.stroke(); }); }); x.globalAlpha=1;
-    // your constellations
+    const sky=allChartedSystems();                       // every star you've charted, across ALL sectors
+    const charted=sky.filter(s=>!state.ruled[s.h]); const worlds=charted.reduce((n,s)=>n+s.pl.length,0);
+    x.fillStyle='#9fb0d0'; x.font='500 22px system-ui'; x.fillText(sky.length+' star'+(sky.length===1?'':'s')+' charted across your galaxy · real NASA discoveries', w/2, 166);
+    // spread every charted star across the poster (golden-angle so a big sky stays readable)
+    const cx=w/2, cy=h*0.47, R=Math.min(w,h)*0.38, pos={}, many=sky.length>50, psz=many?30:46, nfont=many?'700 12px "Space Grotesk"':'700 16px "Space Grotesk"';
+    sky.forEach((s,i)=>{ const t=(i+0.6)/Math.max(1,sky.length), ang=i*2.399963, rn=0.12+0.86*Math.sqrt(t); pos[s.h]={x:cx+Math.cos(ang)*rn*R, y:cy+Math.sin(ang)*rn*R}; });
+    // your constellations — these now span every sector you've worked
     (state.constellations||[]).forEach(cst=>{ x.strokeStyle='rgba(199,174,248,.62)'; x.lineWidth=2.4; x.beginPath(); let sx=0,sy=0,n=0; cst.edges.forEach(e=>{ const a=pos[e[0]],b=pos[e[1]]; if(a&&b){ x.moveTo(a.x,a.y); x.lineTo(b.x,b.y); sx+=a.x+b.x; sy+=a.y+b.y; n+=2; } }); x.stroke(); if(n){ x.fillStyle='rgba(199,174,248,.92)'; x.font='700 20px "Space Grotesk"'; x.fillText('✷ '+cst.name, sx/n, sy/n-16); } });
-    // systems: charted = lit world + name; uncharted = faint dot
-    SYSTEMS.forEach(s=>{ const p=pos[s.h];
-      if(state.charted[s.h]){ x.drawImage(planet(72,s.pl[0].p,s.seed), p.x-25, p.y-25, 50, 50); x.fillStyle='#eaf2ff'; x.font='700 17px "Space Grotesk"'; x.fillText(s.label||s.h, p.x, p.y+42); }
-      else { x.globalAlpha=.4; x.fillStyle='#8fa0c4'; x.beginPath(); x.arc(p.x,p.y,3,0,6.283); x.fill(); x.globalAlpha=1; } });
+    // every charted star: lit world + name
+    sky.forEach(s=>{ const p=pos[s.h]; x.drawImage(planet(72,s.pl[0].p,s.seed), p.x-psz/2, p.y-psz/2, psz, psz); x.fillStyle='#eaf2ff'; x.font=nfont; x.fillText(s.label||s.h, p.x, p.y+psz/2+14); });
     // footer stats
-    const stats=[['Systems',charted.length+'/'+SYSTEMS.length],['Worlds',worlds],['Constellations',(state.constellations||[]).length]];
+    const stats=[['Stars',String(sky.length)],['Worlds',String(worlds)],['Constellations',String((state.constellations||[]).length)]];
     const sw=300,sg=20,tot=3*sw+2*sg,sx0=w/2-tot/2,sy0=h-250;
     stats.forEach((s2,i)=>{ const bx=sx0+i*(sw+sg); rr(x,bx,sy0,sw,110,18); x.fillStyle='rgba(255,255,255,.06)'; x.fill(); x.strokeStyle='rgba(255,255,255,.1)'; x.lineWidth=1.5; x.stroke(); x.fillStyle='#8fa0c4'; x.font='800 18px "Space Grotesk"'; x.fillText(String(s2[0]).toUpperCase(),bx+sw/2,sy0+42); x.fillStyle='#fff'; x.font='800 40px "Space Grotesk"'; x.fillText(String(s2[1]),bx+sw/2,sy0+92); });
     const rl=REGIONS.map(rg=>{ const p=regionProg(rg); return rg.n+' '+(p.done===p.total?'✓':p.done+'/'+p.total); }).join('    ·    ');
@@ -1489,7 +1495,7 @@
     x.fillStyle='#5DCAA5'; x.font='800 34px "Space Grotesk"'; x.fillText('lifeonotherplanets.space', w/2, h-52);
     return c;
   }
-  function openSky(){ if(chartedCount()<1){ celebrate('Chart a star first ✦','#f5c977'); return; }
+  function openSky(){ if(totalChartedCount()<1){ celebrate('Chart a star first ✦','#f5c977'); return; }
     if(!state.explorer){ const nm=prompt('Your explorer name (shown on your sky map):',''); if(nm && cleanName(nm.trim()).ok){ state.explorer=nm.trim(); save(); } }
     (document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()).then(function(){ showImageModal(makeSkyMap(),'my-sky-map.png'); }); }
   function saveCard(){ if(!_cardCanvas)return; _cardCanvas.toBlob(function(b){ const u=URL.createObjectURL(b),a=document.createElement('a'); a.href=u; a.download=_cardFile; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(u);},3000); }); }
@@ -1555,7 +1561,7 @@
     ph+='</div>';
     const pe=document.getElementById('atlasProg'); if(pe) pe.innerHTML=ph;
     // worlds grid
-    const grid=document.getElementById('atlasGrid'), charted=SYSTEMS.filter(s=>state.charted[s.h] && !state.ruled[s.h]); const worlds=[];
+    const grid=document.getElementById('atlasGrid'), charted=allChartedSystems().filter(s=>!state.ruled[s.h]); const worlds=[];
     charted.forEach(s=>s.pl.forEach((pl,i)=>worlds.push({pl,s,i})));
     document.getElementById('atlasCount').textContent=worlds.length+' world'+(worlds.length!==1?'s':'');
     document.getElementById('atlasEmpty').style.display=worlds.length?'none':'block';
