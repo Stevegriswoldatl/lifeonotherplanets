@@ -89,9 +89,13 @@
     <span class="hint">Candidate:</span>
     <select id="pick"></select>
     <button class="btn-pdf" id="btnPdf">⤓ Save as PDF / Print</button>
-    <button class="btn-copy" id="btnCopy">⧉ Copy CTOI row</button>
-    <button class="btn-copy" id="btnExport">⤓ Export all findings (CSV)</button>
-    <a href="reports.html">← all candidates (dashboard)</a>
+    <span id="submitTools" style="display:none;">
+      <button class="btn-copy" id="btnCopy">⧉ Copy CTOI row</button>
+      <button class="btn-copy" id="btnExport">⤓ Export all findings (CSV)</button>
+    </span>
+    <span id="submitGate" class="hint">🔒 ExoFOP submission is handled by the project team</span>
+    <a href="#" id="ownerToggle">owner</a>
+    <a href="reports.html">← dashboard</a>
   </div>
 
   <div class="paper" id="paper">
@@ -110,7 +114,16 @@
 
 <script>
 (function(){
-  var DECK=[], card=null, cons=null, aiCount=0;
+  var DECK=[], card=null, cons=null, aiCount=0, creditNames=[], creditModels=[];
+  function uniq(a){ var s={},o=[]; a.forEach(function(x){ x=String(x||'').trim(); if(x && !s[x.toLowerCase()]){ s[x.toLowerCase()]=1; o.push(x); } }); return o; }
+  function updateCredits(){ var box=document.getElementById('creditsBox'); if(!box)return;
+    var parts=[], obs=(cons&&cons.voters)||0;
+    if(obs) parts.push('<b>'+obs+'</b> community observer'+(obs>1?'s':'')+' (crowd classification)');
+    if(creditNames.length) parts.push('observer notes by <b>'+creditNames.map(esc).join('</b>, <b>')+'</b>');
+    if(creditModels.length) parts.push('AI cross-checks via <b>'+creditModels.map(esc).join('</b>, <b>')+'</b>');
+    box.innerHTML = parts.length
+      ? ('This candidate’s vetting was contributed by '+parts.join(' · ')+'. Every finding here is community work — credit belongs to the explorers above.')
+      : '<span class="empty">No named contributors yet — findings will be credited here as explorers vet this candidate.</span>'; }
   function renderReadiness(){ if(!card||!window.LOPReadiness)return;
     var r=LOPReadiness.evaluate(card, cons||{}, aiCount), lab=LOPReadiness.LABELS[r.tier];
     var badge=$('readyBadge'); if(badge){ badge.style.display='inline-block'; badge.textContent=lab.t+' · '+r.score+'/100'; badge.style.color=lab.c; badge.style.borderColor=lab.c; }
@@ -178,13 +191,14 @@
         + '<div class="fcard fc-chk"><div class="h">Objective checks</div><div class="chk">'+renderChecks(card)+'</div></div>'
       + '</div>'
       + '<div class="findh">AI Lab dossier</div><div class="ai" id="aiBox"><span class="empty">loading…</span></div>'
+      + '<div class="findh">Contributors — credit for this candidate’s vetting</div><div class="ai" id="creditsBox"><span class="empty">Gathering contributors…</span></div>'
       + '<div class="findh">Observer notes</div><div class="notes" id="notesList">—</div>'
       + '<div class="noteadd no-print"><input id="noteAuthor" maxlength="60" placeholder="Your name (optional)"><textarea id="noteText" maxlength="1200" placeholder="Add a vetting note — what you checked, why it looks promising, any caveats…"></textarea><button id="noteSave">Add note</button></div>'
       + '<div class="foot">Data: NASA TESS / Exoplanet Archive. Community vetting by citizen scientists via lifeonotherplanets.space — <b>not peer-reviewed and not a confirmation claim</b>; prepared for ExoFOP-TESS / collaborator review. Per-observer votes and AI findings are retained in the project database. '
         + na.replace('title=','data-x=')+' Fields marked <b>a</b> are available from the NASA Exoplanet Archive / ExoFOP for this TIC. · Report ID LOP-'+dstr()+'-'+esc(card.id)+'</div>';
     $('reportBody').innerHTML=H;
     drawLC(card.f);
-    aiCount=0; renderReadiness();
+    aiCount=0; creditNames=[]; creditModels=[]; renderReadiness(); updateCredits();
     loadDb();
     var nb=$('noteSave'); if(nb) nb.onclick=saveNote;
     loadNotes();
@@ -205,7 +219,7 @@
 
   function loadDb(){
     if(!(window.LOPSync && LOPSync.enabled)){ voteEmpty('Cloud data off — findings not available in this view.'); $('aiBox').innerHTML='<span class="empty">Cloud data off.</span>'; return; }
-    LOPSync.getConsensus(card.id).then(function(c){ cons=c; renderVote(c); renderReadiness(); }).catch(function(){ voteEmpty('No community votes yet.'); });
+    LOPSync.getConsensus(card.id).then(function(c){ cons=c; renderVote(c); renderReadiness(); updateCredits(); }).catch(function(){ voteEmpty('No community votes yet.'); });
     LOPSync.getCandidateFindings(card.id).then(function(list){ renderFindings(list||[]); }).catch(function(){ $('aiBox').innerHTML='<span class="empty">No AI findings yet.</span>'; });
   }
   function voteEmpty(msg){ var b=$('voteBig'); if(b){ b.innerHTML='<span style="font-size:12px;font-weight:500;color:#5a6b85">'+esc(msg)+'</span>'; } }
@@ -220,6 +234,7 @@
   }
   function renderFindings(list){
     aiCount=(list||[]).length; renderReadiness();
+    creditModels=uniq((list||[]).map(function(f){ return f.model; })); updateCredits();
     var box=$('aiBox'); if(!box)return;
     if(!list.length){ box.innerHTML='<span class="empty">No AI Lab findings recorded for this candidate yet.</span>'; return; }
     var out='<b>'+list.length+' finding'+(list.length>1?'s':'')+'</b> gathered by explorers with AI assistants:';
@@ -242,6 +257,7 @@
   }
   function renderNotes(list){
     var box=$('notesList'); if(!box)return;
+    creditNames=uniq((list||[]).map(function(r){ return (r.payload||{}).author; }).filter(function(a){ return a && a!=='Anonymous observer'; })); updateCredits();
     if(!list.length){ box.innerHTML='<span class="empty">No observer notes yet — add the first one below.</span>'; return; }
     box.innerHTML=list.map(function(r){
       var p=r.payload||{}, txt=p.summary||p.note||'', who=p.author||'Anonymous observer', d=String(r.created_at||'').slice(0,10);
@@ -314,6 +330,23 @@
   $('btnPdf').onclick=function(){ window.print(); };
   $('btnCopy').onclick=copyCTOI;
   $('btnExport').onclick=exportAll;
+
+  // ---- owner submit-gate: anyone can VIEW/print a report, but the ExoFOP submit
+  //      actions (Copy CTOI row / Export findings) are gated to the project owner.
+  //      Soft gate — deters casual or duplicate submissions of others' work; a hard
+  //      gate would need real sign-in. Unlock via ?owner=1 or the passphrase. ----
+  function isOwner(){ try{ return localStorage.getItem('lop_owner')==='1'; }catch(e){ return false; } }
+  if(new URLSearchParams(location.search).get('owner')==='1'){ try{ localStorage.setItem('lop_owner','1'); }catch(e){} }
+  function applyOwnerUI(){ var on=isOwner();
+    if($('submitTools')) $('submitTools').style.display=on?'inline':'none';
+    if($('submitGate'))  $('submitGate').style.display=on?'none':'inline';
+    if($('ownerToggle')) $('ownerToggle').textContent=on?'owner ✓ (exit)':'owner'; }
+  $('ownerToggle').onclick=function(e){ e.preventDefault();
+    if(isOwner()){ try{ localStorage.removeItem('lop_owner'); }catch(e){} applyOwnerUI(); return; }
+    var p=window.prompt('Owner passphrase (project team only):','');
+    if(p!=null){ if(p.trim().toLowerCase()==='truckster'){ try{ localStorage.setItem('lop_owner','1'); }catch(e){} applyOwnerUI(); }
+      else alert('Not recognized. Submissions to ExoFOP are handled by the project team.'); } };
+  applyOwnerUI();
   $('pick').onchange=function(){ var id=this.value; card=DECK.filter(function(c){return c.id===id;})[0]||null; cons=null; render(); var u=new URL(location.href); u.searchParams.set('id',id); history.replaceState(null,'',u); };
 
   fetch('frontier_curves.json',{cache:'no-store'}).then(function(r){ return r.ok?r.json():[]; }).then(function(d){

@@ -216,10 +216,15 @@
   .reg .rn3{ font-size:13.5px; font-weight:700; grid-column:1; grid-row:1; } .reg.done .rn3{ color:#7fe6b0; }
   .reg .rc{ font-size:12px; color:#9fb0d0; font-weight:700; font-variant-numeric:tabular-nums; grid-row:1; grid-column:2; text-align:right; }
   .reg .rbar{ width:100%; grid-column:1 / span 2; grid-row:2; }
-  .badges{ display:grid; grid-template-columns:repeat(auto-fill,minmax(78px,1fr)); gap:9px; padding-bottom:24px; }
-  .bdg{ background:rgba(20,28,46,.4); border:1px solid rgba(255,255,255,.07); border-radius:14px; padding:10px 6px; text-align:center; opacity:.45; }
-  .bdg.on{ opacity:1; border-color:rgba(127,178,255,.35); background:rgba(127,178,255,.08); }
-  .bdg .bi{ font-size:20px; } .bdg .bn{ font-size:10px; font-weight:700; margin-top:3px; line-height:1.15; }
+  .badges{ display:grid; grid-template-columns:repeat(auto-fill,minmax(80px,1fr)); gap:9px; padding-bottom:6px; }
+  .achsec{ font-size:11.5px; font-weight:800; color:#c7d2ea; margin:13px 2px 7px; letter-spacing:.02em; display:flex; align-items:center; gap:8px; }
+  .achsec span{ font-size:10px; font-weight:700; color:#8fa0c4; background:rgba(255,255,255,.06); border-radius:20px; padding:2px 8px; }
+  .bdg{ position:relative; background:rgba(20,28,46,.4); border:1px solid rgba(255,255,255,.07); border-radius:14px; padding:13px 6px 10px; text-align:center; }
+  .bdg .bi{ font-size:25px; line-height:1; color:#5b6a8a; } .bdg .bi .lopico{ vertical-align:middle; }
+  .bdg.on{ border-color:rgba(127,224,255,.42); background:linear-gradient(180deg,rgba(127,224,255,.12),rgba(127,178,255,.05)); box-shadow:inset 0 0 16px rgba(127,224,255,.1); }
+  .bdg.on .bi{ color:#9be7ff; }
+  .bdg .bn{ font-size:10px; font-weight:700; margin-top:5px; line-height:1.15; color:#9fb0d0; } .bdg.on .bn{ color:#eaf2ff; }
+  .bdg .blk{ position:absolute; top:6px; right:7px; font-size:11px; color:#5b6a8a; opacity:.75; line-height:1; }
   /* co-op consensus panel */
   .cons{ margin-top:11px; }
   .cons .ch{ font-size:12.5px; font-weight:800; color:#9be7c6; }
@@ -228,7 +233,7 @@
   .cons .cn{ font-size:11.5px; color:#9fb0d0; margin-top:5px; font-weight:600; }
   .cons .ccredit{ margin-top:8px; font-size:12.5px; font-weight:800; color:#5DCAA5; background:rgba(93,202,165,.1); border:1px solid rgba(93,202,165,.3); border-radius:10px; padding:8px 11px; }
   /* shareable explorer card */
-  .sharebtn{ padding:8px 12px; border-radius:12px; font-size:13px; font-weight:800; color:#5DCAA5; cursor:pointer; }
+  .sharebtn{ padding:8px 12px; border-radius:12px; font-size:13px; font-weight:800; color:#5DCAA5; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
   .todpill{ position:absolute; left:50%; transform:translateX(-50%); bottom:130px; z-index:3; padding:8px 14px; border-radius:999px; font-size:12.5px; color:#f5c977; cursor:pointer; align-items:center; gap:5px; border:1px solid rgba(245,201,119,.28) !important; }
   .todpill b{ color:#fff; font-weight:700; }
   .frontpill{ bottom:174px; color:#c7aef8; border:1px solid rgba(150,120,246,.34) !important; }
@@ -271,7 +276,7 @@
   .ctools button:active{ transform:scale(.96); }
   .ctools button.save{ background:linear-gradient(180deg,#c7aef8,#9a6ad0); color:#1a0f2e; border:none; }
   .ctools button:disabled{ opacity:.4; }
-  .skybtn{ width:100%; margin-bottom:14px; padding:15px; border:none; border-radius:16px; font:800 15px "Space Grotesk"; color:#1a0f2e; cursor:pointer; background:linear-gradient(180deg,#c7aef8,#9a6ad0); box-shadow:0 8px 24px rgba(150,120,246,.32); }
+  .skybtn{ width:100%; margin-bottom:14px; padding:15px; border:none; border-radius:16px; font:800 15px "Space Grotesk"; color:#1a0f2e; cursor:pointer; background:linear-gradient(180deg,#c7aef8,#9a6ad0); box-shadow:0 8px 24px rgba(150,120,246,.32); display:inline-flex; align-items:center; justify-content:center; gap:8px; } .skybtn .lopico{ font-size:19px; }
   .skybtn:active{ transform:scale(.98); }
   /* sector showcase */
   .secchip{ position:absolute; left:50%; transform:translateX(-50%); top:calc(env(safe-area-inset-top) + 60px); z-index:4; padding:7px 13px; border-radius:999px; font-size:12px; font-weight:700; color:#9be7ff; cursor:pointer; border:1px solid rgba(120,190,246,.32) !important; display:none; align-items:center; gap:6px; }
@@ -432,9 +437,9 @@
 
   <!-- atlas -->
   <div class="atlas" id="atlas">
-    <div class="ah"><div class="glass close" id="atlasClose">✕</div><h2>My <span>Atlas</span></h2><div class="spacer sg" style="color:#9fb0d0;font-size:13px;font-weight:700;" id="atlasCount"></div><div class="glass sharebtn" id="shareBtn">Share ↗</div></div>
+    <div class="ah"><div class="glass close" id="atlasClose">✕</div><h2>My <span>Atlas</span></h2><div class="spacer sg" style="color:#9fb0d0;font-size:13px;font-weight:700;" id="atlasCount"></div><div class="glass sharebtn" id="shareBtn"><i class="ico" data-i="share"></i> Share</div></div>
     <div class="atlas-scroll">
-      <button class="skybtn" id="skyMapBtn">🗺️ View your Sky Map</button>
+      <button class="skybtn" id="skyMapBtn"><i class="ico" data-i="constellation"></i> View your Sky Map</button>
       <div class="prog-sec" id="atlasProg"></div>
       <div class="grid" id="atlasGrid"></div>
       <div class="empty-msg" id="atlasEmpty" style="display:none;">Your Atlas is empty.<br>Scan a star to discover your first world ✦</div>
@@ -702,16 +707,16 @@
   function regionProg(rg){ return {done:rg.sys.filter(h=>state.charted[h]).length, total:rg.sys.length}; }
   function regionDone(id){ const rg=REGIONS.find(r=>r.id===id); return rg? rg.sys.every(h=>state.charted[h]) : false; }
   const BADGES=[
-    {id:'first',n:'First Light',d:'Chart your first system',got:()=>totalChartedCount()>=1},
-    {id:'sharp',n:'Sharp Eye',d:'5 correct vets in a row',got:()=>state.bestStreak>=5},
-    {id:'deepobs',n:'Deep Observer',d:'Study a candidate up close in Deep Scan',got:()=>(state.deepScans||0)>=1},
-    {id:'namer',n:'Namer',d:'Name a world',got:()=>Object.keys(state.names).length>=1},
-    {id:'stargazer',n:'Stargazer',d:'Create a constellation',got:()=>(state.constellations||[]).length>=1},
-    {id:'carto',n:'Cartographer',d:'Chart 10 systems',got:()=>totalChartedCount()>=10},
-    {id:'r_doorstep',n:'Doorstep',d:'Complete The Doorstep',got:()=>regionDone('doorstep')},
-    {id:'r_reaches',n:'Near Reaches',d:'Complete The Near Reaches',got:()=>regionDone('reaches')},
-    {id:'r_deepfield',n:'Deep Field',d:'Complete The Deep Field',got:()=>regionDone('deepfield')},
-    {id:'season',n:'Season 1 ★',d:'Chart the whole Neighborhood',got:()=>chartedCount()>=SYSTEMS.length}
+    {id:'first',n:'First Light',d:'Chart your first system',group:'Milestones',icon:'star',got:()=>totalChartedCount()>=1},
+    {id:'carto',n:'Cartographer',d:'Chart 10 systems',group:'Milestones',icon:'atlas',got:()=>totalChartedCount()>=10},
+    {id:'season',n:'Season 1',d:'Chart a full sector',group:'Milestones',icon:'trophy',got:()=>chartedCount()>=SYSTEMS.length},
+    {id:'sharp',n:'Sharp Eye',d:'5 correct vets in a row',group:'Skills',icon:'eye',got:()=>state.bestStreak>=5},
+    {id:'deepobs',n:'Deep Observer',d:'Study a candidate up close in Deep Scan',group:'Skills',icon:'scan',got:()=>(state.deepScans||0)>=1},
+    {id:'namer',n:'Namer',d:'Name a world',group:'Skills',icon:'edit',got:()=>Object.keys(state.names).length>=1},
+    {id:'stargazer',n:'Stargazer',d:'Create a constellation',group:'Skills',icon:'constellation',got:()=>(state.constellations||[]).length>=1},
+    {id:'r_doorstep',n:'Doorstep',d:'Complete The Doorstep',group:'Regions',icon:'planet',got:()=>regionDone('doorstep')},
+    {id:'r_reaches',n:'Near Reaches',d:'Complete The Near Reaches',group:'Regions',icon:'satellite',got:()=>regionDone('reaches')},
+    {id:'r_deepfield',n:'Deep Field',d:'Complete The Deep Field',group:'Regions',icon:'galaxy',got:()=>regionDone('deepfield')}
   ];
   function addXP(n){ const before=rankFor(state.xp).r.n; state.xp+=n; save(); const after=rankFor(state.xp).r.n; updateRank(); if(after!==before){ celebrate('⭐ Rank up — '+after+'!','#f5c977',true); playSfx('rankup'); } }
   function checkBadges(){ BADGES.forEach(b=>{ if(!state.badges[b.id] && b.got()){ state.badges[b.id]=true; save(); celebrate('🏅 '+b.n,'#7fb2ff'); } }); }
@@ -1447,18 +1452,21 @@
     x.fillStyle='#fff'; x.font='600 58px "Fredoka",system-ui'; x.fillText('Life On Other Planets?', w/2, 156);
     const charted=allChartedSystems().filter(s=>!state.ruled[s.h]);
     const hp=charted.length?charted[0].pl[0].p:'gas', hs=charted.length?charted[0].seed:3;
+    x.save(); x.translate(w/2,360); x.rotate(-0.34); x.strokeStyle='rgba(127,224,255,.28)'; x.lineWidth=2.5; x.beginPath(); x.ellipse(0,0,232,74,0,0,6.283); x.stroke(); x.restore();
     x.drawImage(planet(340,hp,hs), w/2-170, 190);
     x.fillStyle='#fff'; x.font='700 52px "Space Grotesk",system-ui'; x.fillText(state.explorer||'Explorer', w/2, 606);
     const o=rankFor(state.xp);
     x.fillStyle='#f5c977'; x.font='800 30px "Space Grotesk",system-ui'; x.fillText('★ '+o.r.n+'   ·   '+state.xp+' XP', w/2, 652);
     const worlds=[]; charted.forEach(s=>s.pl.forEach((pl,i)=>worlds.push({p:pl.p,seed:s.seed+i*7}))); const show=worlds.slice(0,6);
-    if(show.length){ const pw=118,gap=16,tot=show.length*pw+(show.length-1)*gap,sx0=w/2-tot/2; show.forEach((wd,i)=>x.drawImage(planet(pw,wd.p,wd.seed),sx0+i*(pw+gap),700)); }
+    if(show.length){ const pw=118,gap=16,tot=show.length*pw+(show.length-1)*gap,sx0=w/2-tot/2;
+      if(show.length>1){ x.strokeStyle='rgba(127,224,255,.32)'; x.lineWidth=2; x.beginPath(); show.forEach(function(wd,i){ var px=sx0+i*(pw+gap)+pw/2, py=700+pw/2; i?x.lineTo(px,py):x.moveTo(px,py); }); x.stroke(); }
+      show.forEach((wd,i)=>x.drawImage(planet(pw,wd.p,wd.seed),sx0+i*(pw+gap),700)); }
     else { x.fillStyle='#9fb0d0'; x.font='500 28px system-ui'; x.fillText('Just getting started — discover your first world', w/2, 760); }
     const badges=Object.keys(state.badges||{}).length;
     const stats=[['Worlds',worlds.length],['Systems',String(charted.length)],['Streak','🔥 '+(state.bestStreak||0)],['Badges',badges]];
     const sw=228,sg=16,st=4*sw+3*sg,sx=w/2-st/2,sy=880;
     stats.forEach((s2,i)=>{ const bx=sx+i*(sw+sg); rr(x,bx,sy,sw,120,20); x.fillStyle='rgba(255,255,255,.06)'; x.fill(); x.strokeStyle='rgba(255,255,255,.1)'; x.lineWidth=1.5; x.stroke(); x.fillStyle='#8fa0c4'; x.font='800 17px "Space Grotesk"'; x.fillText(String(s2[0]).toUpperCase(),bx+sw/2,sy+40); x.fillStyle='#fff'; x.font='800 38px "Space Grotesk"'; x.fillText(String(s2[1]),bx+sw/2,sy+90); });
-    x.fillStyle='#b9c2d6'; x.font='500 27px system-ui'; x.fillText('Charting the nearest stars for signs of life.', w/2, 1120);
+    x.fillStyle='#b9c2d6'; x.font='500 27px system-ui'; x.fillText(worlds.length?('I’ve charted '+worlds.length+' real world'+(worlds.length===1?'':'s')+' in the search for life.'):'Charting the nearest stars for signs of life.', w/2, 1120);
     x.fillStyle='#fff'; x.font='700 32px "Space Grotesk"'; x.fillText('Play free · real NASA data', w/2, h-118);
     x.fillStyle='#5DCAA5'; x.font='800 42px "Space Grotesk"'; x.fillText('lifeonotherplanets.space', w/2, h-64);
     return c;
@@ -1556,9 +1564,16 @@
     let ph=impactCard()+'<div class="pcard"><div class="prow"><div><div class="rttl">'+o.r.n+'</div><div class="rsub">'+state.xp+' XP'+(o.nx?' · '+(o.nx.xp-state.xp)+' to '+o.nx.n:' · max rank')+'</div></div><div class="rstreak">🔥 '+(state.bestStreak||0)+'</div></div><div class="rbar big"><i style="width:'+pct+'%"></i></div></div>';
     ph+='<div class="seclbl">Regions of the Neighborhood</div><div class="regions">';
     REGIONS.forEach(rg=>{ const p=regionProg(rg), done=p.done===p.total; ph+='<div class="reg'+(done?' done':'')+'"><div class="rn3">'+rg.n+(done?' ✓':'')+'</div><div class="rc">'+p.done+'/'+p.total+'</div><div class="rbar"><i style="width:'+(p.done/p.total*100)+'%"></i></div></div>'; });
-    ph+='</div><div class="seclbl">Achievements</div><div class="badges">';
-    BADGES.forEach(b=>{ const got=!!state.badges[b.id]; ph+='<div class="bdg'+(got?' on':'')+'" title="'+esc(b.d)+'"><div class="bi">'+(got?'🏅':'🔒')+'</div><div class="bn">'+esc(b.n)+'</div></div>'; });
-    ph+='</div>';
+    ph+='</div><div class="seclbl">Achievements</div>';
+    ['Milestones','Skills','Regions'].forEach(function(gname){
+      var inG=BADGES.filter(function(b){ return b.group===gname; }); if(!inG.length)return;
+      var earned=inG.filter(function(b){ return state.badges[b.id]; }).length;
+      ph+='<div class="achsec">'+gname+' <span>'+earned+'/'+inG.length+'</span></div><div class="badges">';
+      inG.forEach(function(b){ var got=!!state.badges[b.id];
+        ph+='<div class="bdg'+(got?' on':'')+'" title="'+esc(b.d)+'"><div class="bi">'+(window.LOPIcon?LOPIcon(b.icon||'star'):'')+'</div><div class="bn">'+esc(b.n)+'</div>'+(got?'':'<div class="blk">'+(window.LOPIcon?LOPIcon('lock'):'')+'</div>')+'</div>';
+      });
+      ph+='</div>';
+    });
     const pe=document.getElementById('atlasProg'); if(pe) pe.innerHTML=ph;
     // worlds grid
     const grid=document.getElementById('atlasGrid'), charted=allChartedSystems().filter(s=>!state.ruled[s.h]); const worlds=[];

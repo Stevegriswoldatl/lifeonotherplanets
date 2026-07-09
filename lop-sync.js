@@ -52,6 +52,14 @@
     if (explorerPromise) return explorerPromise;
     explorerPromise = (async () => {
       const dk = deviceKey();
+      // Preferred path: a SECURITY DEFINER function that looks up/creates the explorer
+      // and returns ONLY the id — so the explorers table (and everyone's device_key)
+      // never needs to be readable by anon. See db/phase2_device_key.sql.
+      try {
+        const r = await client.rpc("ensure_explorer", { p_device_key: dk, p_name: name || "Explorer", p_avatar: avatar || "astronaut", p_color: color || "#7fb2ff" });
+        if (!r.error && r.data) { explorerId = (typeof r.data === "string") ? r.data : (r.data.id || r.data); return explorerId; }
+      } catch (e) { /* RPC not installed yet — fall back below */ }
+      // Fallback (used only until the RPC above is installed): direct table access.
       try {
         const sel = await client.from("explorers").select("id").eq("device_key", dk).limit(1);
         if (sel.data && sel.data.length) { explorerId = sel.data[0].id; return explorerId; }
