@@ -192,6 +192,24 @@
   .todpill b{ color:#fff; font-weight:700; }
   .frontpill{ bottom:174px; color:#c7aef8; border:1px solid rgba(150,120,246,.34) !important; }
   .frontpill.locked{ color:#f5c977; border-color:rgba(245,201,119,.36) !important; }
+  /* redesigned Explore chrome: slim rank line + one bottom mission dock */
+  .topleft{ display:flex; flex-direction:column; gap:3px; align-items:flex-start; }
+  .rankline{ display:flex; align-items:center; gap:6px; padding:0 5px; }
+  .rankline .sg{ font-family:'Orbitron',sans-serif; font-size:9px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:#8fa2c6; }
+  .rankline .rbar{ width:36px; height:4px; }
+  .missiondock{ position:absolute; left:10px; right:10px; bottom:calc(env(safe-area-inset-bottom) + 12px); z-index:5; display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:16px; background:rgba(9,18,38,.92); border:1px solid rgba(127,224,255,.26); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); box-shadow:0 6px 22px rgba(0,0,0,.4); cursor:pointer; }
+  .missiondock.locked{ border-color:rgba(245,201,119,.34); }
+  .md-ico{ flex:0 0 auto; width:30px; height:30px; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#b79cf6; font-size:16px; background:rgba(127,224,255,.08); }
+  .missiondock.locked .md-ico{ color:#f5c977; }
+  .md-body{ flex:1; min-width:0; line-height:1.32; }
+  .md-main{ font-size:13px; font-weight:700; color:#e8ecf6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .md-sub{ font-size:11px; color:#8fa2c6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .md-sub .tgt{ color:#f5c977; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
+  .md-go{ flex:0 0 auto; background:#12324a; border:1px solid rgba(127,224,255,.4); color:#7fe0ff; font-weight:800; font-size:12.5px; padding:9px 13px; border-radius:12px; cursor:pointer; font-family:inherit; white-space:nowrap; }
+  .missiondock.locked .md-go{ background:#2a2410; border-color:rgba(245,201,119,.45); color:#f5c977; }
+  .md-go:active{ transform:scale(.94); }
+  .navdiv{ height:1px; background:rgba(255,255,255,.08); margin:8px 2px; }
+  .muteflag{ margin-left:auto; font-size:12px; color:#8fa2c6; text-transform:uppercase; letter-spacing:.05em; }
   /* frontier (open-candidate) styling */
   .tag.front{ color:#c7aef8; background:rgba(150,120,246,.14); border-color:rgba(150,120,246,.4); }
   .vfeed.front{ background:rgba(150,120,246,.1); border:1px solid rgba(150,120,246,.34); }
@@ -300,14 +318,12 @@
   <canvas id="sky"></canvas>
 
   <div class="hud">
-    <a class="glass brand" href="index.html"><span class="lg"></span>The Search<span class="q">?</span></a>
-    <div class="glass rankchip"><span class="rlab sg" id="rankName">Cadet</span><span class="rbar"><i id="rankBar"></i></span></div>
+    <div class="topleft">
+      <a class="glass brand" href="index.html"><span class="lg"></span>The Search</a>
+      <div class="rankline"><span class="sg" id="rankName">Cadet</span><span class="rbar"><i id="rankBar"></i></span></div>
+    </div>
     <div class="spacer"></div>
     <div class="glass counter"><div class="ring"><svg width="26" height="26"><circle cx="13" cy="13" r="10" stroke="rgba(255,255,255,.14)" stroke-width="3" fill="none"/><circle id="ringp" cx="13" cy="13" r="10" stroke="#4fd8ff" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="62.8" stroke-dashoffset="62.8"/></svg><b id="rn">0</b></div><div class="lab">charted<br><b><span id="n">0</span>/<span id="tot">0</span></b></div></div>
-    <div class="glass iconbtn" id="galaxyBtn" title="Your Galaxy"><i class="ico" data-i="galaxy"></i></div>
-    <div class="glass iconbtn" id="constBtn" title="Constellations"><i class="ico" data-i="constellation"></i></div>
-    <div class="glass iconbtn" id="atlasBtn" title="My Atlas"><i class="ico" data-i="atlas"></i></div>
-    <div class="glass iconbtn" id="muteBtn" title="Sound"><i class="ico" data-i="sound"></i></div>
     <div class="glass iconbtn" id="menuBtn" title="Menu"><i class="ico" data-i="menu"></i></div>
   </div>
 
@@ -315,6 +331,12 @@
   <div class="synced" id="synced"></div>
   <div class="glass todpill" id="todPill" style="display:none;"></div>
   <div class="glass todpill frontpill" id="frontPill" style="display:none;"></div>
+  <!-- consolidated bottom mission dock (replaces the two floating pills + countdown chip) -->
+  <div class="missiondock" id="missionDock" style="display:none;">
+    <div class="md-ico" id="mdIco"></div>
+    <div class="md-body"><div class="md-main" id="mdMain"></div><div class="md-sub" id="mdSub"></div></div>
+    <button class="md-go" id="mdGo">Review →</button>
+  </div>
   <div class="glass seltip" id="seltip"></div>
   <div class="funtoast" id="funtoast"></div>
 
@@ -403,6 +425,11 @@
   <div class="authsheet" id="navSheet">
     <div class="authcard" style="text-align:left;">
       <h3 style="text-align:center;">Explore the search</h3>
+      <div class="navlink" id="galaxyBtn" role="button"><i class="ico" data-i="galaxy"></i> Your Galaxy — sector map</div>
+      <div class="navlink" id="atlasBtn" role="button"><i class="ico" data-i="atlas"></i> My Atlas — worlds you’ve found</div>
+      <div class="navlink" id="constBtn" role="button"><i class="ico" data-i="constellation"></i> Constellation mode</div>
+      <div class="navlink" id="muteBtn" role="button"><i class="ico" data-i="sound"></i> Sound <span class="muteflag" id="muteFlag">on</span></div>
+      <div class="navdiv"></div>
       <a class="navlink" href="index.html"><i class="ico" data-i="atlas"></i> Home</a>
       <a class="navlink" href="vet.html"><i class="ico" data-i="scan"></i> Data Lab — vet light curves</a>
       <a class="navlink" href="seti.html"><i class="ico" data-i="signal"></i> Signal Lab — hunt radio signals</a>
@@ -671,7 +698,7 @@
   function playSfx(n){ if(state&&state.muted)return; const a=SFX[n]; if(!a)return; try{ a.currentTime=0; const p=a.play(); if(p&&p.catch)p.catch(function(){}); }catch(e){} }
   function startAmbient(){ if(state&&state.muted)return; if(!ambient){ try{ ambient=new Audio('assets/sounds/ambient.mp3'); ambient.loop=true; ambient.volume=.26; }catch(e){} } if(ambient){ const p=ambient.play(); if(p&&p.catch)p.catch(function(){}); } }
   function stopAmbient(){ if(ambient){ try{ ambient.pause(); }catch(e){} } }
-  function updateMuteBtn(){ const b=document.getElementById('muteBtn'); if(b) b.innerHTML=window.LOPIcon?LOPIcon(state.muted?'mute':'sound'):(state.muted?'🔇':'🔊'); }
+  function updateMuteBtn(){ const f=document.getElementById('muteFlag'); if(f)f.textContent=state.muted?'off':'on'; }
   function toggleMute(){ state.muted=!state.muted; save(); updateMuteBtn(); if(state.muted) stopAmbient(); else startAmbient(); }
 
   const parts=[]; let t=0, shake=0, sel=null, over=false;
@@ -682,7 +709,22 @@
   // Target of the Day — a shared daily featured system, deterministic by date
   function todayNum(){ const d=new Date(); return d.getFullYear()*10000 + (d.getMonth()+1)*100 + d.getDate(); }
   function todaySys(){ return SYSTEMS[ todayNum() % SYSTEMS.length ]; }
-  function updateTod(){ const el=document.getElementById('todPill'); if(!el)return; const s=todaySys(); el.style.display='inline-flex'; el.innerHTML=ic('target')+' <b>Target of the Day</b> · '+esc(s.h)+(state.charted[s.h]?' ✓':''); }
+  // ---- consolidated bottom mission dock: one bar = training/real status + TESS countdown + target of the day ----
+  function updateDock(){ const el=document.getElementById('missionDock'); if(!el)return;
+    if(constMode){ el.style.display='none'; return; }
+    el.style.display='flex';
+    const licensed=!!state.observerLicense, s=todaySys(), charted=!!state.charted[s.h], d=sectorOpensInDays();
+    const drop = d<=0 ? 'New TESS data just dropped' : ('New TESS in '+d+'d');
+    el.classList.toggle('locked', !licensed);
+    const mIco=document.getElementById('mdIco'), mMain=document.getElementById('mdMain'), mSub=document.getElementById('mdSub'), mGo=document.getElementById('mdGo');
+    mIco.innerHTML = licensed ? ic('satellite') : ic('lock');
+    mMain.innerHTML = licensed
+      ? (FRONTIER.length ? ('<b>'+FRONTIER.length+' open</b> — NASA needs this') : 'Real-data explorer · next TESS batch soon')
+      : 'Training — earn your observer’s license';
+    mSub.innerHTML = drop+' · Target: <span class="tgt" id="mdTgt">'+esc(s.h)+(charted?' ✓':'')+'</span>';
+    mGo.textContent = licensed ? 'Review →' : 'Train →';
+    const tgt=document.getElementById('mdTgt'); if(tgt)tgt.onclick=function(ev){ ev.stopPropagation(); const t=todaySys(); if(state.charted[t.h]) openReward(t,true); else openScan(t); }; }
+  function updateTod(){ updateDock(); }
 
   // ---------- map interaction ----------
   cv.addEventListener('pointerdown',e=>{ audio(); const r=cv.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
@@ -700,18 +742,14 @@
   function loadFrontier(){ return fetch('frontier_curves.json',{cache:'no-store'}).then(r=>r.ok?r.json():[]).catch(()=>[])
     .then(fd=>{ FRONTIER=Array.isArray(fd)?fd.filter(c=>c&&Array.isArray(c.f)&&c.f.length):[]; updateFrontPill(); updateSecChip(); maybeSectorShowcase(); }); }
   // the frontier pill doubles as the persistent TRAINING-vs-REAL status indicator on the map.
-  function updateFrontPill(){ const el=document.getElementById('frontPill'); if(!el)return; if(constMode){ el.style.display='none'; return; }
-    el.style.display='inline-flex';
-    if(!state.observerLicense){ el.classList.add('locked'); el.innerHTML=ic('lock')+' <b>Training</b> · earn your observer’s license →'; return; }
-    el.classList.remove('locked');
-    el.innerHTML = dot('#b79cf6')+(FRONTIER.length ? ('<b>Real data</b> · '+FRONTIER.length+' open — NASA needs this') : '<b>Real-data explorer</b> · next TESS batch soon'); }
+  function updateFrontPill(){ updateDock(); }
 
   // ---------- constellation creator (your personal sky) ----------
   let constMode=false, cDraft=[], cLastNode=null;
   function enterConst(){ constMode=true; cDraft=[]; cLastNode=null;
     document.getElementById('cmode').classList.add('show'); document.getElementById('ctools').classList.add('show');
     document.getElementById('hint').style.opacity=0;
-    document.getElementById('todPill').style.display='none'; document.getElementById('frontPill').style.display='none'; document.getElementById('secChip').classList.remove('show');
+    updateDock();
     updateCTools(); }
   function exitConst(){ constMode=false; cDraft=[]; cLastNode=null;
     document.getElementById('cmode').classList.remove('show'); document.getElementById('ctools').classList.remove('show');
@@ -737,8 +775,7 @@
   // days until the next automated data refresh (GitHub Action runs on the 1st/15th/29th) — so the countdown matches when new stars actually arrive
   function sectorOpensInDays(){ const now=new Date(), d=now.getUTCDate(), dim=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()+1,0)).getUTCDate(), days=[1,15,29]; for(var i=0;i<days.length;i++){ if(days[i]>d) return days[i]-d; } return (dim-d)+1; }
   let secRAF=0;
-  function updateSecChip(){ const el=document.getElementById('secChip'); if(!el||constMode)return; const d=sectorOpensInDays(); el.classList.add('show'); el.classList.toggle('soon', d<=3);
-    el.innerHTML = ic('satellite')+' '+(d<=0 ? '<b>New TESS data just dropped!</b> · fresh stars to explore' : '<b>New TESS data in '+d+'d</b> · stars no one has explored'); }
+  function updateSecChip(){ updateDock(); }
   function openSector(cur){ cur=cur||sectorNow(); state.lastSeenSector=cur; save();
     const n=FRONTIER.length;
     document.getElementById('secBig').textContent='Sector '+cur;
@@ -1245,7 +1282,8 @@
     (document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()).then(function(){ showImageModal(makeSkyMap(),'my-sky-map.png'); }); }
   function saveCard(){ if(!_cardCanvas)return; _cardCanvas.toBlob(function(b){ const u=URL.createObjectURL(b),a=document.createElement('a'); a.href=u; a.download=_cardFile; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(u);},3000); }); }
   function shareCardImg(){ if(!_cardCanvas)return; _cardCanvas.toBlob(function(b){ const f=new File([b],_cardFile,{type:'image/png'}); if(navigator.canShare&&navigator.canShare({files:[f]})){ navigator.share({files:[f],title:'The Search',text:'I’m charting real worlds in The Search — join me! lifeonotherplanets.space'}).catch(function(){}); } else saveCard(); }); }
-  { const _sb=document.getElementById('shareBtn'); if(_sb)_sb.onclick=openCard; const _ws=document.getElementById('winShare'); if(_ws)_ws.onclick=openCard; const _sc=document.getElementById('shCert'); if(_sc)_sc.onclick=openCertificate; const _tp=document.getElementById('todPill'); if(_tp)_tp.onclick=function(){ const s=todaySys(); if(state.charted[s.h]) openReward(s,true); else openScan(s); }; const _fp=document.getElementById('frontPill'); if(_fp)_fp.onclick=openFrontier;
+  { const _sb=document.getElementById('shareBtn'); if(_sb)_sb.onclick=openCard; const _ws=document.getElementById('winShare'); if(_ws)_ws.onclick=openCard; const _sc=document.getElementById('shCert'); if(_sc)_sc.onclick=openCertificate; const _md=document.getElementById('missionDock'); if(_md)_md.onclick=openFrontier;
+    ['galaxyBtn','atlasBtn','constBtn'].forEach(function(id){ var _b=document.getElementById(id); if(_b)_b.addEventListener('click',function(){ var _ns=document.getElementById('navSheet'); if(_ns)_ns.classList.remove('show'); }); });
     const _cb=document.getElementById('constBtn'); if(_cb)_cb.onclick=function(){ if(constMode){ exitConst(); return; } if(chartedCount()<2){ celebrate('Chart 2+ stars first ✦','#f5c977'); return; } enterConst(); };
     document.getElementById('cUndo').onclick=function(){ cDraft.pop(); cLastNode=null; updateCTools(); };
     document.getElementById('cClear').onclick=function(){ cDraft=[]; cLastNode=null; updateCTools(); };
