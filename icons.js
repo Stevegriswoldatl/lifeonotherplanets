@@ -11,6 +11,7 @@
     constellation:'<path d="M6 16l4-8 5 5 3-7"/><circle class="f" cx="6" cy="16" r="1.5"/><circle class="f" cx="10" cy="8" r="1.5"/><circle class="f" cx="15" cy="13" r="1.5"/><circle class="f" cx="18" cy="6" r="1.5"/>',
     sound:'<path d="M4 9.5h3l4-3v11l-4-3H4z"/><path d="M15.5 9.5a4 4 0 0 1 0 5"/><path d="M18 7.5a7 7 0 0 1 0 9"/>',
     mute:'<path d="M4 9.5h3l4-3v11l-4-3H4z"/><path d="M15.5 9.5l4 5"/><path d="M19.5 9.5l-4 5"/>',
+    music:'<path d="M9 17V5l10-2v12"/><circle class="f" cx="6.5" cy="17" r="2.5"/><circle class="f" cx="16.5" cy="15" r="2.5"/>',
     planet:'<circle cx="12" cy="12" r="4.3"/><ellipse cx="12" cy="12" rx="9" ry="3.3" transform="rotate(-22 12 12)"/>',
     notplanet:'<circle cx="12" cy="12" r="8"/><path d="M6.5 6.5l11 11"/>',
     unsure:'<circle cx="12" cy="12" r="8.4"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.7.3-1 .8-1 1.6v.4"/><circle class="f" cx="12" cy="16.6" r="1"/>',
