@@ -143,6 +143,7 @@
   .vfeed.show{ padding:11px 13px; } .vfeed.ok{ background:rgba(93,202,165,.12); border:1px solid rgba(93,202,165,.32); } .vfeed.no{ background:rgba(201,107,74,.12); border:1px solid rgba(201,107,74,.3); }
   .vfeed .h{ font-weight:800; font-size:14px; } .vfeed .p{ font-size:12.5px; color:#c7d2ea; margin-top:3px; line-height:1.5; }
   .vfeed .src{ font-size:10.5px; color:#5DCAA5; margin-top:6px; font-weight:700; }
+  .vfeed .lopico,.cons .lopico,.fchecks .lopico,.seceb .lopico{ vertical-align:-.14em; }
   .nextb{ margin-top:11px; width:100%; padding:14px; border:1px solid rgba(79,216,255,.5); border-radius:15px; font:800 15px "Space Grotesk"; color:#bff0ff; cursor:pointer; background:linear-gradient(180deg,rgba(18,42,72,.95),rgba(9,24,44,.95)); box-shadow:0 0 20px rgba(79,216,255,.25), inset 0 1px 0 rgba(79,216,255,.18); }
   .nextb:active{ transform:scale(.98); box-shadow:0 0 30px rgba(79,216,255,.4), inset 0 1px 0 rgba(79,216,255,.18); }
 
@@ -547,7 +548,7 @@
   <div class="sector" id="sector">
     <canvas id="seccv"></canvas>
     <div class="secinner">
-      <div class="seceb">🛰️ Fresh from TESS</div>
+      <div class="seceb"><i class="ico" data-i="satellite"></i> Fresh from TESS</div>
       <h1 id="secTitle">New sector <span>open</span></h1>
       <div class="secbig" id="secBig">Sector —</div>
       <div class="secp" id="secP">A new slice of the sky just arrived from NASA’s telescope.</div>
@@ -1164,9 +1165,9 @@
     if(c.depth_ppm) kv.push(fkv('Dip depth',Number(c.depth_ppm).toLocaleString()+' ppm'));
     let checks='';
     if(Array.isArray(c.checks)&&c.checks.length){ const nf=c.checks.filter(k=>k.flag).length;
-      checks='<div class="fchecks"><div class="fh">🔬 Automated checks — run on the data'+(nf?' · '+nf+' red flag'+(nf>1?'s':''):' · all clear')+'</div>'+
+      checks='<div class="fchecks"><div class="fh">'+ic('scan')+' Automated checks — run on the data'+(nf?' · '+nf+' red flag'+(nf>1?'s':''):' · all clear')+'</div>'+
         c.checks.map(k=>'<div class="fchk'+(k.flag?' flag':'')+'">'+(k.flag?'⚠ ':'✓ ')+'<b>'+esc(k.test)+'</b> — '+esc(k.note)+'</div>').join('')+'</div>'; }
-    vf.innerHTML='<div class="h">🛰️ First look recorded — thank you!</div>'+
+    vf.innerHTML='<div class="h">'+ic('satellite')+' First look recorded — thank you!</div>'+
       '<div class="p"><b>A real, still-open TESS candidate.</b> No answer key — your read joins the community’s consensus, and this star is now charted on your map.</div>'+
       '<div style="margin-top:9px;">'+kv.join('')+'</div>'+checks+
       '<div class="cons" id="cons"></div>'+
@@ -1212,10 +1213,10 @@
     if(c.depth_ppm) kv.push(fkv('Dip depth',Number(c.depth_ppm).toLocaleString()+' ppm'));
     let checks='';
     if(Array.isArray(c.checks)&&c.checks.length){ const nf=c.checks.filter(k=>k.flag).length;
-      checks='<div class="fchecks"><div class="fh">🔬 Automated checks — run on the data'+(nf?' · '+nf+' red flag'+(nf>1?'s':''):' · all clear')+'</div>'+
+      checks='<div class="fchecks"><div class="fh">'+ic('scan')+' Automated checks — run on the data'+(nf?' · '+nf+' red flag'+(nf>1?'s':''):' · all clear')+'</div>'+
         c.checks.map(k=>'<div class="fchk'+(k.flag?' flag':'')+'">'+(k.flag?'⚠ ':'✓ ')+'<b>'+esc(k.test)+'</b> — '+esc(k.note)+'</div>').join('')+'</div>'; }
     const last=(fIdx>=fQueue.length-1);
-    vf.innerHTML='<div class="h">🛰️ First look recorded — thank you!</div>'+
+    vf.innerHTML='<div class="h">'+ic('satellite')+' First look recorded — thank you!</div>'+
       '<div class="p"><b>A real, still-open TESS candidate.</b> No answer key — your read joins the community’s consensus below.</div>'+
       '<div style="margin-top:9px;">'+kv.join('')+'</div>'+checks+
       '<div class="cons" id="cons"></div>'+
@@ -1305,18 +1306,18 @@
     if(window.LOPSync){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5').then(()=>LOPSync.logClassification(a,isCorrect)); }
     if(correct){ tone(660,.18,'sine',.13,990); } else if(a==='unsure'){ tone(440,.15,'sine',.1); } else { tone(200,.2,'sawtooth',.09); }
     const vf=document.getElementById('vfeed'); vf.className='vfeed show '+(correct?'ok':'no');
-    const head=a==='unsure'?'Fair call to flag it':(correct?(truth==='planet'?'🎉 Real one!':'✓ Correct'):'Not quite');
+    const head=a==='unsure'?(ic('unsure')+' Fair call to flag it'):(correct?(truth==='planet'?(ic('reward')+' Real one!'):(ic('check')+' Correct')):'Not quite');
     const isReal=curCard.source&&curCard.source.indexOf('Real')===0;
     let tl = truth==='planet' ? (curCard.kind==='injection'?'Real planet (faint injected transit)':(isReal?'Real confirmed planet':'A planet transit')) : (curCard.kind==='eb'?'Not a planet — eclipsing binary':'Not a planet — quiet star');
-    vf.innerHTML='<div class="h">'+head+'</div><div class="p"><b>'+tl+'.</b> '+curCard.why+'</div>'+(isReal?'<div class="src">📡 '+curCard.source+(curCard.name?' · '+curCard.name:'')+'</div>':'')+'<div class="cons" id="cons"></div><button class="nextb" id="nb">'+(scanN>=2?'Chart '+curSys.h+' →':'Next curve →')+'</button>';
+    vf.innerHTML='<div class="h">'+head+'</div><div class="p"><b>'+tl+'.</b> '+curCard.why+'</div>'+(isReal?'<div class="src">'+ic('satellite')+' '+curCard.source+(curCard.name?' · '+curCard.name:'')+'</div>':'')+'<div class="cons" id="cons"></div><button class="nextb" id="nb">'+(scanN>=2?'Chart '+curSys.h+' →':'Next curve →')+'</button>';
     document.getElementById('nb').onclick=()=>{ scanN++; if(scanN>=3){ const sysDone=curSys; closeScan(); chartSystem(sysDone); } else { nextCard(); } };
     if(window.LOPSync && LOPSync.enabled && curCard.id){ const key=curCard.id, mv=a, tr=truth; LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer','#5DCAA5').then(()=>LOPSync.logVote(key,mv)).then(()=>LOPSync.getConsensus(key)).then(c=>renderConsensus(c,mv,tr)); }
   }
   function renderConsensus(c,myVote,truth){ const el=document.getElementById('cons'); if(!el)return;
-    if(!c||!c.votes){ el.innerHTML='<div class="cn">🛰️ You’re among the first to vet this star — consensus builds as more explorers join.</div>'; return; }
+    if(!c||!c.votes){ el.innerHTML='<div class="cn">'+ic('satellite')+' You’re among the first to vet this star — consensus builds as more explorers join.</div>'; return; }
     const v=c.votes,p=c.planet_votes||0,n=c.not_votes||0,u=c.unsure_votes||0,voters=c.voters||v;
     const topIsPlanet=p>=n, reached=voters>=5 && Math.max(p,n)/v>=0.7;
-    el.innerHTML='<div class="ch">'+(reached?'🔒 Consensus reached — candidate advancing!':'👥 '+voters+' explorer'+(voters>1?'s':'')+' vetting this')+'</div>'+
+    el.innerHTML='<div class="ch">'+(reached?(ic('lock')+' Consensus reached — candidate advancing!'):(ic('together')+' '+voters+' explorer'+(voters>1?'s':'')+' vetting this'))+'</div>'+
       '<div class="cbar"><i style="width:'+(p/v*100)+'%;background:#5DCAA5"></i><i style="width:'+(n/v*100)+'%;background:#c96b4a"></i><i style="width:'+(u/v*100)+'%;background:#6b7690"></i></div>'+
       '<div class="cn">Planet '+Math.round(p/v*100)+'% · Not '+Math.round(n/v*100)+'% · Unsure '+Math.round(u/v*100)+'%</div>';
     if(reached){ const agreed=(topIsPlanet&&myVote==='planet')||(!topIsPlanet&&myVote==='not'); if(agreed){ el.innerHTML+='<div class="ccredit">🤝 You share co-discovery credit on this world.</div>'; celebrate('🤝 Consensus — shared credit!','#5DCAA5'); } }
