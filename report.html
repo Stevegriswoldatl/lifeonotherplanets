@@ -9,6 +9,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
 <script src="lop-sync.js"></script>
+<script src="readiness.js"></script>
 <style>
   :root{ --navy:#0c2340; --ink:#1a2230; --mut:#5a6b85; --line:#d5dbe6; --blue:#2b6cb0; --green:#0a7d5a; }
   *{ box-sizing:border-box; }
@@ -61,6 +62,11 @@
   .notes{ border:1px dashed var(--line); border-radius:6px; padding:10px 12px; margin-bottom:14px; font-size:12px; color:var(--mut); min-height:44px; }
   .foot{ border-top:1px solid var(--line); padding-top:9px; font-size:9.5px; color:#8593a8; line-height:1.55; }
   .empty{ color:var(--mut); font-size:12px; }
+  .ready-box{ margin:12px 0 16px; }
+  .rtier{ display:inline-block; font-weight:800; font-size:13px; padding:5px 12px; border-radius:6px; margin-bottom:8px; }
+  .rgates{ display:flex; flex-wrap:wrap; gap:5px 16px; font-size:12px; margin-bottom:7px; }
+  .rgate.ok{ color:var(--green); font-weight:600; } .rgate.no{ color:var(--mut); }
+  .rverdict{ font-size:12.5px; color:var(--ink); background:#f7f9fc; border:1px solid var(--line); border-radius:6px; padding:8px 11px; line-height:1.5; }
   @media print{
     body{ background:#fff; } .bar{ display:none; } .paper{ box-shadow:none; border:none; margin:0; max-width:100%; border-radius:0; }
     .fcard,.ai,.fig,.notes{ break-inside:avoid; }
@@ -94,7 +100,19 @@
 
 <script>
 (function(){
-  var DECK=[], card=null, cons=null;
+  var DECK=[], card=null, cons=null, aiCount=0;
+  function renderReadiness(){ if(!card||!window.LOPReadiness)return;
+    var r=LOPReadiness.evaluate(card, cons||{}, aiCount), lab=LOPReadiness.LABELS[r.tier];
+    var badge=$('readyBadge'); if(badge){ badge.style.display='inline-block'; badge.textContent=lab.t+' · '+r.score+'/100'; badge.style.color=lab.c; badge.style.borderColor=lab.c; }
+    var box=$('readyBox'); if(!box)return;
+    var g=function(ok,label){ return '<div class="rgate '+(ok?'ok':'no')+'">'+(ok?'✓':'○')+' '+label+'</div>'; };
+    var verdict = r.tier==='ready' ? 'All gates cleared — generate this report and submit to ExoFOP-TESS.'
+      : r.tier==='fp' ? 'Disqualified as a planet — document as a false positive / eclipsing binary, not a discovery.'
+      : r.tier==='likely' ? 'Strong candidate — send it to the AI Lab for deep research, then it’s submission-ready.'
+      : ('Still building — needs '+(r.needs.join(', ')||'more data')+'.');
+    box.innerHTML='<div class="rtier" style="color:'+lab.c+';background:'+lab.bg+'">'+lab.t+' · likelihood '+r.score+'/100</div>'
+      + '<div class="rgates">'+g(r.gates.checks,'Automated checks pass')+g(r.gates.crowd,'Crowd consensus ('+r.planetPct+'% planet · '+r.voters+' obs)')+g(r.gates.ai,'AI Lab deep research ('+r.aiCount+')')+g(r.gates.star,'Host star characterized')+'</div>'
+      + '<div class="rverdict">'+esc(verdict)+'</div>'; }
   var $=function(id){ return document.getElementById(id); };
   var esc=function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); };
   var LY_PER_PC=3.261564;
@@ -125,7 +143,8 @@
     var H=''
       + '<div class="idrow"><div class="toi">'+esc(card.id)+'</div>'
       + '<div class="ids">TIC '+esc(tid)+' · RA '+(card.ra!=null?card.ra.toFixed(4)+'°':'—'+na)+' · Dec '+(card.dec!=null?card.dec.toFixed(4)+'°':'—'+na)+(card.constellation?' · '+esc(card.constellation):'')+'</div>'
-      + '<div class="disp">'+esc(card.disposition||'PC')+' · planet candidate</div></div>'
+      + '<div class="disp">'+esc(card.disposition||'PC')+' · planet candidate</div><span class="disp" id="readyBadge" style="display:none;margin-left:6px;"></span></div>'
+      + '<div id="readyBox" class="ready-box"></div>'
       + '<div class="cols">'
         + '<div class="col"><div class="k">Host star</div><table class="p">'
           + row('Teff (st_teff)', card.teff!=null?(Math.round(card.teff).toLocaleString()+' K'):'—')
@@ -154,6 +173,7 @@
         + na.replace('title=','data-x=')+' Fields marked <b>a</b> are available from the NASA Exoplanet Archive / ExoFOP for this TIC. · Report ID LOP-'+dstr()+'-'+esc(card.id)+'</div>';
     $('reportBody').innerHTML=H;
     drawLC(card.f);
+    aiCount=0; renderReadiness();
     loadDb();
   }
   function row(l,v){ return '<tr><td class="lbl">'+l+'</td><td class="v">'+v+'</td></tr>'; }
@@ -172,7 +192,7 @@
 
   function loadDb(){
     if(!(window.LOPSync && LOPSync.enabled)){ voteEmpty('Cloud data off — findings not available in this view.'); $('aiBox').innerHTML='<span class="empty">Cloud data off.</span>'; return; }
-    LOPSync.getConsensus(card.id).then(function(c){ cons=c; renderVote(c); }).catch(function(){ voteEmpty('No community votes yet.'); });
+    LOPSync.getConsensus(card.id).then(function(c){ cons=c; renderVote(c); renderReadiness(); }).catch(function(){ voteEmpty('No community votes yet.'); });
     LOPSync.getCandidateFindings(card.id).then(function(list){ renderFindings(list||[]); }).catch(function(){ $('aiBox').innerHTML='<span class="empty">No AI findings yet.</span>'; });
   }
   function voteEmpty(msg){ var b=$('voteBig'); if(b){ b.innerHTML='<span style="font-size:12px;font-weight:500;color:#5a6b85">'+esc(msg)+'</span>'; } }
@@ -186,6 +206,7 @@
       + '<div style="font-size:10.5px;color:'+(reached?'#0a7d5a':'#5a6b85')+'">'+(reached?'Consensus reached — advancing':'Building consensus')+' · Not '+Math.round(n/v*100)+'% · Unsure '+Math.round(u/v*100)+'%</div>';
   }
   function renderFindings(list){
+    aiCount=(list||[]).length; renderReadiness();
     var box=$('aiBox'); if(!box)return;
     if(!list.length){ box.innerHTML='<span class="empty">No AI Lab findings recorded for this candidate yet.</span>'; return; }
     var out='<b>'+list.length+' finding'+(list.length>1?'s':'')+'</b> gathered by explorers with AI assistants:';

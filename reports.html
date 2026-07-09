@@ -8,6 +8,7 @@
 <link rel="icon" href="assets/app-icon.svg">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
+<script src="readiness.js"></script>
 <style>
   :root{ --navy:#0c2340; --ink:#1a2230; --mut:#5a6b85; --line:#d5dbe6; --blue:#2b6cb0; --green:#0a7d5a; }
   *{ box-sizing:border-box; }
@@ -37,6 +38,7 @@
   .pct{ font-size:11px; color:var(--mut); margin-left:6px; }
   .badge{ font-size:10px; font-weight:800; padding:2px 7px; border-radius:20px; }
   .b-reached{ background:#e3f6ec; color:var(--green); } .b-flag{ background:#fdeee2; color:#c0631f; } .b-clean{ background:#eef2f8; color:#5a6b85; }
+  .rpill{ display:inline-block; font-size:10px; font-weight:800; padding:1px 7px; border-radius:20px; margin-top:3px; white-space:nowrap; }
   .go{ color:var(--blue); text-decoration:none; font-weight:700; white-space:nowrap; }
   .empty{ color:var(--mut); padding:16px; text-align:center; }
   .note{ font-size:11.5px; color:var(--mut); margin:10px 2px; }
@@ -56,6 +58,7 @@
     <div class="ctrls">
       <span>Sort:</span>
       <select id="sort">
+        <option value="ready">Submission-readiness</option>
         <option value="consensus">Consensus strength</option>
         <option value="votes">Most reviewed</option>
         <option value="flags">Most red flags</option>
@@ -88,8 +91,9 @@
     var totalVotes=MODEL.reduce(function(a,m){return a+(m.votes||0);},0);
     var cons=MODEL.filter(reached).length;
     var ai=MODEL.reduce(function(a,m){return a+(m.ai||0);},0);
+    var promising=MODEL.filter(function(m){ var t=readyOf(m).tier; return t==='likely'||t==='ready'; }).length;
     $('stats').innerHTML=
-      stat(reviewed,'Candidates reviewed')+stat(totalVotes,'Total classifications')+stat(cons,'Reached consensus')+stat(ai,'AI findings');
+      stat(promising,'Promising candidates')+stat(reviewed,'Candidates reviewed')+stat(cons,'Reached consensus')+stat(ai,'AI findings');
   }
   function stat(n,l){ return '<div class="stat"><div class="n">'+n+'</div><div class="l">'+l+'</div></div>'; }
 
@@ -97,6 +101,7 @@
     var only=$('onlyFindings').checked, sort=$('sort').value;
     var list=MODEL.slice().filter(function(m){ return only ? ((m.voters||0)>0 || (m.ai||0)>0) : true; });
     list.sort(function(a,b){
+      if(sort==='ready') return readyOf(b).score-readyOf(a).score || (b.voters||0)-(a.voters||0);
       if(sort==='name') return String(a.id).localeCompare(String(b.id));
       if(sort==='votes') return (b.voters||0)-(a.voters||0) || (b.votes||0)-(a.votes||0);
       if(sort==='flags') return (b.flags||0)-(a.flags||0) || (b.voters||0)-(a.voters||0);
@@ -109,6 +114,7 @@
     $('rows').innerHTML=list.map(rowHtml).join('');
   }
   function agree(m){ var v=m.votes||0; if(!v)return 0; return Math.max(m.planet_votes||0,m.not_votes||0)/v; }
+  function readyOf(m){ return window.LOPReadiness ? LOPReadiness.evaluate(m,{votes:m.votes,voters:m.voters,planet_votes:m.planet_votes,not_votes:m.not_votes},m.ai) : {tier:'candidate',score:0}; }
   function rowHtml(m){
     var v=m.votes||0,p=m.planet_votes||0,n=m.not_votes||0,u=m.unsure_votes||0,voters=m.voters||0;
     var pctPlanet = v?Math.round(p/v*100):0;
@@ -116,8 +122,9 @@
                         : '<span class="pct">—</span>';
     var re=m.re;
     var chk = (m.flags>0) ? '<span class="badge b-flag">⚠ '+m.flags+'</span>' : '<span class="badge b-clean">clean</span>';
+    var rd=readyOf(m), rl=(window.LOPReadiness?LOPReadiness.LABELS[rd.tier]:{t:'',c:'#5a6b85',bg:'#eef2f8'});
     return '<tr>'
-      + '<td class="toi">'+esc(m.id)+'</td>'
+      + '<td class="toi">'+esc(m.id)+'<div class="rpill" style="color:'+rl.c+';background:'+rl.bg+'">'+rl.t+' · '+rd.score+'</div></td>'
       + '<td>'+esc(m.constellation||'—')+'</td>'
       + '<td>'+esc(m.disposition||'PC')+'</td>'
       + '<td class="r">'+(m.period_days!=null?m.period_days+' d':'—')+'</td>'
@@ -137,10 +144,10 @@
   function exportAll(){
     var have=MODEL.filter(function(m){ return (m.voters||0)>0 || (m.ai||0)>0; });
     if(!have.length){ alert('No community findings recorded yet — the export fills in as explorers vet candidates.'); return; }
-    var cols=['card_id','tic','disposition','period_days','depth_ppm','implied_rade','constellation','red_flags','voters','votes','pct_planet','pct_not','pct_unsure','consensus_reached','ai_findings'];
+    var cols=['card_id','tic','disposition','period_days','depth_ppm','implied_rade','constellation','red_flags','voters','votes','pct_planet','pct_not','pct_unsure','consensus_reached','ai_findings','readiness_tier','likelihood_score'];
     var rows=[cols.join(',')];
-    have.forEach(function(m){ var v=m.votes||0,p=m.planet_votes||0,n=m.not_votes||0,u=m.unsure_votes||0;
-      rows.push([m.id,String(m.tic||'').replace(/^TIC\s*/,''),m.disposition||'',m.period_days,m.depth_ppm,m.re!=null?m.re:'',m.constellation||'',m.flags||0,m.voters||0,v,v?Math.round(p/v*100):'',v?Math.round(n/v*100):'',v?Math.round(u/v*100):'',reached(m)?'yes':'no',m.ai||0].map(csvCell).join(',')); });
+    have.forEach(function(m){ var v=m.votes||0,p=m.planet_votes||0,n=m.not_votes||0,u=m.unsure_votes||0, rd=readyOf(m);
+      rows.push([m.id,String(m.tic||'').replace(/^TIC\s*/,''),m.disposition||'',m.period_days,m.depth_ppm,m.re!=null?m.re:'',m.constellation||'',m.flags||0,m.voters||0,v,v?Math.round(p/v*100):'',v?Math.round(n/v*100):'',v?Math.round(u/v*100):'',reached(m)?'yes':'no',m.ai||0,rd.tier,rd.score].map(csvCell).join(',')); });
     var d=new Date(), stamp=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
     download('LOP-findings-'+stamp+'.csv', rows.join('\n'));
   }
@@ -149,7 +156,7 @@
   $('sort').onchange=render; $('onlyFindings').onchange=render; $('btnExport').onclick=exportAll;
   fetch('frontier_curves.json',{cache:'no-store'}).then(function(r){ return r.ok?r.json():[]; }).then(function(d){
     DECK=(Array.isArray(d)?d:[]).filter(function(c){ return c&&c.id; });
-    MODEL=DECK.map(function(c){ return { id:c.id, tic:c.tic, constellation:c.constellation, disposition:c.disposition, period_days:c.period_days, depth_ppm:c.depth_ppm, re:impliedRe(c), flags:c.flag_count||0, voters:0, votes:0, planet_votes:0, not_votes:0, unsure_votes:0, ai:0 }; });
+    MODEL=DECK.map(function(c){ return { id:c.id, tic:c.tic, constellation:c.constellation, disposition:c.disposition, period_days:c.period_days, depth_ppm:c.depth_ppm, re:impliedRe(c), flags:c.flag_count||0, flag_count:c.flag_count||0, checks:c.checks, teff:c.teff, st_rad:c.st_rad, distance_ly:c.distance_ly, voters:0, votes:0, planet_votes:0, not_votes:0, unsure_votes:0, ai:0 }; });
     var byId={}; MODEL.forEach(function(m){ byId[m.id]=m; });
     renderStats(); render();
     var sb=sbClient();
