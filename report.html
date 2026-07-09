@@ -74,6 +74,7 @@
     <select id="pick"></select>
     <button class="btn-pdf" id="btnPdf">⤓ Save as PDF / Print</button>
     <button class="btn-copy" id="btnCopy">⧉ Copy CTOI row</button>
+    <button class="btn-copy" id="btnExport">⤓ Export all findings (CSV)</button>
     <a href="index.html">← back to site</a>
   </div>
 
@@ -212,11 +213,40 @@
   }
   function flash(msg){ var b=$('btnCopy'); var t=b.textContent; b.textContent='✓ '+msg; setTimeout(function(){ b.textContent=t; }, 2600); }
 
+  // ---- bulk export: every candidate that has any community finding ----
+  function sbClient(){ try{ var c=window.LOP_SUPABASE||{}; if(c.url&&c.anonKey&&window.supabase&&window.supabase.createClient) return window.supabase.createClient(c.url,c.anonKey); }catch(e){} return null; }
+  function csvCell(v){ v=(v==null?'':String(v)); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+  function download(name,text){ var b=new Blob([text],{type:'text/csv'}); var u=URL.createObjectURL(b),a=document.createElement('a'); a.href=u; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(u);},2000); }
+  function exportAll(){
+    var sb=sbClient(), btn=$('btnExport'), t0=btn.textContent;
+    if(!sb){ alert('Cloud data is off in this deployment — no findings to export.'); return; }
+    btn.textContent='…exporting';
+    Promise.all([ sb.from('card_consensus').select('*'), sb.from('ai_dossiers').select('planet,mode,model,created_at') ]).then(function(res){
+      var cons=(res[0]&&res[0].data)||[], ai=(res[1]&&res[1].data)||[];
+      var aiCount={}; ai.forEach(function(r){ aiCount[r.planet]=(aiCount[r.planet]||0)+1; });
+      var byId={}; DECK.forEach(function(c){ byId[c.id]=c; });
+      var ids={}; cons.forEach(function(r){ ids[r.card_id]=1; }); Object.keys(aiCount).forEach(function(k){ ids[k]=1; });
+      var cols=['card_id','tic','disposition','period_days','depth_ppm','implied_rade','constellation','voters','votes','pct_planet','pct_not','pct_unsure','consensus_reached','ai_findings'];
+      var rows=[cols.join(',')];
+      Object.keys(ids).sort().forEach(function(id){
+        var c=byId[id]||{}, cc=cons.filter(function(x){return x.card_id===id;})[0]||{};
+        var v=cc.votes||0,p=cc.planet_votes||0,n=cc.not_votes||0,u=cc.unsure_votes||0,voters=cc.voters||0;
+        var reached=(voters>=5 && v>0 && Math.max(p,n)/v>=0.7)?'yes':'no', re=impliedRe(c);
+        rows.push([ id, String(c.tic||'').replace(/^TIC\s*/,''), c.disposition||'', c.period_days!=null?c.period_days:'', c.depth_ppm!=null?c.depth_ppm:'', re!=null?re:'', c.constellation||'', voters, v, v?Math.round(p/v*100):'', v?Math.round(n/v*100):'', v?Math.round(u/v*100):'', reached, aiCount[id]||0 ].map(csvCell).join(','));
+      });
+      if(rows.length<=1){ alert('No community findings recorded yet — the export will fill in as explorers vet candidates.'); btn.textContent=t0; return; }
+      download('LOP-findings-'+$('genDate').textContent+'.csv', rows.join('\n'));
+      btn.textContent='✓ exported '+(rows.length-1)+' candidate'+(rows.length-1>1?'s':'');
+      setTimeout(function(){ btn.textContent=t0; },3000);
+    }).catch(function(e){ alert('Export failed: '+((e&&e.message)||e)); btn.textContent=t0; });
+  }
+
   // ---- boot ----
   var now = document.lastModified ? new Date(document.lastModified) : null;
   $('genDate').textContent = (function(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })();
   $('btnPdf').onclick=function(){ window.print(); };
   $('btnCopy').onclick=copyCTOI;
+  $('btnExport').onclick=exportAll;
   $('pick').onchange=function(){ var id=this.value; card=DECK.filter(function(c){return c.id===id;})[0]||null; cons=null; render(); var u=new URL(location.href); u.searchParams.set('id',id); history.replaceState(null,'',u); };
 
   fetch('frontier_curves.json',{cache:'no-store'}).then(function(r){ return r.ok?r.json():[]; }).then(function(d){
