@@ -525,6 +525,8 @@
   <div class="authsheet" id="navSheet">
     <div class="authcard" style="text-align:left;">
       <h3 style="text-align:center;">Explore the search</h3>
+      <div class="navlink" id="navAuthBtn" role="button"><i class="ico" data-i="save"></i> <span id="navAuthLabel">Save your progress</span></div>
+      <div class="navdiv"></div>
       <div class="navlink" id="galaxyBtn" role="button"><i class="ico" data-i="galaxy"></i> Your Galaxy — sector map</div>
       <div class="navlink" id="atlasBtn" role="button"><i class="ico" data-i="atlas"></i> My Atlas — worlds you’ve found</div>
       <div class="navlink" id="constBtn" role="button"><i class="ico" data-i="constellation"></i> Constellation mode</div>
@@ -1656,10 +1658,23 @@
     return m; }
   function authOpen(){ var s=document.getElementById('authSheet'); if(s){ s.classList.add('show'); var e=document.getElementById('authEmail'); if(e)setTimeout(function(){ try{e.focus();}catch(_){} },60); } }
   function authClose(){ var s=document.getElementById('authSheet'); if(s)s.classList.remove('show'); }
-  function updateAuthUI(u){ var el=document.getElementById('synced'); if(!el)return;
-    if(u){ el.innerHTML='✓ Signed in as '+esc(u.email||'your account')+' · <a class="authlink" id="signOutLink">sign out</a>'; var so=document.getElementById('signOutLink'); if(so)so.onclick=function(){ if(window.LOPSync)LOPSync.signOut().then(function(){ location.reload(); }); }; }
-    else if(window.LOPSync&&LOPSync.enabled){ el.innerHTML='Progress saved on this device · <a class="authlink" id="saveAcctLink">save to my account →</a>'; var sl=document.getElementById('saveAcctLink'); if(sl)sl.onclick=authOpen; }
-    else { el.textContent='Saving to this device'; } }
+  function doSignOut(){ if(window.LOPSync)LOPSync.signOut().then(function(){ location.reload(); }); }
+  function navAuthOpen(){ var n=document.getElementById('navSheet'); if(n)n.classList.remove('show'); authOpen(); }
+  function updateAuthUI(u){
+    var el=document.getElementById('synced');
+    if(el){
+      if(u){ el.innerHTML='✓ Signed in as '+esc(u.email||'your account')+' · <a class="authlink" id="signOutLink">sign out</a>'; var so=document.getElementById('signOutLink'); if(so)so.onclick=doSignOut; }
+      else if(window.LOPSync&&LOPSync.enabled){ el.innerHTML='Progress saved on this device · <a class="authlink" id="saveAcctLink">save to my account →</a>'; var sl=document.getElementById('saveAcctLink'); if(sl)sl.onclick=authOpen; }
+      else { el.textContent='Saving to this device'; }
+    }
+    // mirror the state into the pop-up menu so it's easy to find + shows who you are
+    var nl=document.getElementById('navAuthLabel'), nb=document.getElementById('navAuthBtn');
+    if(nl&&nb){
+      if(u){ nl.textContent='Signed in as '+(u.email||'your account')+' — sign out'; nb.onclick=doSignOut; }
+      else if(window.LOPSync&&LOPSync.enabled){ nl.textContent='Save your progress →'; nb.onclick=navAuthOpen; }
+      else { nl.textContent='Saving to this device'; nb.onclick=null; }
+    }
+  }
   function onSignedIn(u){ _signedUser=u; if(!u)return;
     if(state && state.__acct===u.id){ pushRemote(); return; }         // already merged for this account
     if(_authMerging)return; _authMerging=true;
