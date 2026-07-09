@@ -615,15 +615,15 @@
     {id:'r_deepfield',n:'Deep Field',d:'Complete The Deep Field',got:()=>regionDone('deepfield')},
     {id:'season',n:'Season 1 ★',d:'Chart the whole Neighborhood',got:()=>chartedCount()>=SYSTEMS.length}
   ];
-  function addXP(n){ const before=rankFor(state.xp).r.n; state.xp+=n; save(); const after=rankFor(state.xp).r.n; updateRank(); if(after!==before){ celebrate('⭐ Rank up — '+after+'!','#f5c977'); playSfx('rankup'); } }
+  function addXP(n){ const before=rankFor(state.xp).r.n; state.xp+=n; save(); const after=rankFor(state.xp).r.n; updateRank(); if(after!==before){ celebrate('⭐ Rank up — '+after+'!','#f5c977',true); playSfx('rankup'); } }
   function checkBadges(){ BADGES.forEach(b=>{ if(!state.badges[b.id] && b.got()){ state.badges[b.id]=true; save(); celebrate('🏅 '+b.n,'#7fb2ff'); } }); }
   function checkRegion(){ REGIONS.forEach(rg=>{ const k='rg_'+rg.id; if(!state.badges[k] && regionDone(rg.id)){ state.badges[k]=true; save(); celebrate('🌠 Region charted — '+rg.n+'!','#5DCAA5'); burst(W/2,H/2,'#5DCAA5',44,true); } }); }
   function updateRank(){ const o=rankFor(state.xp); const el=document.getElementById('rankName'); if(el)el.textContent=o.r.n; const bar=document.getElementById('rankBar'); if(bar){ const lo=o.r.xp, hi=o.nx?o.nx.xp:o.r.xp+1; bar.style.width=Math.max(6,Math.min(100,((state.xp-lo)/(hi-lo))*100))+'%'; } }
   const TOAST_ICON={'⭐':'star','🏅':'star','🌠':'atlas','🛰️':'satellite','✷':'constellation','🎓':'graduate','🔒':'lock','🔥':'fire','🤝':'together','🔬':'scan','🎉':'reward','☁️':'check','🎯':'target','🏆':'trophy'};
-  function celebrate(msg,color){ let icon=''; msg=String(msg);
+  function celebrate(msg,color,quiet){ let icon=''; msg=String(msg);
     for(const em in TOAST_ICON){ if(msg.indexOf(em)===0){ icon=TOAST_ICON[em]; msg=msg.slice(em.length).replace(/^\s+/,''); break; } }
     if(!icon && /✦\s*$/.test(msg)){ icon='atlas'; msg=msg.replace(/\s*✦\s*$/,''); }
-    const ft=document.getElementById('funtoast'); if(ft){ ft.innerHTML=(icon&&window.LOPIcon?LOPIcon(icon)+' ':'')+esc(msg); ft.style.color=color||'#fff'; ft.classList.remove('show'); void ft.offsetWidth; ft.classList.add('show'); } tone(700,.4,'triangle',.11); setTimeout(()=>tone(1050,.4,'triangle',.09),110); }
+    const ft=document.getElementById('funtoast'); if(ft){ ft.innerHTML=(icon&&window.LOPIcon?LOPIcon(icon)+' ':'')+esc(msg); ft.style.color=color||'#fff'; ft.classList.remove('show'); void ft.offsetWidth; ft.classList.add('show'); } if(!quiet)playSfx('notify'); }
 
   // ---------- layout systems by distance ----------
   const rndPos=mulberry(4242);
@@ -693,7 +693,9 @@
   function tone(f,d,ty,v,slide){ if(state&&state.muted)return; const a=audio(); if(!a)return; const o=a.createOscillator(),g=a.createGain(); o.type=ty||'sine'; o.frequency.value=f; if(slide)o.frequency.exponentialRampToValueAtTime(slide,a.currentTime+d); g.gain.value=0; g.gain.linearRampToValueAtTime(v||.12,a.currentTime+.02); g.gain.exponentialRampToValueAtTime(.001,a.currentTime+d); o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime+d+.02); }
   function chord(b){ [0,4,7,12,16].forEach((s,i)=>setTimeout(()=>tone(b*Math.pow(2,s/12),.6,'triangle',.10),i*60)); }
   // ---------- Pixie Pals sample audio (SFX + ambient loop) ----------
-  const SFX={}; ['chart','unlock','rankup','win'].forEach(function(n){ try{ const a=new Audio('assets/sounds/'+n+'.m4a'); a.preload='auto'; a.volume=.5; SFX[n]=a; }catch(e){} });
+  const SFX={}; ['chart','unlock','rankup','win','tap','back','warp','notify'].forEach(function(n){ try{ const a=new Audio('assets/sounds/'+n+'.m4a'); a.preload='auto'; a.volume=.5; SFX[n]=a; }catch(e){} });
+  // frequently-heard UI sounds sit lower in the mix than reward stingers
+  if(SFX.tap)SFX.tap.volume=.32; if(SFX.back)SFX.back.volume=.4; if(SFX.warp)SFX.warp.volume=.45; if(SFX.notify)SFX.notify.volume=.42;
   let ambient=null;
   function playSfx(n){ if(state&&state.muted)return; const a=SFX[n]; if(!a)return; try{ a.currentTime=0; const p=a.play(); if(p&&p.catch)p.catch(function(){}); }catch(e){} }
   function startAmbient(){ if(state&&state.muted)return; if(!ambient){ try{ ambient=new Audio('assets/sounds/ambient.mp3'); ambient.loop=true; ambient.volume=.26; }catch(e){} } if(ambient){ const p=ambient.play(); if(p&&p.catch)p.catch(function(){}); } }
@@ -783,7 +785,7 @@
     document.getElementById('secGo').style.display = n?'':'none';
     document.getElementById('sector').classList.add('show'); over=true; tone(300,.5,'triangle',.1,600); chord(330);
     startSecAnim(); }
-  function closeSector(){ document.getElementById('sector').classList.remove('show'); over=false; if(secRAF){ cancelAnimationFrame(secRAF); secRAF=0; } }
+  function closeSector(){ document.getElementById('sector').classList.remove('show'); over=false; playSfx('back'); if(secRAF){ cancelAnimationFrame(secRAF); secRAF=0; } }
   function startSecAnim(){ const c=document.getElementById('seccv'), x=c.getContext('2d'); const dpr=Math.min(window.devicePixelRatio||1,2);
     let w=c.clientWidth||W, h=c.clientHeight||H; c.width=w*dpr; c.height=h*dpr; x.setTransform(dpr,0,0,dpr,0,0);
     const rnd=mulberry(sectorNow()*7+3), N=Math.max(12,Math.min(26,(FRONTIER.length||6)*3));
@@ -819,7 +821,7 @@
     for(let i=0;i<GAL_N;i++){ const id=(start+i)%GAL_N; if(id!==TRAIN_ID && !t.has(id)) return id; } return pickHome(); }
   function finishGraduation(homeId){ state.graduated=true; state.playerColor=myColor(); state.homeSector=homeId; state.activeSector=homeId; state.homeSynced=true; save();
     if(window.LOPSync && LOPSync.enabled){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer',state.playerColor).then(function(){ LOPSync.claimHome(homeId,state.playerColor); }); }
-    celebrate('🎓 Graduated — '+secName(homeId)+' is yours!', state.playerColor); playSfx('unlock'); burst(W/2,H/2,state.playerColor,50,true); checkBadges(); }
+    celebrate('🎓 Graduated — '+secName(homeId)+' is yours!', state.playerColor, true); playSfx('unlock'); burst(W/2,H/2,state.playerColor,50,true); checkBadges(); }
   let gradInFlight=false;
   function graduate(){ if(state.graduated || gradInFlight)return; gradInFlight=true; const done=function(id){ gradInFlight=false; finishGraduation(id); };
     if(window.LOPSync && LOPSync.enabled){ LOPSync.ensureExplorer(state.explorer||'Explorer','stargazer',myColor())
@@ -843,7 +845,7 @@
   function openGalaxy(){ const g=document.getElementById('galaxy'); g.classList.add('show');
     if(!galHexes){ galLayout(); galSeededStars(); } galLoadIcons(); galSetup(); galFit(); drawGalaxy(); refreshGalaxyMap(); }
   function closeGalaxy(){ document.getElementById('galaxy').classList.remove('show'); }
-  function enterSector(id){ if(!state.graduated){ if(id!==TRAIN_ID)return; } else { state.activeSector=id; save(); }
+  function enterSector(id){ if(!state.graduated){ if(id!==TRAIN_ID)return; } else { state.activeSector=id; save(); } playSfx('warp');
     closeGalaxy(); const h=document.getElementById('hint'); if(h){ h.style.opacity=1; h.textContent = state.graduated ? ('Working '+secName(id)+' — tap a star to scan') : 'Training — tap a glowing star to scan'; } }
   // ---- canvas galaxy hex-map (replaces the flat #galGrid) ----
   const HEX_SIZE=48;                 // hex radius in world units (px at scale 1)
@@ -1171,7 +1173,7 @@
     }
     btn.onclick=function(){ w.classList.remove('show'); nextSector(); };
   }
-  function closeReward(){ document.getElementById('sheet').classList.remove('show'); over=false; renderAtlas(); checkSectorDone(); }
+  function closeReward(){ document.getElementById('sheet').classList.remove('show'); over=false; playSfx('back'); renderAtlas(); checkSectorDone(); }
   // on load, if the current sector is already fully charted, show its "next section" prompt so there's always a way forward
   function maybeSectorComplete(){ if(SYSTEMS.length && chartedCount()>=SYSTEMS.length){ prepWin(); document.getElementById('win').classList.add('show'); } }
   document.getElementById('shGo').onclick=closeReward; document.getElementById('sheetClose').onclick=closeReward;
@@ -1284,6 +1286,12 @@
   function shareCardImg(){ if(!_cardCanvas)return; _cardCanvas.toBlob(function(b){ const f=new File([b],_cardFile,{type:'image/png'}); if(navigator.canShare&&navigator.canShare({files:[f]})){ navigator.share({files:[f],title:'The Search',text:'I’m charting real worlds in The Search — join me! lifeonotherplanets.space'}).catch(function(){}); } else saveCard(); }); }
   { const _sb=document.getElementById('shareBtn'); if(_sb)_sb.onclick=openCard; const _ws=document.getElementById('winShare'); if(_ws)_ws.onclick=openCard; const _sc=document.getElementById('shCert'); if(_sc)_sc.onclick=openCertificate; const _md=document.getElementById('missionDock'); if(_md)_md.onclick=openFrontier;
     ['galaxyBtn','atlasBtn','constBtn'].forEach(function(id){ var _b=document.getElementById(id); if(_b)_b.addEventListener('click',function(){ var _ns=document.getElementById('navSheet'); if(_ns)_ns.classList.remove('show'); }); });
+    // UI sound effects on chrome: tap for menus/nav, warp for the galaxy, back for closers
+    var _sfx=function(n){ return function(){ playSfx(n); }; };
+    ['menuBtn','atlasBtn','constBtn','muteBtn','missionDock'].forEach(function(id){ var _b=document.getElementById(id); if(_b)_b.addEventListener('click',_sfx('tap')); });
+    document.querySelectorAll('#navSheet a.navlink').forEach(function(a){ a.addEventListener('click',_sfx('tap')); });
+    var _gbW=document.getElementById('galaxyBtn'); if(_gbW)_gbW.addEventListener('click',_sfx('warp'));
+    ['galClose','navClose'].forEach(function(id){ var _b=document.getElementById(id); if(_b)_b.addEventListener('click',_sfx('back')); });
     const _cb=document.getElementById('constBtn'); if(_cb)_cb.onclick=function(){ if(constMode){ exitConst(); return; } if(chartedCount()<2){ celebrate('Chart 2+ stars first ✦','#f5c977'); return; } enterConst(); };
     document.getElementById('cUndo').onclick=function(){ cDraft.pop(); cLastNode=null; updateCTools(); };
     document.getElementById('cClear').onclick=function(){ cDraft=[]; cLastNode=null; updateCTools(); };
