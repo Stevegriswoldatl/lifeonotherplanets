@@ -26,6 +26,12 @@
   button { border-radius:10px; padding:9px 14px; font-size:13px; font-weight:600; cursor:pointer; border:1px solid #29365a; background:#16203a; color:#dbe4fb; }
   button:hover { background:#1d2a4a; }
   button.primary { background:#4fd8ff; color:#05231b; border-color:#4fd8ff; }
+  .promwrap{ background:#0f0b22; border:1px solid #2f2657; border-radius:12px; padding:11px 13px; margin-bottom:12px; }
+  .promhead{ font-family:"Space Grotesk",sans-serif; font-weight:700; font-size:13px; color:#c7b6f0; margin-bottom:8px; }
+  .promlist{ display:flex; flex-wrap:wrap; gap:8px; }
+  .promitem{ display:flex; flex-direction:column; align-items:flex-start; gap:2px; background:#141033; border:1px solid #3a2f66; color:#e8ecf6; padding:7px 12px; border-radius:12px; text-align:left; }
+  .promitem:hover{ background:#1c1642; } .promitem b{ font-size:13px; } .promtier{ font-size:11px; font-weight:700; }
+  .promnote{ font-size:12px; color:#8fa2c6; margin-top:8px; }
   button:disabled { opacity:.45; cursor:not-allowed; }
   .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:10px; }
   textarea { width:100%; min-height:130px; background:#0a0f1c; color:#e8ecf6; border:1px solid #26314f; border-radius:12px; padding:12px; font-size:13px; }
@@ -77,6 +83,7 @@
 
   <div class="step">Step 1 — Pick a target</div>
   <div class="panel">
+    <div id="promising"></div>
     <select id="planet"></select>
     <div class="note" id="pmeta"></div>
     <div id="candChecks"></div>
@@ -126,6 +133,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
 <script src="lop-sync.js"></script>
+<script src="readiness.js"></script>
 <script>
 const PLANETS = [
   {n:"TOI-700 d", r:1.07, s:0.85, t:3459, d:101, note:"Earth-sized, temperate, quiet M dwarf — a flagship habitable-zone world."},
@@ -196,7 +204,13 @@ const LADDER = [
   { key:"contamination", label:"Nearby-star contamination",
     q:"Is there a nearby or blended star (for example from Gaia, including a high RUWE / astrometric-binary flag) that could contaminate the light or be the true source of the dip?" },
   { key:"catalog",       label:"Catalog agreement",
-    q:"Do the public catalogs (NASA Exoplanet Archive, ExoFOP/TOI, discovery papers) AGREE on this candidate's period, transit depth, and radius, or do they disagree? Give the numbers." }
+    q:"Do the public catalogs (NASA Exoplanet Archive, ExoFOP/TOI, discovery papers) AGREE on this candidate's period, transit depth, and radius, or do they disagree? Give the numbers." },
+  { key:"activity",      label:"Stellar activity?",
+    q:"Is the host star magnetically active, spotted, flaring, or otherwise variable (rotational modulation, pulsations) in a way that could mimic, inject, or distort a transit-like signal? Note any documented activity indicators from the TESS light curve or the literature." },
+  { key:"archival",      label:"Archival cross-match",
+    q:"Was this star observed by earlier missions (Kepler, K2) or ground-based transit surveys (WASP, HATNet, KELT, NGTS, etc.)? Do any archival light curves or catalogs show the SAME periodic signal, and what disposition did they assign?" },
+  { key:"literature",    label:"Professional disposition?",
+    q:"Are there professional dispositions, comments, or notes already posted for this TIC/TOI on ExoFOP-TESS or in the literature — e.g. flagged as a false positive, a confirmed planet, or ambiguous? Summarize what the professionals have concluded, with sources." }
 ];
 
 function candidatePrompt(cand, qkey){
@@ -345,8 +359,34 @@ function setClassicUI(on){
   $("s4panel").style.display = on?"":"none";
   $("sharerow").style.display = on?"":"none";
   $("ladder").innerHTML=""; $("candChecks").innerHTML="";
+  if(on){ var _pb=$("promising"); if(_pb)_pb.innerHTML=""; }
   $("add").textContent = on ? "Add this answer" : "Submit finding";
   if(on) $("wallintro").textContent = "Answers shared here are pooled across every explorer. Add yours, then validate others' — only what the community trusts advances toward the professional record.";
+}
+// ---- auto-escalation: candidates the readiness funnel rates "likely planet" ----
+let PROM_LOADED=false; const CONS_ALL={}, AI_ALL={};
+const PROM_DARKC={ likely:'#7fb2ff', ready:'#5DCAA5', candidate:'#8fa2c6', fp:'#f0906b' };
+async function loadFindingsIndex(){
+  if(PROM_LOADED) return; PROM_LOADED=true;
+  try{ const cfg=window.LOP_SUPABASE||{};
+    if(cfg.url&&cfg.anonKey&&window.supabase&&window.supabase.createClient){
+      const sb=window.supabase.createClient(cfg.url,cfg.anonKey);
+      const cr=await sb.from('card_consensus').select('*'); (cr.data||[]).forEach(r=>{ CONS_ALL[r.card_id]=r; });
+      const ar=await sb.from('ai_dossiers').select('planet'); (ar.data||[]).forEach(r=>{ AI_ALL[r.planet]=(AI_ALL[r.planet]||0)+1; });
+    }
+  }catch(e){}
+}
+function renderPromising(){
+  const box=$("promising"); if(!box) return;
+  if(!isCandidateMode() || !window.LOPReadiness){ box.innerHTML=""; return; }
+  const scored=CANDIDATES.map((c,i)=>({ c, i, rd:LOPReadiness.evaluate(c, CONS_ALL[c.id]||{}, AI_ALL[c.id]||0) }))
+    .filter(x=>x.rd.tier==='likely'||x.rd.tier==='ready')
+    .sort((a,b)=>b.rd.score-a.rd.score);
+  if(!scored.length){ box.innerHTML='<div class="promwrap"><div class="promhead">🔬 Promising candidates — needs deep research</div><div class="promnote">None yet — a candidate appears here automatically once the crowd has vetted it as planet-like. Pick any target below to research in the meantime.</div></div>'; return; }
+  box.innerHTML='<div class="promwrap"><div class="promhead">🔬 Promising candidates — needs deep research <span class="who-tag">'+scored.length+'</span></div>'
+    + '<div class="promlist">'+scored.slice(0,8).map(x=>'<button class="promitem" data-i="'+x.i+'"><b>'+escapeHtml(x.c.name)+'</b><span class="promtier" style="color:'+(PROM_DARKC[x.rd.tier]||'#8fa2c6')+'">'+LOPReadiness.LABELS[x.rd.tier].t+' · '+x.rd.score+'</span></button>').join('')+'</div>'
+    + '<div class="promnote">The crowd flagged these as planet-like — your AI research pushes them toward submission. Or pick any target below.</div></div>';
+  box.querySelectorAll(".promitem").forEach(b=> b.addEventListener("click", ()=>{ sel.value=b.dataset.i; candQ=null; refresh(); window.scrollTo(0,0); }));
 }
 async function refreshCandidate(){
   setClassicUI(false);
@@ -354,6 +394,7 @@ async function refreshCandidate(){
   $("answer").value=""; $("err").style.color=""; $("err").textContent=""; $("copied").textContent="";
   if(!CANDIDATES.length){ $("candChecks").innerHTML='<div class="hint">Loading open candidates…</div>'; $("prompt").textContent=""; $("wall").innerHTML=""; await loadCandidates(); populateTargets(); }
   if(!CANDIDATES.length){ $("candChecks").innerHTML='<div class="hint">No open candidates are available right now.</div>'; $("prompt").textContent=""; $("wall").innerHTML=""; return; }
+  await loadFindingsIndex(); renderPromising();
   const cand = CANDIDATES[+sel.value] || CANDIDATES[0];
   $("pmeta").textContent = [cand.constellation, (cand.distance_ly!=null?("~"+cand.distance_ly+" ly"):null), (cand.period_days?("P="+cand.period_days+" d"):null), (cand.depth_ppm?("depth "+cand.depth_ppm+" ppm"):null)].filter(Boolean).join("  ·  ");
   renderCandChecks(cand);
