@@ -124,21 +124,22 @@
     var na='<sup class="na" title="Available from the NASA Exoplanet Archive / ExoFOP for this TIC — not stored locally.">a</sup>';
     var H=''
       + '<div class="idrow"><div class="toi">'+esc(card.id)+'</div>'
-      + '<div class="ids">TIC '+esc(tid)+' · RA —'+na+' · Dec —'+na+(card.constellation?' · '+esc(card.constellation):'')+'</div>'
+      + '<div class="ids">TIC '+esc(tid)+' · RA '+(card.ra!=null?card.ra.toFixed(4)+'°':'—'+na)+' · Dec '+(card.dec!=null?card.dec.toFixed(4)+'°':'—'+na)+(card.constellation?' · '+esc(card.constellation):'')+'</div>'
       + '<div class="disp">'+esc(card.disposition||'PC')+' · planet candidate</div></div>'
       + '<div class="cols">'
         + '<div class="col"><div class="k">Host star</div><table class="p">'
           + row('Teff (st_teff)', card.teff!=null?(Math.round(card.teff).toLocaleString()+' K'):'—')
-          + row('Radius (st_rad)', '—'+na)
+          + row('Radius (st_rad)', card.st_rad!=null?(card.st_rad+' R☉'):('—'+na))
           + row('Distance (st_dist)', distPc!=null?(distPc+' pc'):'—')
-          + row('TESS mag (st_tmag)', '—'+na)
+          + row('TESS mag (st_tmag)', card.st_tmag!=null?card.st_tmag:('—'+na))
         + '</table></div>'
         + '<div class="col"><div class="k">Transit / planet</div><table class="p">'
           + row('Period (pl_orbper)', card.period_days!=null?(card.period_days+' d'):'—')
-          + row('Epoch T0 (pl_tranmid)', '—'+na)
+          + row('Epoch T0 (pl_tranmid)', card.pl_tranmid!=null?(card.pl_tranmid+' BJD'):('—'+na))
           + row('Depth (pl_trandep)', card.depth_ppm!=null?(card.depth_ppm.toLocaleString()+' ppm'):'—')
-          + row('Duration (pl_trandurh)', '—'+na)
+          + row('Duration (pl_trandurh)', card.pl_trandurh!=null?(card.pl_trandurh+' h'):('—'+na))
           + row('Radius (pl_rade)', rade!=null?('~'+rade+' R⊕ '+small(sizeCat(rade))):'—')
+          + row('Eq. temp (pl_eqt)', card.pl_eqt!=null?(card.pl_eqt+' K'):('—'+na))
         + '</table></div>'
       + '</div>'
       + '<div class="fig"><div class="cap">Phase-folded light curve'+(card.period_days?(' · P = '+card.period_days+' d'):'')+' · '+((card.f||[]).length)+' binned points · source: '+esc(card.source||'TESS')+'</div><canvas id="lc"></canvas></div>'
@@ -205,7 +206,7 @@
     var v = cons||{}; var votes=v.votes||0, voters=v.voters||0, p=v.planet_votes||0;
     var pct = votes? Math.round(p/votes*100)+'%' : '';
     var cols=['tid','toi','ra','dec','st_tmag','st_teff','st_rad','st_dist','pl_orbper','pl_tranmid','pl_trandep','pl_trandurh','pl_rade','tfopwg_disp','lop_observers','lop_pct_planet','lop_report'];
-    var vals=[tid, card.id, '', '', '', card.teff!=null?Math.round(card.teff):'', '', distPc, card.period_days!=null?card.period_days:'', '', card.depth_ppm!=null?card.depth_ppm:'', '', rade!=null?rade:'', card.disposition||'PC', voters, pct, 'LOP-'+dstr()+'-'+card.id];
+    var vals=[tid, card.id, card.ra!=null?card.ra:'', card.dec!=null?card.dec:'', card.st_tmag!=null?card.st_tmag:'', card.teff!=null?Math.round(card.teff):'', card.st_rad!=null?card.st_rad:'', distPc, card.period_days!=null?card.period_days:'', card.pl_tranmid!=null?card.pl_tranmid:'', card.depth_ppm!=null?card.depth_ppm:'', card.pl_trandurh!=null?card.pl_trandurh:'', rade!=null?rade:'', card.disposition||'PC', voters, pct, 'LOP-'+dstr()+'-'+card.id];
     var tsv=cols.join('\t')+'\n'+vals.join('\t');
     (navigator.clipboard&&navigator.clipboard.writeText? navigator.clipboard.writeText(tsv):Promise.reject())
       .then(function(){ flash('Copied — paste into a spreadsheet or the ExoFOP bulk uploader'); })
