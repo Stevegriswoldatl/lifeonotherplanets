@@ -31,7 +31,9 @@
     together:'<circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/>',
     eye:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.6"/>',
     menu:'<path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/>',
-    reward:'<path class="f" d="M12 3.5l2.2 4.6 5 .6-3.7 3.4 1 5-4.5-2.5-4.5 2.5 1-5L6.8 8.7l5-.6z"/>'
+    reward:'<path class="f" d="M12 3.5l2.2 4.6 5 .6-3.7 3.4 1 5-4.5-2.5-4.5 2.5 1-5L6.8 8.7l5-.6z"/>',
+    edit:'<path d="M4 20h4L18.6 9.4a2 2 0 0 0-2.8-2.8L5 17.2z"/><path d="M14 7l3 3"/>',
+    save:'<path d="M12 4v9.5"/><path d="M8.5 10.5L12 14l3.5-3.5"/><path d="M5 18.5h14"/>'
   };
   function svg(name, cls) {
     var p = P[name]; if (!p) return '';

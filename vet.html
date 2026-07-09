@@ -424,12 +424,12 @@ function answerFrontier(a){
   if(current.period_days) kv.push('<div class="kv"><span>Period</span> <b>'+current.period_days+' d</b></div>');
   if(current.depth_ppm) kv.push('<div class="kv"><span>Dip depth</span> <b>'+Number(current.depth_ppm).toLocaleString()+' ppm</b></div>');
   html+='<div class="starcard">'+kv.join("")+'</div>';
-  html+='<div class="src">📡 '+esc(current.source||"Real TESS data · open candidate")+'</div>';
+  html+='<div class="src">'+(window.LOPIcon?LOPIcon('signal'):'📡')+' '+esc(current.source||"Real TESS data · open candidate")+'</div>';
   // objective red-flag checks (Candidate check A) — run on the data, shown after your read
   if(Array.isArray(current.checks) && current.checks.length){
     const nf=current.checks.filter(c=>c.flag).length;
     html+='<div class="checks"><div class="checkhead">'+(window.LOPIcon?LOPIcon('scan'):'')+' Automated checks — run on the data, not a guess'+(nf?' · <b style="color:#f3a9a9;">'+nf+' red flag'+(nf>1?'s':'')+'</b>':' · <span style="color:#9fd9c2;">all clear</span>')+':</div>';
-    current.checks.forEach(function(ch){ html+='<div class="checkrow '+(ch.flag?'flagged':'')+'">'+(ch.flag?'⚠ ':'✓ ')+'<b>'+esc(ch.test)+'</b> — '+esc(ch.note)+'</div>'; });
+    current.checks.forEach(function(ch){ html+='<div class="checkrow '+(ch.flag?'flagged':'')+'">'+(ch.flag?'⚠ ':(window.LOPIcon?LOPIcon('check')+' ':'✓ '))+'<b>'+esc(ch.test)+'</b> — '+esc(ch.note)+'</div>'; });
     html+='</div>';
   }
   if(window.LOPSync && LOPSync.enabled && current.id){ html+='<div class="crowd" id="crowd">Checking the crowd…</div>'; }
@@ -491,7 +491,7 @@ function answer(a){
     if(current.tic) kv.push('<div class="kv"><span>Catalog</span> <b>TIC '+esc(current.tic)+'</b></div>');
     if(current.depth_ppm) kv.push('<div class="kv"><span>Dip depth</span> <b>'+current.depth_ppm.toLocaleString()+' ppm</b></div>');
     html += '<div class="starcard">'+kv.join("")+'</div>';
-    html += '<div class="src">📡 '+esc(current.source)+'</div>';
+    html += '<div class="src">'+(window.LOPIcon?LOPIcon('signal'):'📡')+' '+esc(current.source)+'</div>';
   }
 
   // crowd consensus — REAL when cloud sync is on; clearly-labeled demo when local-only
@@ -529,7 +529,7 @@ function gradFlash(){
   buildRealQueue();   // switch the deck to real unverified candidates + hidden controls
   const v=document.getElementById("verdict");
   v.className="verdict show correct celebrate";
-  v.innerHTML='<h3>🎓 Observer’s license earned!</h3>'+
+  v.innerHTML='<h3>'+(window.LOPIcon?LOPIcon('graduate'):'🎓')+' Observer’s license earned!</h3>'+
     '<p>You just cleared <b>'+LIC_NEED+' of 10</b> on real NASA training stars. From here you’re reviewing <b>real, unverified TESS candidates</b> — data NASA hasn’t classified yet, where your read is genuine science. We’ll still slip in the occasional known-answer star to keep your accuracy honest (that’s how the pros do it).</p>'+
     '<div style="margin-top:12px;"><button id="nextbtn" style="flex:0 0 auto;">Start real science →</button></div>';
   document.getElementById("nextbtn").onclick=next;
@@ -553,7 +553,7 @@ function updateMission(){
   const el=document.getElementById('mission'); if(!el) return; el.style.display='block';
   if(MISSION.done){
     el.className='mission done';
-    el.innerHTML='🎉 <b>'+esc(MISSION.system)+' charted!</b> You vetted '+MISSION.target+' real light curves to earn it. <a href="game.html">← Back to the map</a>';
+    el.innerHTML=(window.LOPIcon?LOPIcon('reward'):'🎉')+' <b>'+esc(MISSION.system)+' charted!</b> You vetted '+MISSION.target+' real light curves to earn it. <a href="game.html">← Back to the map</a>';
   } else {
     el.className='mission';
     el.innerHTML='🔭 <b>Charting mission: '+esc(MISSION.system)+'</b> — vet '+MISSION.target+' real light curves to chart it &nbsp;<span style="color:#f5c977;">('+MISSION.count+'/'+MISSION.target+')</span> <a href="game.html">← map</a>';

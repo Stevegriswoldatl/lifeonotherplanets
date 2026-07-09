@@ -367,7 +367,7 @@ function answer(verdict){
   // verdict card
   const v = document.getElementById('verdict');
   v.className = 'verdict show '+(correct?'correct':'wrong');
-  let html = '<h3>'+(correct?'✅ Nice read':'❌ Not quite')+' — this was '+LABELS[truth]+'.</h3>';
+  let html = '<h3>'+(correct?((window.LOPIcon?LOPIcon('check')+' ':'✅ ')+'Nice read'):((window.LOPIcon?LOPIcon('notplanet')+' ':'❌ ')+'Not quite'))+' — this was '+LABELS[truth]+'.</h3>';
   html += '<p>'+current.why+'</p>';
   if(current.story){ html += '<div class="story">📖 '+current.story+'</div>'; }
   html += '<div class="starcard">'
