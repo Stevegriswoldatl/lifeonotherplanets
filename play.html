@@ -564,7 +564,8 @@
   const cv=document.getElementById('sky'), ctx=cv.getContext('2d'); let W=0,H=0,DPR=1;
   const ic=(n)=> (window.LOPIcon?LOPIcon(n):'');   // custom icon markup for dynamic strings
   const dot=(c)=> '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+c+';vertical-align:-1px;margin-right:2px;"></span>';
-  function resize(){ DPR=Math.min(window.devicePixelRatio||1,2); W=cv.clientWidth; H=cv.clientHeight; cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0); buildNebula(); layout(); }
+  var _inConst=false;   // hoisted mirror of constMode, safe to read from resize() during early init
+  function resize(){ DPR=Math.min(window.devicePixelRatio||1,2); W=cv.clientWidth; H=cv.clientHeight; cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0); buildNebula(); if(_inConst){ constLayout(); } else { layout(); } }
   window.addEventListener('resize',resize);
   function mulberry(a){ return function(){ a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296; }; }
   function hex(h,a){ const n=parseInt(h.slice(1),16); return 'rgba('+(n>>16&255)+','+(n>>8&255)+','+(n&255)+','+a+')'; }
@@ -793,9 +794,11 @@
       if(!pool.length){ SYSTEMS=CURATED.slice(); }
       else{
         const n=pool.length, base=hexRank(id)*HEX_STARS, arr=[];
-        for(let i=0;i<HEX_STARS && i<n;i++){ arr.push(candidateToSystem(pool[(base+i)%n], id, i)); }
+        // UNIQUE slice per hex (no wrap) — so each sector owns its own real candidates and new
+        // NASA data opens brand-new sectors instead of refilling old ones.
+        for(let i=0;i<HEX_STARS && base+i<n;i++){ arr.push(candidateToSystem(pool[base+i], id, i)); }
         const ctrl=controlToSystem(id,0); if(ctrl && arr.length>=3) arr.push(ctrl);   // 1 hidden known-answer check
-        SYSTEMS=arr;
+        SYSTEMS = arr.length ? arr : CURATED.slice();   // frontier hex (no data yet) — shouldn't be enterable, but never leave it empty
       }
     }
     SYSBYH={}; SYSTEMS.forEach(s=>{ SYSBYH[s.h]=s; });
@@ -885,22 +888,38 @@
   // gather EVERY charted star across ALL sectors, so a constellation can span sectors
   function allChartedSystems(){ const out=[], seen={};
     CURATED.forEach(s=>{ if(state.charted[s.h] && !seen[s.h]){ seen[s.h]=1; out.push(Object.assign({},s)); } });
-    const pool=sectorPool();
-    for(let id=0; id<GAL_N && pool.length; id++){ if(id===TRAIN_ID) continue;
-      const base=hexRank(id)*HEX_STARS, n=pool.length;
-      for(let i=0;i<HEX_STARS && i<n;i++){ const c=pool[(base+i)%n]; if(state.charted[c.name] && !seen[c.name]){ seen[c.name]=1; out.push(candidateToSystem(c,id,i)); } }
+    const pool=sectorPool(), n=pool.length;
+    // walk the WHOLE pool (unique slice per hex, no wrap) so a charted star from any sector — even
+    // sectors past the old 20-hex board — shows up in your sky.
+    for(let id=0; n && hexRank(id)*HEX_STARS < n; id++){ if(id===TRAIN_ID) continue;
+      const base=hexRank(id)*HEX_STARS;
+      for(let i=0;i<HEX_STARS && base+i<n;i++){ const c=pool[base+i]; if(state.charted[c.name] && !seen[c.name]){ seen[c.name]=1; out.push(candidateToSystem(c,id,i)); } }
     }
     return out; }
   function totalChartedCount(){ return allChartedSystems().length; }
-  function enterConst(){ constMode=true; cDraft=[]; cLastNode=null;
+  // Constellation layout: spread EVERY charted star on a comfortably-spaced grid (with gentle
+  // per-star jitter so it reads as sky, not a spreadsheet) — the old code reused the tight sector
+  // spiral, so 50+ stars piled on top of each other and you couldn't tap two cleanly.
+  function constLayout(){ const stars=SYSTEMS, n=stars.length; if(!n)return;
+    const padX=Math.max(24,W*0.085), top=H*0.155, bot=H*0.135;
+    const uW=Math.max(60,W-2*padX), uH=Math.max(60,H-top-bot);
+    let cols=Math.max(1,Math.min(n,Math.round(Math.sqrt(n*uW/uH))));   // roughly-square cells
+    const rows=Math.ceil(n/cols), cellW=uW/cols, cellH=uH/Math.max(1,rows);
+    stars.forEach((s,i)=>{ const c=i%cols, r=Math.floor(i/cols);
+      const inRow=(r===rows-1)?(n-cols*(rows-1)):cols, rowOff=(cols-inRow)*cellW/2;   // center a short last row
+      const jx=(mulberry(hashStr(s.h)*2+1)()-0.5)*cellW*0.34, jy=(mulberry(hashStr(s.h)*3+7)()-0.5)*cellH*0.34;
+      s.x=padX+rowOff+cellW*(c+0.5)+jx; s.y=top+cellH*(r+0.5)+jy; });
+    stars.forEach(s=>{ s._lk=null; });   // recompute the faint neighbour links for the new spacing
+    stars.forEach((s,i)=>{ if(s._lk)return; s._lk=stars.map((o,j)=>({j,dd:(o.x-s.x)**2+(o.y-s.y)**2})).filter(o=>o.j!==i).sort((a,b)=>a.dd-b.dd).slice(0,2).map(o=>o.j); }); }
+  function enterConst(){ constMode=true; _inConst=true; cDraft=[]; cLastNode=null;
     _constSave={S:SYSTEMS,B:SYSBYH,H:activeHex};                 // remember the sector we were in
     const all=allChartedSystems();                              // show every charted star, from every sector
-    if(all.length){ SYSTEMS=all; SYSBYH={}; SYSTEMS.forEach(s=>SYSBYH[s.h]=s); activeHex=1; layout(); }
+    if(all.length){ SYSTEMS=all; SYSBYH={}; SYSTEMS.forEach(s=>SYSBYH[s.h]=s); activeHex=1; constLayout(); }
     document.getElementById('cmode').classList.add('show'); document.getElementById('ctools').classList.add('show');
     document.getElementById('hint').style.opacity=0;
     updateDock();
     updateCTools(); }
-  function exitConst(){ constMode=false; cDraft=[]; cLastNode=null;
+  function exitConst(){ constMode=false; _inConst=false; cDraft=[]; cLastNode=null;
     if(_constSave){ SYSTEMS=_constSave.S; SYSBYH=_constSave.B; activeHex=_constSave.H; _constSave=null; layout(); updateHUD(); }
     document.getElementById('cmode').classList.remove('show'); document.getElementById('ctools').classList.remove('show');
     updateTod(); updateFrontPill(); updateSecChip(); }
@@ -953,7 +972,27 @@
     if(cur>state.lastSeenSector && FRONTIER.length){ setTimeout(()=>openSector(cur),700); } }
 
   // ---------- territory / galaxy (Phase A: your own claimable turf, training -> graduation) ----------
-  const GAL_COLS=5, GAL_ROWS=4, GAL_N=GAL_COLS*GAL_ROWS, TRAIN_ID=7, SECTOR_GOAL=5, TRAIN_GOAL=3;
+  // The galaxy is NOT a fixed 20-hex board — it GROWS. Columns stay fixed (so every saved
+  // sector_id keeps its meaning), but the number of rows expands to give every real TESS
+  // candidate its own home and to always leave a frontier of open sky beyond what's been worked.
+  const GAL_COLS=5, TRAIN_ID=7, SECTOR_GOAL=5, TRAIN_GOAL=3;
+  let GAL_ROWS=4, GAL_N=GAL_COLS*GAL_ROWS;
+  // how many hexes we need right now: one per HEX_STARS of real pool (+1 for the training hex),
+  // never fewer than the sectors anyone (me or another explorer) has already worked.
+  function galaxyNeededSectors(){
+    let need = state.observerLicense ? (Math.ceil(sectorPool().length/HEX_STARS)+1) : (GAL_COLS*4);
+    const sw=state.sectorWork||{}; for(const id in sw){ if(sw[id]>0) need=Math.max(need,(+id)+1); }
+    for(const id in (galaxyMap||{})){ need=Math.max(need,(+id)+1); }   // where other explorers are active
+    return Math.max(GAL_COLS*4, need);
+  }
+  function recomputeGalaxySize(){
+    const rows=Math.max(4, Math.ceil(galaxyNeededSectors()/GAL_COLS));
+    const n=GAL_COLS*rows;
+    if(n!==GAL_N){ GAL_ROWS=rows; GAL_N=n; galHexes=null; galStars=null; }   // grid changed → force relayout
+  }
+  // a hex "has data" once the real pool is big enough to fill its slice (unique slice, no wrap).
+  function sectorHasData(id){ if(id===TRAIN_ID) return true; if(!state.observerLicense) return false;
+    return hexRank(id)*HEX_STARS < sectorPool().length; }
   const SECTOR_COLORS=['#5DCAA5','#7fb2ff','#f5c977','#c7aef8','#f0906b','#6be6c1','#e56ba8','#9be77f'];
   function secName(id){ const c=id%GAL_COLS, r=Math.floor(id/GAL_COLS); return 'Sector '+String.fromCharCode(65+c)+(r+1); }
   function hashStr(s){ let h=2166136261; s=String(s); for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return (h>>>0); }
@@ -991,6 +1030,7 @@
         const g=document.getElementById('galaxy'); if(g&&g.classList.contains('show')) renderGalaxy(); })
       .catch(function(){}); }
   function openGalaxy(){ const g=document.getElementById('galaxy'); g.classList.add('show');
+    recomputeGalaxySize();
     if(!galHexes){ galLayout(); galSeededStars(); } galLoadIcons(); galSetup(); galFit(); drawGalaxy(); refreshGalaxyMap(); }
   function closeGalaxy(){ document.getElementById('galaxy').classList.remove('show'); }
   function enterSector(id){
@@ -1042,13 +1082,18 @@
     const otherHome=(gm&&gm.home_explorer&&myId&&gm.home_explorer!==myId)?(gm.home_color||'#7fb2ff'):null;
     const otherWork=(gm&&gm.work>0&&!myWork);
     const together=(myWork&&gm&&gm.explorers>=2); const col=myColor(); let bg,bd,badge,sub,icon;
+    // frontier = licensed, unworked, untouched by anyone, and the real pool hasn't reached this hex yet.
+    const frontier=(state.graduated && state.observerLicense && !isTrain && !myWork && !otherHome && !otherWork && !sectorHasData(id));
     if(isTrain){ bg='rgba(245,201,119,.14)'; bd='#f5c977'; badge='🎓'; icon='graduate'; sub='Training'; }
-    else if(myWork){ bg=hex(col,.15+fill*.45); bd=col; badge=together?'🤝':(myHome?'★':'●'); icon=together?'together':(myHome?'star':'planet'); sub=Math.round(fill*100)+'%'; }
-    else if(otherHome){ bg=hex(otherHome,.16); bd=otherHome; badge='◆'; icon='flag'; sub='claimed'; }
-    else if(otherWork){ bg=hex(gm.home_color||'#7fb2ff',.07); bd='rgba(255,255,255,.16)'; badge='·'; icon='dot'; sub='active'; }
-    else if(state.graduated){ bg='rgba(255,255,255,.03)'; bd='rgba(255,255,255,.11)'; badge='+'; icon='plus'; sub=''; }
+    else if(myWork){ bg=hex(col,.15+fill*.45); bd=col; badge=together?'🤝':(myHome?'★':'●'); icon=together?'together':(myHome?'star':'planet'); sub=(together&&gm)?('you +'+Math.max(1,gm.explorers-1)):(Math.round(fill*100)+'%'); }
+    else if(otherHome){ bg=hex(otherHome,.20); bd=otherHome; badge='◆'; icon='flag'; sub=(gm&&gm.explorers>1)?(gm.explorers+' explorers'):'claimed'; }
+    else if(otherWork){ const oc=gm.home_color||'#7fb2ff'; bg=hex(oc,.17); bd=oc; badge='●'; icon='dot'; sub=(gm.explorers>1)?(gm.explorers+' explorers'):'explorer here'; }
+    else if(frontier){ bg='rgba(127,178,255,.05)'; bd='rgba(127,178,255,.22)'; badge='◇'; icon='soon'; sub='soon'; }
+    else if(state.graduated){ bg='rgba(255,255,255,.03)'; bd='rgba(255,255,255,.12)'; badge='+'; icon='plus'; sub='open'; }
     else { bg='rgba(255,255,255,.03)'; bd='rgba(255,255,255,.11)'; badge='🔒'; icon='lock'; sub=''; }
-    return {bg,bd,badge,sub,icon,active,tappable:(state.graduated||isTrain),together:!!together,otherHome:!!otherHome}; }
+    const tappable = isTrain || (state.graduated && !frontier);
+    return {bg,bd,badge,sub,icon,active,tappable,together:!!together,otherHome:!!otherHome,
+            mine:!!myWork, shared:!!(myWork&&together), otherOnly:!!(otherHome||otherWork), frontier:!!frontier}; }
   function drawGalaxy(){ const cv=document.getElementById('galCanvas'); if(!cv||!galCam||!galHexes)return;
     const dpr=window.devicePixelRatio||1, W=cv.clientWidth, H=cv.clientHeight;
     if(cv.width!==Math.round(W*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
@@ -1059,8 +1104,8 @@
       ctx.globalAlpha=st.a; ctx.fillStyle='#cfe0ff'; ctx.beginPath(); ctx.arc(p[0],p[1],st.r,0,6.2832); ctx.fill(); }
     ctx.globalAlpha=1;
     // hexes
-    const col=myColor(); let tog=0, others=0; const R=HEX_SIZE*galCam.scale;
-    for(const h of galHexes){ const s=galStyle(h.id); if(s.together)tog++; if(s.otherHome)others++;
+    const col=myColor(); let mineN=0, sharedN=0, otherN=0; const R=HEX_SIZE*galCam.scale;
+    for(const h of galHexes){ const s=galStyle(h.id); if(s.mine)mineN++; if(s.shared)sharedN++; if(s.otherOnly)otherN++;
       const p=w2s(h.x,h.y,cv); const cx=p[0], cy=p[1];
       if(cx<-R||cx>W+R||cy<-R||cy>H+R) continue;
       ctx.beginPath(); for(let i=0;i<6;i++){ const a=Math.PI/180*(60*i-90), vx=cx+R*Math.cos(a), vy=cy+R*Math.sin(a); i?ctx.lineTo(vx,vy):ctx.moveTo(vx,vy); } ctx.closePath();
@@ -1076,7 +1121,7 @@
       ctx.font='700 '+Math.round(R*0.21)+'px system-ui'; ctx.fillStyle='#e8ecf6'; ctx.fillText(secName(h.id).replace('Sector ',''), cx, cy+R*0.20);
       if(s.sub){ ctx.font=Math.round(R*0.165)+'px system-ui'; ctx.fillStyle='#c7d2ea'; ctx.fillText(s.sub, cx, cy+R*0.45); } }
     drawGalMini(cv,ctx,W,H);
-    updateGalStatus(tog,others,col); }
+    updateGalStatus(mineN,sharedN,otherN,col); }
   function drawGalMini(cv,ctx,W,H){ if(W<260)return; const bw=galBound.maxX-galBound.minX, bh=galBound.maxY-galBound.minY;
     const mw=Math.min(112,W*0.3), mh=mw*(bh/bw), ox=W-mw-14, oy=14;
     ctx.save(); ctx.fillStyle='rgba(6,10,24,.72)'; ctx.strokeStyle='rgba(255,255,255,.14)'; ctx.lineWidth=1;
@@ -1108,12 +1153,14 @@
     cv.addEventListener('pointerup',up); cv.addEventListener('pointercancel',up);
     cv.addEventListener('wheel',e=>{ e.preventDefault(); galZoom(e.clientX,e.clientY, e.deltaY<0?1.12:0.892, cv); drawGalaxy(); },{passive:false});
     window.addEventListener('resize',()=>{ const g=document.getElementById('galaxy'); if(g&&g.classList.contains('show')){ galFit(); drawGalaxy(); } }); }
-  function updateGalStatus(tog,others,col){ const st=document.getElementById('galStatus'); if(!st)return;
+  function updateGalStatus(mine,shared,others,col){ const st=document.getElementById('galStatus'); if(!st)return;
     st.innerHTML = state.graduated
-      ? ('Home: <b style="color:'+col+'">'+secName(state.homeSector)+'</b> · '+Object.keys(state.sectorWork||{}).filter(id=>sectorWork(id)>0).length+' worked'
-         +(tog?' · 🤝 '+tog+' together':'')+(others?' · ◆ '+others+' other explorer'+(others>1?'s':''):'')+' — drag to explore, tap a sector to work it.')
+      ? ('Home <b style="color:'+col+'">'+secName(state.homeSector).replace('Sector ','')+'</b> · <b>'+mine+'</b> sector'+(mine===1?'':'s')+' worked'
+         +(shared?' · 🤝 '+shared+' shared':'')
+         +(others?' · ◆ '+others+' where others explore':'')
+         +' — drag to explore, tap a sector to work it.')
       : ('🎓 <b>Training</b> — '+(state.trainCorrect||0)+'/'+TRAIN_GOAL+' good vets to earn your own territory. Tap a glowing sector to scan real data.'); }
-  function renderGalaxy(){ if(!galHexes){ galLayout(); galSeededStars(); } galLoadIcons(); galSetup(); if(!galCam) galFit(); drawGalaxy(); }
+  function renderGalaxy(){ recomputeGalaxySize(); if(!galHexes){ galLayout(); galSeededStars(); } galLoadIcons(); galSetup(); if(!galCam) galFit(); drawGalaxy(); }
   function gauss(s){ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random(); return s*Math.sqrt(-2*Math.log(u))*Math.cos(6.2831853*v); }
   function synthCard(){ const roll=Math.random(),N=200,f=[]; for(let i=0;i<N;i++)f.push(1+gauss(.006)); let truth,kind,why;
     if(roll<.45){truth='planet';kind='transit';why='Evenly-spaced, flat-bottomed dips — the signature of a transiting planet.'; const P=40+Math.random()*20,t0=Math.random()*P,d=.012+Math.random()*.01; for(let i=0;i<N;i++){const ph=((i-t0)%P+P)%P; if(ph<4||ph>P-4)f[i]-=d;}}
@@ -1596,23 +1643,23 @@
       ctx.strokeStyle='rgba(79,216,255,.06)'; ctx.lineWidth=1; for(let k=1;k<=3;k++){ ctx.beginPath(); ctx.arc(cxr,cyr,Rr*k/3.1,0,6.283); ctx.stroke(); }
       if(ctx.createConicGradient){ const g=ctx.createConicGradient(ang,cxr,cyr); g.addColorStop(0,'rgba(79,216,255,.12)'); g.addColorStop(.05,'rgba(79,216,255,0)'); g.addColorStop(1,'rgba(79,216,255,0)'); ctx.save(); ctx.globalAlpha=.7; ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cxr,cyr,Rr,0,6.283); ctx.fill(); ctx.restore(); }
       ctx.save(); ctx.globalAlpha=.16; ctx.strokeStyle='#4fd8ff'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(cxr,cyr); ctx.lineTo(cxr+Math.cos(ang)*Rr,cyr+Math.sin(ang)*Rr); ctx.stroke(); ctx.restore(); })();
-    // links between charted
-    ctx.lineWidth=1.6; SYSTEMS.forEach(s=>{ if(!state.charted[s.h])return; s._lk.forEach(j=>{ const o=SYSTEMS[j]; if(!state.charted[o.h])return; const g=ctx.createLinearGradient(s.x,s.y,o.x,o.y); g.addColorStop(0,'#5DCAA5'); g.addColorStop(1,'#7fb2ff'); ctx.strokeStyle=g; ctx.globalAlpha=.32; ctx.beginPath(); ctx.moveTo(s.x,s.y); ctx.lineTo(o.x,o.y); ctx.stroke(); }); }); ctx.globalAlpha=1;
+    // links between charted (skipped in constellation mode so YOUR lines stand out on their own)
+    if(!constMode){ ctx.lineWidth=1.6; SYSTEMS.forEach(s=>{ if(!state.charted[s.h])return; s._lk.forEach(j=>{ const o=SYSTEMS[j]; if(!state.charted[o.h])return; const g=ctx.createLinearGradient(s.x,s.y,o.x,o.y); g.addColorStop(0,'#5DCAA5'); g.addColorStop(1,'#7fb2ff'); ctx.strokeStyle=g; ctx.globalAlpha=.32; ctx.beginPath(); ctx.moveTo(s.x,s.y); ctx.lineTo(o.x,o.y); ctx.stroke(); }); }); ctx.globalAlpha=1; }
     // saved user constellations (your personal sky) — always visible
     (state.constellations||[]).forEach(cst=>{ ctx.strokeStyle=hex('#c7aef8',.55); ctx.lineWidth=1.8; ctx.beginPath();
       let sx2=0,sy2=0,ncnt=0; cst.edges.forEach(e=>{ const a=SYSBYH[e[0]],b=SYSBYH[e[1]]; if(a&&b){ ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); sx2+=a.x+b.x; sy2+=a.y+b.y; ncnt+=2; } }); ctx.stroke();
       if(ncnt){ ctx.fillStyle='rgba(199,174,248,.85)'; ctx.font='700 11px "Space Grotesk"'; ctx.textAlign='center'; ctx.fillText('✷ '+cst.name, sx2/ncnt, sy2/ncnt-12); ctx.textAlign='left'; } });
     // constellation mode: highlight charted stars as nodes + show the draft in progress
     if(constMode){ SYSTEMS.forEach(s=>{ if(!state.charted[s.h])return; const pul=.5+.5*Math.sin(t*2+s.seed);
-        ctx.strokeStyle=hex('#c7aef8',.4+pul*.4); ctx.lineWidth=2; ctx.beginPath(); ctx.arc(s.x,s.y,16,0,6.283); ctx.stroke();
-        if(cLastNode&&cLastNode.h===s.h){ ctx.strokeStyle='#fff'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.arc(s.x,s.y,21,0,6.283); ctx.stroke(); } });
+        ctx.strokeStyle=hex('#c7aef8',.4+pul*.4); ctx.lineWidth=2; ctx.beginPath(); ctx.arc(s.x,s.y,13,0,6.283); ctx.stroke();
+        if(cLastNode&&cLastNode.h===s.h){ ctx.strokeStyle='#fff'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.arc(s.x,s.y,18,0,6.283); ctx.stroke(); } });
       ctx.strokeStyle='#e6d8ff'; ctx.lineWidth=2.4; ctx.shadowBlur=8; ctx.shadowColor='#c7aef8'; ctx.beginPath();
       cDraft.forEach(e=>{ const a=SYSBYH[e[0]],b=SYSBYH[e[1]]; if(a&&b){ ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); } }); ctx.stroke(); ctx.shadowBlur=0; }
     SYSTEMS.forEach(s=>{ const charted=state.charted[s.h];
       if(charted && state.ruled[s.h]){ // reviewed & flagged NOT a planet — a quiet checked-off marker, not a collected world
         const bob=Math.sin(t*1.1+s.seed)*1.6; ctx.save(); ctx.globalAlpha=.8; ctx.strokeStyle='rgba(150,172,205,.7)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(s.x,s.y+bob,11,0,6.283); ctx.stroke();
         ctx.strokeStyle='#9fb8d6'; ctx.lineWidth=2.6; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(s.x-4.5,s.y+bob+.5); ctx.lineTo(s.x-1,s.y+bob+4); ctx.lineTo(s.x+5,s.y+bob-4); ctx.stroke(); ctx.restore(); }
-      else if(charted){ let scv=1; if(s._grow>0){ s._grow=Math.min(1,s._grow+.05); scv=1-Math.pow(1-s._grow,3); } const sz=54*scv, bob=Math.sin(t*1.1+s.seed)*2.2; drawSpin(s.x, s.y+bob, sz*0.32, s.pl[0].p, s.seed, t+s.seed);
+      else if(charted){ let scv=1; if(s._grow>0){ s._grow=Math.min(1,s._grow+.05); scv=1-Math.pow(1-s._grow,3); } const sz=(constMode?30:54)*scv, bob=Math.sin(t*1.1+s.seed)*2.2; drawSpin(s.x, s.y+bob, sz*0.32, s.pl[0].p, s.seed, t+s.seed);
         const oa=t*0.9+s.seed*1.7, orx=sz*0.42, stx=s.x+Math.cos(oa)*orx, sty=(s.y+bob)+Math.sin(oa)*orx*0.42;
         ctx.globalAlpha=.9; ctx.fillStyle='#9be7ff'; ctx.shadowBlur=6; ctx.shadowColor='#4fd8ff'; ctx.beginPath(); ctx.arc(stx,sty,1.5,0,6.283); ctx.fill(); ctx.shadowBlur=0; ctx.globalAlpha=1;
         if(s.pl.length>1){ ctx.fillStyle='rgba(255,255,255,.85)'; ctx.font='700 9px "Space Grotesk"'; }
