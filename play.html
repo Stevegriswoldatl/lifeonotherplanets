@@ -746,7 +746,16 @@
         const jr=(mulberry(sec*997+i*37)()-0.5)*0.05, ja=(mulberry(sec*131+i*53)()-0.5)*0.55;
         s.x=cx+Math.cos(ga+ja)*(rn+jr)*rmin*0.92; s.y=cy+Math.sin(ga+ja)*(rn+jr)*rmin*0.86; });
     }
-    SYSTEMS.forEach((s,i)=>{ if(s._lk)return; s._lk=SYSTEMS.map((o,j)=>({j,dd:(o.x-s.x)**2+(o.y-s.y)**2})).filter(o=>o.j!==i).sort((a,b)=>a.dd-b.dd).slice(0,2).map(o=>o.j); });
+    // spread any stars that landed too close so an unscanned star can never hide fully behind a
+    // charted planet (deterministic — same positions every render, so nothing jitters).
+    const MINSEP=56;
+    for(let iter=0; iter<14; iter++){ let moved=false;
+      for(let i=0;i<SYSTEMS.length;i++)for(let j=i+1;j<SYSTEMS.length;j++){ const a=SYSTEMS[i],b=SYSTEMS[j];
+        let dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy)||0.01;
+        if(d<MINSEP){ const push=(MINSEP-d)/2, ux=dx/d, uy=dy/d; a.x-=ux*push; a.y-=uy*push; b.x+=ux*push; b.y+=uy*push; moved=true; } }
+      if(!moved)break; }
+    SYSTEMS.forEach(s=>{ s.x=Math.max(48,Math.min(W-48,s.x)); s.y=Math.max(96,Math.min(H-150,s.y)); });   // keep clear of the HUD + dock
+    SYSTEMS.forEach((s,i)=>{ s._lk=SYSTEMS.map((o,j)=>({j,dd:(o.x-s.x)**2+(o.y-s.y)**2})).filter(o=>o.j!==i).sort((a,b)=>a.dd-b.dd).slice(0,2).map(o=>o.j); });
   }
 
   // ---------- generative sectors: after Section 1 (Training), each new sector is a fresh
@@ -783,8 +792,10 @@
   //     stars persist by name, a completed sector still shows the stars you charted there. ---
   const HEX_STARS=6;
   function hexRank(id){ return id<TRAIN_ID ? id : id-1; }   // 0-based rank among the non-training hexes
-  function sectorPool(){ return FRONTIER.filter(c=>c&&Array.isArray(c.f)&&c.f.length)
-      .slice().sort((a,b)=>String(a.name).localeCompare(String(b.name))); }
+  let _poolCache=null, _poolCacheLen=-1;
+  function sectorPool(){ if(_poolCache && _poolCacheLen===FRONTIER.length) return _poolCache;   // memoized (rebuilt when the deck grows)
+    _poolCache=FRONTIER.filter(c=>c&&Array.isArray(c.f)&&c.f.length).slice().sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+    _poolCacheLen=FRONTIER.length; return _poolCache; }
   function buildSectorForHex(id){
     // real TESS sectors require the observer's license — unlicensed players stay on the
     // curated Training set (so we only collect real judgements from proven-accurate users).
@@ -879,7 +890,9 @@
   // frontier deck = REAL open TESS candidates (no answer key); reviewing them feeds the community consensus
   let FRONTIER=[], frontierMode=false, fQueue=[], fIdx=0;
   function loadFrontier(){ return fetch('frontier_curves.json',{cache:'no-store'}).then(r=>r.ok?r.json():[]).catch(()=>[])
-    .then(fd=>{ FRONTIER=Array.isArray(fd)?fd.filter(c=>c&&Array.isArray(c.f)&&c.f.length):[]; updateFrontPill(); updateSecChip(); maybeSectorShowcase(); }); }
+    .then(fd=>{ FRONTIER=Array.isArray(fd)?fd.filter(c=>c&&Array.isArray(c.f)&&c.f.length):[]; _poolCache=null; updateFrontPill(); updateSecChip(); maybeSectorShowcase();
+      // if the galaxy is already open when the deck arrives, resize + repaint so it grows to fit the real pool
+      const g=document.getElementById('galaxy'); if(g&&g.classList.contains('show')){ recomputeGalaxySize(); if(!galHexes){ galLayout(); galSeededStars(); } galFit(); drawGalaxy(); } }); }
   // the frontier pill doubles as the persistent TRAINING-vs-REAL status indicator on the map.
   function updateFrontPill(){ updateDock(); }
 
@@ -980,7 +993,10 @@
   // how many hexes we need right now: one per HEX_STARS of real pool (+1 for the training hex),
   // never fewer than the sectors anyone (me or another explorer) has already worked.
   function galaxyNeededSectors(){
-    let need = state.observerLicense ? (Math.ceil(sectorPool().length/HEX_STARS)+1) : (GAL_COLS*4);
+    // Grow the galaxy for any GRADUATED explorer (the observer's licence only gates whether you can
+    // VET real data, not how much sky you can see) — one hex per HEX_STARS of real pool, +1 for the
+    // training hex, and never fewer than the sectors anyone has already worked.
+    let need = state.graduated ? (Math.ceil(sectorPool().length/HEX_STARS)+1) : (GAL_COLS*4);
     const sw=state.sectorWork||{}; for(const id in sw){ if(sw[id]>0) need=Math.max(need,(+id)+1); }
     for(const id in (galaxyMap||{})){ need=Math.max(need,(+id)+1); }   // where other explorers are active
     return Math.max(GAL_COLS*4, need);
@@ -991,7 +1007,8 @@
     if(n!==GAL_N){ GAL_ROWS=rows; GAL_N=n; galHexes=null; galStars=null; }   // grid changed → force relayout
   }
   // a hex "has data" once the real pool is big enough to fill its slice (unique slice, no wrap).
-  function sectorHasData(id){ if(id===TRAIN_ID) return true; if(!state.observerLicense) return false;
+  // NOTE: data existence is pool-based, independent of the licence — the licence gates ENTRY, not the map.
+  function sectorHasData(id){ if(id===TRAIN_ID) return true;
     return hexRank(id)*HEX_STARS < sectorPool().length; }
   const SECTOR_COLORS=['#5DCAA5','#7fb2ff','#f5c977','#c7aef8','#f0906b','#6be6c1','#e56ba8','#9be77f'];
   function secName(id){ const c=id%GAL_COLS, r=Math.floor(id/GAL_COLS); return 'Sector '+String.fromCharCode(65+c)+(r+1); }
@@ -1000,6 +1017,13 @@
   function pickHome(){ let id=hashStr((state.explorer||'Explorer')+'home')%GAL_N; if(id===TRAIN_ID)id=(id+1)%GAL_N; return id; }
   function sectorWork(id){ return (state.sectorWork&&state.sectorWork[id])||0; }
   function sectorFill(id){ return Math.min(1, sectorWork(id)/SECTOR_GOAL); }
+  // How many of THIS sector's real stars you've actually charted — so the galaxy tile matches what
+  // you see inside it (fixes "tile looks half-done but every star in it is charted").
+  function sectorCharted(id){ if(id===TRAIN_ID){ let h=0; CURATED.forEach(s=>{ if(state.charted[s.h])h++; }); return [h,CURATED.length]; }
+    const pool=sectorPool(), n=pool.length; if(!n) return [0,0];
+    const base=hexRank(id)*HEX_STARS; let have=0,tot=0;
+    for(let i=0;i<HEX_STARS && base+i<n;i++){ tot++; if(state.charted[pool[base+i].name]) have++; }
+    return [have,tot]; }
   function isMine(id){ return state.graduated && (id===state.homeSector || sectorWork(id)>0); }
   function currentSector(){ if(!state.graduated)return TRAIN_ID; return state.activeSector!=null?state.activeSector:state.homeSector; }
   function creditSectorWork(){ const id=currentSector(); if(id==null)return; state.sectorWork=state.sectorWork||{}; state.sectorWork[id]=(state.sectorWork[id]||0)+1; save();
@@ -1082,10 +1106,10 @@
     const otherHome=(gm&&gm.home_explorer&&myId&&gm.home_explorer!==myId)?(gm.home_color||'#7fb2ff'):null;
     const otherWork=(gm&&gm.work>0&&!myWork);
     const together=(myWork&&gm&&gm.explorers>=2); const col=myColor(); let bg,bd,badge,sub,icon;
-    // frontier = licensed, unworked, untouched by anyone, and the real pool hasn't reached this hex yet.
-    const frontier=(state.graduated && state.observerLicense && !isTrain && !myWork && !otherHome && !otherWork && !sectorHasData(id));
-    if(isTrain){ bg='rgba(245,201,119,.14)'; bd='#f5c977'; badge='🎓'; icon='graduate'; sub='Training'; }
-    else if(myWork){ bg=hex(col,.15+fill*.45); bd=col; badge=together?'🤝':(myHome?'★':'●'); icon=together?'together':(myHome?'star':'planet'); sub=(together&&gm)?('you +'+Math.max(1,gm.explorers-1)):(Math.round(fill*100)+'%'); }
+    // frontier = graduated, unworked, untouched by anyone, and the real pool hasn't reached this hex yet.
+    const frontier=(state.graduated && !isTrain && !myWork && !otherHome && !otherWork && !sectorHasData(id));
+    if(isTrain){ const tc=sectorCharted(id); bg='rgba(245,201,119,.14)'; bd='#f5c977'; badge='🎓'; icon='graduate'; sub=tc[1]?(tc[0]+'/'+tc[1]):'Training'; }
+    else if(myWork){ const c=sectorCharted(id), cf=c[1]?c[0]/c[1]:fill; bg=hex(col,.15+cf*.45); bd=col; badge=together?'🤝':(myHome?'★':'●'); icon=together?'together':(myHome?'star':'planet'); sub=c[1]?(c[0]+'/'+c[1]):(Math.round(fill*100)+'%'); }
     else if(otherHome){ bg=hex(otherHome,.20); bd=otherHome; badge='◆'; icon='flag'; sub=(gm&&gm.explorers>1)?(gm.explorers+' explorers'):'claimed'; }
     else if(otherWork){ const oc=gm.home_color||'#7fb2ff'; bg=hex(oc,.17); bd=oc; badge='●'; icon='dot'; sub=(gm.explorers>1)?(gm.explorers+' explorers'):'explorer here'; }
     else if(frontier){ bg='rgba(127,178,255,.05)'; bd='rgba(127,178,255,.22)'; badge='◇'; icon='soon'; sub='soon'; }
